@@ -227,9 +227,9 @@ var q = marksheets.Where(x => x.CalcPercentage > 50).Select(x => new { x.Course,
 
 **SQL**
 ```sql
-select  a_1.Course as Course, a_1.Grade as Grade, 
-        (a_1.ObtainedMarks * 100) / a_1.TotalMarks as CalcPercentage
-from    Marks as a_1
+select	a_1.Course as Course, a_1.Grade as Grade
+from	Marksheet as a_1
+where	(case when (a_1.TotalMarks > 0) then ((a_1.MarksGained / a_1.TotalMarks) * 100.0) else 0 end > 50)
 ```
 
 ---
