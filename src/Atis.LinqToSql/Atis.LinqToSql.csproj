@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+	<Version>1.0.0</Version>
+	<Authors>AT Integrated Systems</Authors>
+	<Company>AT Integrated Systems</Company>
+	<Product>Atis LINQ to SQL</Product>
+	<Description>Atis LINQ to SQL is a powerful library that gives a framework to convert complex LINQ to SQL String.</Description>
+	<Copyright>Copyright (c) AT Integrated Systems</Copyright>
+	<PackageTags>Atis LINQ to SQL</PackageTags>
+	<GenerateDocumentationFile>True</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Atis.Expressions\Atis.Expressions.csproj" />
+  </ItemGroup>
+
+</Project>
