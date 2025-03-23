@@ -72,7 +72,22 @@ namespace Atis.LinqToSql.Internal
 
         public static string GetAlias(SqlDataSourceExpression ds)
         {
-            return GetAlias(ds.DataSourceAlias, ds.NodeType == SqlExpressionType.DataSource ? "t" : "t_cte");
+            return GetAlias(ds.DataSourceAlias, GetDataSourceType(ds));
+        }
+
+        private static string GetDataSourceType(SqlDataSourceExpression ds)
+        {
+            switch (ds.NodeType)
+            {
+                case SqlExpressionType.DataSource:
+                    return "t";
+                case SqlExpressionType.CteDataSource:
+                    return "t_cte";
+                case SqlExpressionType.OtherDataSource:
+                    return "t_other";
+                default:
+                    return "t_ds";
+            }
         }
     }
 

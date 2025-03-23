@@ -89,7 +89,19 @@ namespace Atis.LinqToSql.ExpressionConverters
                     // if the projection has been applied, then we'll match with full or partial
                     // we cannot go anywhere else if the projection has been applied in the query
                     var columnExpressions = this.MatchWithProjection(path, sqlQuery);
-                    result = columnExpressions;
+                    if (columnExpressions.Length == 1 && columnExpressions[0].ColumnExpression is SqlQueryExpression otherQuery)
+                    {
+                        otherQuery = otherQuery.CreateCopy(clearModelMaps: true);
+                        result = new SqlColumnExpression[] { new SqlColumnExpression(otherQuery, columnExpressions[0].ColumnAlias, columnExpressions[0].ModelPath) };
+                    }
+                    else if (columnExpressions.All(x=>x is SqlOuterApplyQueryColumnExpression))
+                    {
+                        var firstCol = (SqlOuterApplyQueryColumnExpression)columnExpressions.First();
+                        var outerApplyQuery = firstCol.OuterApplyQuery.CreateCopy(clearModelMaps: true);
+                        result = new SqlColumnExpression[] { new SqlColumnExpression(outerApplyQuery, columnExpressions[0].ColumnAlias, columnExpressions[0].ModelPath) };
+                    }
+                    else
+                        result = columnExpressions;
                     resultSource = sqlQuery;
                 }
                 else
@@ -209,11 +221,23 @@ namespace Atis.LinqToSql.ExpressionConverters
                                                 ??
                                                 throw new InvalidOperationException($"Expected {nameof(SqlDataSourceReferenceExpression)} but got {firstItem.GetType().Name}");
                     var resultDs = resultAsDsRef.DataSource;
-                    if (resultDs is SqlDataSourceExpression sqlQueryDs && sqlQueryDs.DataSource is SqlQueryExpression innerQuery &&
-                            innerQuery.Projection.TryGetScalarColumn(out var scalarColExpr))
+                    if (resultDs is SqlDataSourceExpression sqlQueryDs)
                     {
-                        return new SqlDataSourceColumnExpression(sqlQueryDs, scalarColExpr.ColumnAlias);
+                        if (sqlQueryDs.DataSource is SqlQueryExpression innerQuery &&
+                            innerQuery.Projection.TryGetScalarColumn(out var scalarColExpr))
+                            return new SqlDataSourceColumnExpression(sqlQueryDs, scalarColExpr.ColumnAlias);
+                        else if (sqlQueryDs.NodeType == SqlExpressionType.OtherDataSource)
+                        {
+                            // this in-case if other data source directly selected
+                            var otherDataSourceSqlQuery = sqlQueryDs.DataSource as SqlQueryExpression
+                                                            ??
+                                                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} but got {sqlQueryDs.DataSource.GetType().Name}");
+                            var newSqlQuery = otherDataSourceSqlQuery.CreateCopy(clearModelMaps: true);
+                            return newSqlQuery;
+                        }
+                         
                     }
+
                     return firstItem;
                 }
             }
@@ -246,11 +270,26 @@ namespace Atis.LinqToSql.ExpressionConverters
                                         throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} but got {subQuery.InitialDataSource.DataSource?.GetType().Name}.");
                 }
 
-                var subQueryColumnAliases = this.MatchWithProjection(path, queryToUse)
-                                                    .Select(x => new { DsModel = x.ModelPath, ColExpr = new SqlDataSourceColumnExpression(ds, x.ColumnAlias) })
-                                                    .ToArray();
-                var columns = subQueryColumnAliases.Select(x => new SqlColumnExpression(x.ColExpr, x.ColExpr.ColumnName, x.DsModel)).ToArray();
-                result = columns;
+                var matchedProjections = this.MatchWithProjection(path, queryToUse);
+                if (matchedProjections.Length == 1 && matchedProjections[0].ColumnExpression is SqlQueryExpression otherQuery)
+                {
+                    otherQuery = otherQuery.CreateCopy(clearModelMaps: true);
+                    result = new SqlColumnExpression[] { new SqlColumnExpression(otherQuery, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath) };
+                }
+                else if (matchedProjections.All(x => x is SqlOuterApplyQueryColumnExpression))
+                {
+                    var firstCol = (SqlOuterApplyQueryColumnExpression)matchedProjections.First();
+                    var outerApplyQuery = firstCol.OuterApplyQuery.CreateCopy(clearModelMaps: true);
+                    result = new SqlColumnExpression[] { new SqlColumnExpression(outerApplyQuery, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath) };
+                }
+                else
+                {
+                    var subQueryColumnAliases = this.MatchWithProjection(path, queryToUse)
+                                                        .Select(x => new { DsModel = x.ModelPath, ColExpr = new SqlDataSourceColumnExpression(ds, x.ColumnAlias) })
+                                                        .ToArray();
+                    var columns = subQueryColumnAliases.Select(x => new SqlColumnExpression(x.ColExpr, x.ColExpr.ColumnName, x.DsModel)).ToArray();
+                    result = columns;
+                }
             }
             else
                 throw new InvalidOperationException($"firstDataSource is neither Table nor a Query");

@@ -98,7 +98,9 @@ namespace Atis.LinqToSql.SqlExpressions
         Update,
         Delete,
         Not,
-        CteDataSource
+        CteDataSource,
+        OtherDataSource,
+        OuterApplyQueryColumn
     }
 
 

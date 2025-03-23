@@ -290,4 +290,20 @@ namespace Atis.LinqToSql.UnitTest
         public Func<ItemBase> NavItem { get; set; }
     }
 
+    public class Order
+    {
+        public string OrderID { get; set; }
+        public string CustomerId { get; set; }
+        public DateTime OrderDate { get; set; }
+    }
+
+    public class OrderDetail
+    {
+        public string OrderID { get; set; }
+        public decimal Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+
+    }
+
+
 }

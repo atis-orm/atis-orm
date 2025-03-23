@@ -2969,5 +2969,45 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
 ";
             Test("Nested Constant Property Test", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void T01010_GroupJoinSubQueryTest()
+        {
+            var orders = new Queryable<Order>(this.dbc);
+            var orderDetails = new Queryable<OrderDetail>(this.dbc);
+            var customers = new Queryable<Customer>(this.dbc);
+
+            // GroupJoin => (IQueryable<T>, IQueryable<O>, T.Key, O.Key, (T, IQueryable<O>, R) => new { p1 = T, p2 = IQueryable<O> })
+            var q = from o in orders
+                    join od in orderDetails on o.OrderID equals od.OrderID
+                    join c in customers on o.CustomerId equals c.CustomerId into g
+                    where g.Count() > 0
+                    select new { o.OrderID, o.OrderDate, od.Quantity, od.UnitPrice, Count = g.Where(y => y.CustomerName.StartsWith("TT")).Count() };
+
+            string ? expectedResult = null;
+            Test("Customer Complex Query Test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void T01020_GroupJoinSubQueryNewSelectionTest()
+        {
+            var orders = new Queryable<Order>(this.dbc);
+            var orderDetails = new Queryable<OrderDetail>(this.dbc);
+            var customers = new Queryable<Customer>(this.dbc);
+
+            // GroupJoin => (IQueryable<T>, IQueryable<O>, T.Key, O.Key, (T, IQueryable<O>, R) => new { p1 = T, p2 = IQueryable<O> })
+            var q = from o in orders
+                    join od in orderDetails on o.OrderID equals od.OrderID
+                    join c in customers on o.CustomerId equals c.CustomerId into g          // g could be 4th parameter, but below select is modifying the
+                    select new { o, od, g = g.Where(z => z.CustomerId == "123") } into t    // 4th parameter of GroupJoin
+                                                                                            // if we don't use select new after 2nd join, the new anonymous type would be auto
+                                                                                            // and below we didn't had to use the "t" variable, and would have used "g" directly
+                                                                                            // but since we defined the anonymous type manually, there now we have to use the "t" variable
+                    where t.g.Where(r => r.CustomerName.Contains("abc")).Count() > 0
+                    select new { t.o.OrderID, t.o.OrderDate, t.od.Quantity, t.od.UnitPrice, Count = t.g.Where(y => y.CustomerName.StartsWith("TT")).Count() };
+
+            string? expectedResult = null;
+            Test("Customer Complex Query Test", q.Expression, expectedResult);
+        }
     }
 }

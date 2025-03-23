@@ -16,6 +16,7 @@ namespace Atis.LinqToSql.SqlExpressions
             {
                 SqlExpressionType.DataSource,
                 SqlExpressionType.CteDataSource,
+                SqlExpressionType.OtherDataSource,      // this data source will be added because of GroupJoin
             };
         private static SqlExpressionType ValidateNodeType(SqlExpressionType nodeType)
             => _allowedTypes.Contains(nodeType)
@@ -171,6 +172,11 @@ namespace Atis.LinqToSql.SqlExpressions
         public void ReplaceModelPathPrefix(string modelPathPrefix)
         {
             this.AddOrReplaceModelPathPrefix(modelPathPrefix, replace: true);
+        }
+
+        public void ClearModelPath()
+        {
+            this.ModelPath = ModelPath.Empty;
         }
 
         /// <summary>

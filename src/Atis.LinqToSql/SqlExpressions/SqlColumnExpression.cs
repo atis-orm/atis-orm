@@ -84,7 +84,7 @@
         ///         Gets the model path of the column.
         ///     </para>
         /// </summary>
-        public ModelPath ModelPath { get; }
+        public ModelPath ModelPath { get; private set; }
 
         /// <summary>
         ///     <para>
@@ -116,6 +116,11 @@
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
             return sqlExpressionVisitor.VisitSqlColumnExpression(this);
+        }
+
+        public void ClearModelPath()
+        {
+            this.ModelPath = new ModelPath(this.ColumnAlias);
         }
 
         // not updating the ModelPath, because we were copying projection elsewhere, so we experienced same
