@@ -2,6 +2,7 @@
 using Atis.LinqToSql.Internal;
 using Atis.LinqToSql.SqlExpressions;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -239,75 +240,53 @@ namespace Atis.LinqToSql.ExpressionConverters
         {
             var sourceColumnSelection = arguments[1];
             var otherColumnSelection = arguments[2];
-            // in-case of GroupJoin we should be careful about the projection
             var projection = arguments[3];
 
-            if (this.IsGroupJoin)
+            if (!IsGroupJoin)
             {
-                if (this.HasProjection)
-                {
-                    if (this.HasAutoProjection())
-                    {
-                        var dataSourcePropertyInfoExtractor = new DataSourcePropertyInfoExtractor();
-                        var updatedMap = dataSourcePropertyInfoExtractor.RecalculateMemberMapping(this.GetArgumentLambda(this.SelectArgIndex));
-                        var lastDs = sqlQuery.AllDataSources.Last();
-                        if (updatedMap.CurrentDataSourceMemberInfo != null)
-                        {
-                            foreach (var ds in this.SourceQuery.AllDataSources)
-                            {
-                                if (ds != lastDs)
-                                {
-                                    ds.AddModelPathPrefix(updatedMap.CurrentDataSourceMemberInfo.Name);
-                                }
-                            }
-                        }
-                        if (updatedMap.NewDataSourceMemberInfo != null)
-                        {
-                            lastDs.AddModelPathPrefix(updatedMap.NewDataSourceMemberInfo.Name);
-                        }
-                    }
-                    else
-                    {
-                        this.SourceQuery.ApplyProjection(projection);
-                    }
-                }
+                var joinType = joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
+                var joinExpression = new SqlJoinExpression(joinType, joinedDataSource, joinCondition);
+                SourceQuery.ApplyJoin(joinExpression);
             }
-            else
-            {
-                var joinType = this.joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
-                var joinExpression = new SqlJoinExpression(joinType, this.joinedDataSource, joinCondition);
-                this.SourceQuery.ApplyJoin(joinExpression);
 
-                if (this.HasProjection)
+            if (HasProjection)
+            {
+                if (HasAutoProjection())
                 {
-                    if (this.HasAutoProjection())
-                    {
-                        var dataSourcePropertyInfoExtractor = new DataSourcePropertyInfoExtractor();
-                        var updatedMap = dataSourcePropertyInfoExtractor.RecalculateMemberMapping(this.GetArgumentLambda(this.SelectArgIndex));
-                        var lastDs = sqlQuery.DataSources.Last();
-                        if (updatedMap.CurrentDataSourceMemberInfo != null)
-                        {
-                            foreach (var ds in this.SourceQuery.AllDataSources)
-                            {
-                                if (ds != lastDs)
-                                {
-                                    ds.AddModelPathPrefix(updatedMap.CurrentDataSourceMemberInfo.Name);
-                                }
-                            }
-                        }
-                        if (updatedMap.NewDataSourceMemberInfo != null)
-                        {
-                            lastDs.AddModelPathPrefix(updatedMap.NewDataSourceMemberInfo.Name);
-                        }
-                    }
-                    else
-                    {
-                        this.SourceQuery.ApplyProjection(projection);
-                    }
+                    ApplyAutoProjection(sqlQuery.AllDataSources);
+                }
+                else
+                {
+                    SourceQuery.ApplyProjection(projection);
                 }
             }
+
             return sqlQuery;
         }
+
+        private void ApplyAutoProjection(IReadOnlyCollection<SqlDataSourceExpression> allDataSources)
+        {
+            var extractor = new DataSourcePropertyInfoExtractor();
+            var updatedMap = extractor.RecalculateMemberMapping(GetArgumentLambda(SelectArgIndex));
+            var lastDs = allDataSources.Last();
+
+            if (updatedMap.CurrentDataSourceMemberInfo != null)
+            {
+                foreach (var ds in SourceQuery.AllDataSources)
+                {
+                    if (ds != lastDs)
+                    {
+                        ds.AddModelPathPrefix(updatedMap.CurrentDataSourceMemberInfo.Name);
+                    }
+                }
+            }
+
+            if (updatedMap.NewDataSourceMemberInfo != null)
+            {
+                lastDs.AddModelPathPrefix(updatedMap.NewDataSourceMemberInfo.Name);
+            }
+        }
+
 
         private bool HasProjection => this.Expression.Arguments.Count >= 5;
 
