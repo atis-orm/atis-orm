@@ -19,6 +19,18 @@ namespace Atis.LinqToSql.SqlExpressions
         Union,
     }
 
+    public class OtherDataSourceLink
+    {
+        public OtherDataSourceLink(SqlDataSourceExpression otherDataSource, SqlBinaryExpression joinCondition)
+        {
+            this.OtherDataSource = otherDataSource;
+            this.JoinCondition = joinCondition;
+        }
+
+        public SqlDataSourceExpression OtherDataSource { get; set; }
+        public SqlBinaryExpression JoinCondition { get; set; }
+    }
+
     /// <summary>
     ///     <para>
     ///         Represents a SQL query expression.
@@ -113,7 +125,7 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         Gets both normal data sources and CTE data sources combined.
         ///     </para>
         /// </summary>
-        public IReadOnlyCollection<SqlDataSourceExpression> AllDataSources => CombinedDataSources.Where(x => !(x.DataSource is SqlCteReferenceExpression)).Concat(this.cteDataSources).ToArray();
+        public IReadOnlyCollection<SqlDataSourceExpression> AllDataSources => CombinedDataSources.Where(x => !(x.DataSource is SqlCteReferenceExpression)).Concat(this.cteDataSources).Concat(this.otherDataSources.Select(x => x.OtherDataSource)).ToArray();
 
         private readonly List<SqlJoinExpression> joins = new List<SqlJoinExpression>();
         /// <summary>
@@ -139,6 +151,16 @@ namespace Atis.LinqToSql.SqlExpressions
         ///     </para>
         /// </summary>
         public IReadOnlyCollection<SqlDataSourceExpression> CteDataSources => this.cteDataSources;
+        private readonly List<OtherDataSourceLink> otherDataSources = new List<OtherDataSourceLink>();
+        /// <summary>
+        ///     <para>
+        ///         Gets the list of other data sources that were created and added to sql query.
+        ///     </para>
+        ///     <para>
+        ///         Usually GroupJoin data sources are added to this collection.
+        ///     </para>
+        /// </summary>
+        public IReadOnlyCollection<SqlDataSourceExpression> OtherDataSources => this.otherDataSources.Select(x => x.OtherDataSource).ToList();
         /// <summary>
         ///     <para>
         ///         Gets the list of Union expressions applied to the query.
@@ -231,6 +253,19 @@ namespace Atis.LinqToSql.SqlExpressions
                 return this.cteDataSources.Where(x => x.DataSourceAlias == cteRef.CteAlias).FirstOrDefault();
             }
             return usualDataSourceOrCteDataSource;
+        }
+
+        public void AddOtherDataSource(SqlDataSourceExpression sqlDataSourceExpression, SqlBinaryExpression joinCondition)
+        {
+            this.otherDataSources.Add(new OtherDataSourceLink(sqlDataSourceExpression, joinCondition));
+        }
+
+        public void UpdateOtherDataSourceJoinCondition(SqlDataSourceExpression sqlDataSourceExpression, SqlBinaryExpression joinCondition)
+        {
+            var otherDataSource = this.otherDataSources.FirstOrDefault(x => x.OtherDataSource == sqlDataSourceExpression);
+            if (otherDataSource is null)
+                throw new InvalidOperationException($"Other data source not found in the query.");
+            otherDataSource.JoinCondition = joinCondition;
         }
 
         /// <summary>
@@ -447,9 +482,67 @@ namespace Atis.LinqToSql.SqlExpressions
 
         private void ApplyProjectionInternal(SqlExpression projection)
         {
+            if (!(projection is SqlColumnExpression colExpr && colExpr.NodeType == SqlExpressionType.ScalarColumn))
+            {
+                var givenProjections = projection.GetProjections().ToList();
+                var newProjections = new List<SqlColumnExpression>();
+                for (var i = 0; i < givenProjections.Count; i++)
+                {
+                    var givenProjection = givenProjections[i];
+                    this.ConvertSubQueryProjectionToOuterApply(givenProjection, newProjections);
+                }
+                projection = new SqlCollectionExpression(newProjections);
+            }
             projection = this.FixDuplicateColumns(projection);
             this.Projection = projection;
             this.dataSourceWithSubDataSourceMap.Clear();
+        }
+
+        private void ConvertSubQueryProjectionToOuterApply(SqlColumnExpression sqlColumnExpression, List<SqlColumnExpression> projections)
+        {
+            // sqlColumnExpression might be like this
+            //      (select top 1 a_1.Column from Table as a_1 where outerTable.Column = a_1.Column) as g
+            // so we are picking ColumNExpression which will be a sub-query and that sub-query is *NOT* single
+            // value query then we'll make it outer apply to this query
+            if (sqlColumnExpression.ColumnExpression is SqlQueryExpression subQuery && !subQuery.IsSingleValueQuery())
+            {
+                subQuery.ApplyAutoProjection();
+                var subQueryAsDataSourceInThisQuery = new SqlDataSourceExpression(subQuery);
+                var joinExpression = new SqlJoinExpression(SqlJoinType.OuterApply, subQueryAsDataSourceInThisQuery, joinCondition: null);
+                this.joins.Add(joinExpression);
+
+                var subQueryProjections = subQuery.Projection.GetProjections();
+                for (var i = 0; i < subQueryProjections.Length; i++)
+                {
+                    var subQueryProjection = subQueryProjections[i];
+                    var newSubQueryColumnSelection = new SqlDataSourceColumnExpression(subQueryAsDataSourceInThisQuery, subQueryProjection.ColumnAlias);
+                    var newProjection = new SqlOuterApplyQueryColumnExpression(newSubQueryColumnSelection, subQueryProjection.ColumnAlias, sqlColumnExpression.ModelPath.Append(subQueryProjection.ColumnAlias), subQuery);
+                    projections.Add(newProjection);
+                }
+            }
+            else
+            {
+                projections.Add(sqlColumnExpression);
+            }
+        }
+
+        public bool IsSingleValueQuery()
+        {
+            var sqlQuery = this;
+            if (sqlQuery.Top != null &&
+                    ((sqlQuery.Top is SqlParameterExpression sqlParameter && (sqlParameter.Value?.Equals(1) ?? false))
+                        ||
+                    (sqlQuery.Top is SqlLiteralExpression sqlLiteral && (sqlLiteral.LiteralValue?.Equals(1) ?? false))))
+            {
+                if ((sqlQuery.Projection is SqlColumnExpression)
+                    ||
+                    (sqlQuery.Projection is SqlCollectionExpression collection &&
+                    collection.SqlExpressions.Count() == 1))
+                    return true;
+            }
+            if (sqlQuery.Projection is SqlColumnExpression colExpr && colExpr.NodeType == SqlExpressionType.ScalarColumn)
+                return true;
+            return false;
         }
 
         private SqlExpression FixDuplicateColumns(SqlExpression projection)
@@ -466,7 +559,10 @@ namespace Atis.LinqToSql.SqlExpressions
                     if (colDictionary.ContainsKey(currentCol.ColumnAlias))
                     {
                         columnAlias = this.GenerateUniqueColumnAlias(colDictionary, currentCol.ColumnAlias);
-                        colToAdd = new SqlColumnExpression(currentCol.ColumnExpression, columnAlias, currentCol.ModelPath);
+                        if (currentCol is SqlOuterApplyQueryColumnExpression outerApplyCol)
+                            colToAdd = new SqlOuterApplyQueryColumnExpression(outerApplyCol.ColumnExpression, columnAlias, outerApplyCol.ModelPath, outerApplyCol.OuterApplyQuery);
+                        else
+                            colToAdd = new SqlColumnExpression(currentCol.ColumnExpression, columnAlias, currentCol.ModelPath);
                         projectionChanged = true;
                     }
                     colDictionary.Add(columnAlias, colToAdd);
@@ -653,6 +749,29 @@ namespace Atis.LinqToSql.SqlExpressions
             this.autoJoins.Clear();
         }
 
+        public void ClearModelMaps()
+        {
+            foreach (var ds in this.AllDataSources)
+            {
+                ds.ClearModelPath();
+            }
+            if (this.Projection != null)
+            {
+                if (this.Projection is SqlColumnExpression columnExpression)
+                {
+                    columnExpression.ClearModelPath();
+                }
+                else if (this.Projection is SqlCollectionExpression collection)
+                {
+                    var columnExpressions = collection.SqlExpressions.OfType<SqlColumnExpression>();
+                    foreach (var col in columnExpressions)
+                    {
+                        col.ClearModelPath();
+                    }
+                }
+            }
+        }
+
         /// <summary>
         ///     <para>
         ///         Creates of copy of <paramref name="source"/>.
@@ -797,9 +916,11 @@ namespace Atis.LinqToSql.SqlExpressions
         ///     </para>
         /// </summary>
         /// <returns>A new instance of <see cref="SqlQueryExpression"/> with copied properties.</returns>
-        public virtual SqlQueryExpression CreateCopy()
+        public virtual SqlQueryExpression CreateCopy(bool clearModelMaps = false)
         {
             var copy = CreateCopy(this);
+            if (clearModelMaps)
+                copy.ClearModelMaps();
             return copy;
         }
 
@@ -1483,16 +1604,13 @@ namespace Atis.LinqToSql.SqlExpressions
             if (performWrap)
             {
                 this.WrapInSubQuery();
-                if (expression != null)
-                {
-                    var innerQuery = this.DataSources.First();
-                    var innerQueryProjection = (
-                                                innerQuery.DataSource as SqlQueryExpression
-                                                ??
-                                                throw new InvalidOperationException("Wrapped query not found.")
-                                                ).Projection;
-                    expression = this.ReplaceInnerQueryColumnAccessWithOuterQueryColumnAccess(expression, innerQuery, innerQueryProjection);
-                }
+            }
+
+            var innerQueryDataSource = this.DataSources.FirstOrDefault();
+            if (expression != null && innerQueryDataSource != null && innerQueryDataSource.DataSource is SqlQueryExpression innerQueryQuery)
+            {
+                var innerQueryProjection = innerQueryQuery.Projection;
+                expression = this.ReplaceInnerQueryColumnAccessWithOuterQueryColumnAccess(expression, innerQueryDataSource, innerQueryProjection);
             }
             if (newOperation == SqlQueryOperation.Select)
                 this.lastMethodBeforeSelect = this.LastSqlOperation;

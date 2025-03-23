@@ -2,6 +2,7 @@
 using Atis.LinqToSql.Internal;
 using Atis.LinqToSql.SqlExpressions;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -46,6 +47,8 @@ namespace Atis.LinqToSql.ExpressionConverters
     public class StandardJoinQueryMethodExpressionConverter : QueryMethodExpressionConverterBase
     {
         private SqlDataSourceExpression joinedDataSource;
+        private SqlExpression sourceColumnSelection;
+        private SqlBinaryExpression joinCondition;
 
         /// <summary>
         ///     <para>
@@ -78,6 +81,10 @@ namespace Atis.LinqToSql.ExpressionConverters
         private int OtherColumnsArgIndex => 3;
         private int SelectArgIndex => 4;
 
+        private bool IsGroupJoin => this.Expression.Method.Name == nameof(Queryable.GroupJoin);
+        // SelectMany will flatten the result, so we'll consider the GroupJoin as normal Join
+        private bool UseOtherDataSource => IsGroupJoin && !(this.ConverterStack.FirstOrDefault() is SelectManyQueryMethodExpressionConverter);
+
         /// <inheritdoc />
         protected override void OnSourceQueryCreated()
         {
@@ -105,27 +112,129 @@ namespace Atis.LinqToSql.ExpressionConverters
                                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
 
                 SqlQuerySourceExpression querySource;
-                //string alias;
-                if (otherDataSqlQuery.IsTableOnly())
+                if (!this.UseOtherDataSource && otherDataSqlQuery.IsTableOnly())
                 {
                     querySource = otherDataSqlQuery.InitialDataSource.DataSource;
-                    //alias = otherDataSqlQuery.InitialDataSource.DataSourceAlias;
                 }
                 else
                 {
                     querySource = otherDataSqlQuery;
-                    //alias = this.Context.GenerateAlias();
                 }
 
-                this.joinedDataSource = new SqlDataSourceExpression(querySource);
-                this.SourceQuery.AddDataSource(this.joinedDataSource);
+                if (this.UseOtherDataSource)
+                {
+                    this.joinedDataSource = new SqlDataSourceExpression(Guid.NewGuid(), querySource, modelPath: ModelPath.Empty, tag: null, nodeType: SqlExpressionType.OtherDataSource);
+                    this.SourceQuery.AddOtherDataSource(this.joinedDataSource, null);
+                }
+                else
+                {
+                    this.joinedDataSource = new SqlDataSourceExpression(Guid.NewGuid(), querySource, modelPath: ModelPath.Empty, tag: null, nodeType: SqlExpressionType.DataSource);
+                    this.SourceQuery.AddDataSource(this.joinedDataSource);
+                }
 
                 var otherColumnLambda = this.GetArgumentLambda(this.OtherColumnsArgIndex);
                 var selectLambda = this.GetArgumentLambda(this.SelectArgIndex);
-                this.ParameterMap.TrySetParameterMap(otherColumnLambda.Parameters[0], this.joinedDataSource);
+                if (this.UseOtherDataSource)
+                {
+                    this.ParameterMap.TrySetParameterMap(otherColumnLambda.Parameters[0], querySource);
+                }
 
-                // map 2nd argument of select argument to other data source
-                this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[1], this.joinedDataSource);
+                else
+                {
+                    this.ParameterMap.TrySetParameterMap(otherColumnLambda.Parameters[0], this.joinedDataSource);
+                }
+
+                this.ParameterMap.RemoveParameterMap(selectLambda.Parameters[0]);
+                this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[0], this.SourceQuery);
+                if (this.UseOtherDataSource)
+                {
+                    this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[1], querySource);
+                }
+                else
+                {
+                    // map 2nd argument of select argument to other data source
+                    this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[1], this.joinedDataSource);
+                }
+
+
+                //if (this.IsGroupJoin && this.HasProjection)
+                //{
+                //    var dataSourcePropertyInfoExtractor = new DataSourcePropertyInfoExtractor();
+                //    var updatedMapping = dataSourcePropertyInfoExtractor.RecalculateMemberMapping(this.GetArgumentLambda(this.SelectArgIndex));
+                //    if (updatedMapping.NewDataSourceMemberInfo == null)
+                //        throw new InvalidOperationException($"Unable to find the new data source in the 2nd argument of Join Query Method, make sure you have selected the 2nd parameter in New Data Source Expression.");
+
+                //    if (updatedMapping.CurrentDataSourceMemberInfo == null)
+                //    {
+                //        var dataSourceWithModelPath = this.SourceQuery.AllDataSources
+                //                                                        .Where(x => !x.ModelPath.IsEmpty)
+                //                                                        .Select(x => new { Ds = x, DsModelPath = x.ModelPath.GetLastElement() })
+                //                                                        .ToDictionary(x => x.DsModelPath, x => x.Ds);
+                //        foreach (var kv in updatedMapping.NewMap)
+                //        {
+                //            if (dataSourceWithModelPath.TryGetValue(kv.Value.Name, out var ds))
+                //            {
+                //                ds.ReplaceModelPathPrefix(kv.Key.Name);
+                //            }
+                //        }
+                //    }
+                //    else
+                //    {
+                //        foreach (var ds in this.SourceQuery.AllDataSources)
+                //        {
+                //            if (ds != this.joinedDataSource)
+                //            {
+                //                ds.AddModelPathPrefix(updatedMapping.CurrentDataSourceMemberInfo.Name);
+                //            }
+                //        }
+                //    }
+                //    this.joinedDataSource.AddModelPathPrefix(updatedMapping.NewDataSourceMemberInfo.Name);
+                //}
+            }
+            else if (argIndex == this.SourceColumnsArgIndex)
+            {
+                this.sourceColumnSelection = converterArgument;
+            }
+            else if (argIndex == this.OtherColumnsArgIndex)
+            {
+                // here we'll know that both parameters are converted
+
+                var otherColumnSelection = converterArgument;
+
+                SqlBinaryExpression joinPredicate = null;
+
+                if (sourceColumnSelection is SqlCollectionExpression sourceColumnCollection)
+                {
+                    if (otherColumnSelection is SqlCollectionExpression otherColumnCollection)
+                    {
+                        var sourceColumns = sourceColumnCollection.SqlExpressions.Cast<SqlColumnExpression>().ToArray();
+                        var otherColumns = otherColumnCollection.SqlExpressions.Cast<SqlColumnExpression>().ToArray();
+                        if (sourceColumns.Length != otherColumns.Length)
+                            throw new InvalidOperationException($"Source columns count {sourceColumns.Length} does not match other columns count {otherColumns.Length}.");
+
+                        for (var i = 0; i < sourceColumns.Length; i++)
+                        {
+                            var sourceColumn = sourceColumns[i].ColumnExpression;
+                            var otherColumn = otherColumns[i].ColumnExpression;
+                            var condition = new SqlBinaryExpression(sourceColumn, otherColumn, SqlExpressionType.Equal);
+                            joinPredicate = joinPredicate == null ? condition : new SqlBinaryExpression(joinPredicate, condition, SqlExpressionType.AndAlso);
+                        }
+                    }
+                    else
+                        throw new InvalidOperationException($"Expected {nameof(SqlCollectionExpression)} for other columns selection Arg-Index: {this.OtherColumnsArgIndex}.");
+                }
+                else
+                {
+                    joinPredicate = new SqlBinaryExpression(sourceColumnSelection, otherColumnSelection, SqlExpressionType.Equal);
+                }
+
+                if (this.UseOtherDataSource)
+                {
+                    (this.joinedDataSource.DataSource as SqlQueryExpression)?.ApplyWhere(joinPredicate);
+                    this.SourceQuery.UpdateOtherDataSourceJoinCondition(this.joinedDataSource, joinPredicate);
+                }
+
+                this.joinCondition = joinPredicate;
             }
         }
 
@@ -136,67 +245,51 @@ namespace Atis.LinqToSql.ExpressionConverters
             var otherColumnSelection = arguments[2];
             var projection = arguments[3];
 
-            SqlExpression joinCondition = null;
-
-            if (sourceColumnSelection is SqlCollectionExpression sourceColumnCollection)
+            if (!this.UseOtherDataSource)
             {
-                if (otherColumnSelection is SqlCollectionExpression otherColumnCollection)
-                {
-                    var sourceColumns = sourceColumnCollection.SqlExpressions.Cast<SqlColumnExpression>().ToArray();
-                    var otherColumns = otherColumnCollection.SqlExpressions.Cast<SqlColumnExpression>().ToArray();
-                    if (sourceColumns.Length != otherColumns.Length)
-                        throw new InvalidOperationException($"Source columns count {sourceColumns.Length} does not match other columns count {otherColumns.Length}.");
-
-                    for (var i = 0; i < sourceColumns.Length; i++)
-                    {
-                        var sourceColumn = sourceColumns[i].ColumnExpression;
-                        var otherColumn = otherColumns[i].ColumnExpression;
-                        var condition = new SqlBinaryExpression(sourceColumn, otherColumn, SqlExpressionType.Equal);
-                        joinCondition = joinCondition == null ? condition : new SqlBinaryExpression(joinCondition, condition, SqlExpressionType.AndAlso);
-                    }
-                }
-                else
-                    throw new InvalidOperationException($"Expected {nameof(SqlCollectionExpression)} for other columns selection Arg-Index: {this.OtherColumnsArgIndex}.");
+                var joinType = joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
+                var joinExpression = new SqlJoinExpression(joinType, joinedDataSource, joinCondition);
+                SourceQuery.ApplyJoin(joinExpression);
             }
-            else
-            {
-                joinCondition = new SqlBinaryExpression(sourceColumnSelection, otherColumnSelection, SqlExpressionType.Equal);
-            }
-
-            var joinType = this.joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
-            var joinExpression = new SqlJoinExpression(joinType, this.joinedDataSource, joinCondition);
-            this.SourceQuery.ApplyJoin(joinExpression);
 
             if (this.HasProjection)
             {
                 if (this.HasAutoProjection())
                 {
-                    var dataSourcePropertyInfoExtractor = new DataSourcePropertyInfoExtractor();
-                    var updatedMap = dataSourcePropertyInfoExtractor.RecalculateMemberMapping(this.GetArgumentLambda(this.SelectArgIndex));
-                    var lastDs = sqlQuery.DataSources.Last();
-                    if (updatedMap.CurrentDataSourceMemberInfo != null)
-                    {
-                        foreach (var ds in this.SourceQuery.AllDataSources)
-                        {
-                            if (ds != lastDs)
-                            {
-                                ds.AddModelPathPrefix(updatedMap.CurrentDataSourceMemberInfo.Name);
-                            }
-                        }
-                    }
-                    if (updatedMap.NewDataSourceMemberInfo != null)
-                    {
-                        lastDs.AddModelPathPrefix(updatedMap.NewDataSourceMemberInfo.Name);
-                    }
+                    this.ApplyAutoProjection(sqlQuery.AllDataSources);
                 }
                 else
                 {
-                    this.SourceQuery.ApplyProjection(projection);
+                    SourceQuery.ApplyProjection(projection);
                 }
             }
 
             return sqlQuery;
         }
+
+        private void ApplyAutoProjection(IReadOnlyCollection<SqlDataSourceExpression> allDataSources)
+        {
+            var extractor = new DataSourcePropertyInfoExtractor();
+            var updatedMap = extractor.RecalculateMemberMapping(GetArgumentLambda(SelectArgIndex));
+            var lastDs = allDataSources.Last();
+
+            if (updatedMap.CurrentDataSourceMemberInfo != null)
+            {
+                foreach (var ds in SourceQuery.AllDataSources)
+                {
+                    if (ds != lastDs)
+                    {
+                        ds.AddModelPathPrefix(updatedMap.CurrentDataSourceMemberInfo.Name);
+                    }
+                }
+            }
+
+            if (updatedMap.NewDataSourceMemberInfo != null)
+            {
+                lastDs.AddModelPathPrefix(updatedMap.NewDataSourceMemberInfo.Name);
+            }
+        }
+
 
         private bool HasProjection => this.Expression.Arguments.Count >= 5;
 

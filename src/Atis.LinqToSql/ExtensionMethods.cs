@@ -23,6 +23,20 @@ namespace Atis.LinqToSql
             return sqlQuerySource is SqlQueryExpression sqlQuery && sqlQuery.IsTableOnly();
         }
 
+        public static SqlColumnExpression[] GetProjections(this SqlExpression sqlExpression)
+        {
+            if (sqlExpression is SqlColumnExpression sqlColumnExpression)
+            {
+                return new[] { sqlColumnExpression };
+            }
+            else if (sqlExpression is SqlCollectionExpression sqlCollectionExpression)
+            {
+                return sqlCollectionExpression.SqlExpressions.Cast<SqlColumnExpression>().ToArray();
+            }
+            else
+                throw new InvalidOperationException($"Argument '{nameof(sqlExpression)}' must be of type '{nameof(SqlColumnExpression)}' or '{nameof(SqlCollectionExpression)}'.");
+        }
+
         public static bool TryGetScalarColumn(this SqlExpression sqlExpression, out SqlColumnExpression sqlScalarColumn)
         {
             if (sqlExpression is SqlColumnExpression sqlColumnExpression && sqlColumnExpression.NodeType == SqlExpressionType.ScalarColumn)

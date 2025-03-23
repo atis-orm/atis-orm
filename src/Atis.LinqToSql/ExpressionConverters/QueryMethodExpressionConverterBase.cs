@@ -139,10 +139,14 @@ namespace Atis.LinqToSql.ExpressionConverters
             {
                 SqlQueryExpression sqlQuery = (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlQueryExpression
                                                 ??
+(                                                (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression)?.DataSource as SqlQueryExpression
+                                                ??
                                                 convertedExpression as SqlQueryExpression;
-
+                
                 if (this.SourceQuery == null)
+                {
                     this.SourceQuery = sqlQuery;
+                }
 
                 if (sqlQuery != null)
                 {
