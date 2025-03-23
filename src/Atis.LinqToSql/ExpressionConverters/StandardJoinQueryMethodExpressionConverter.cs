@@ -82,6 +82,8 @@ namespace Atis.LinqToSql.ExpressionConverters
         private int SelectArgIndex => 4;
 
         private bool IsGroupJoin => this.Expression.Method.Name == nameof(Queryable.GroupJoin);
+        // SelectMany will flatten the result, so we'll consider the GroupJoin as normal Join
+        private bool UseOtherDataSource => IsGroupJoin && !(this.ConverterStack.FirstOrDefault() is SelectManyQueryMethodExpressionConverter);
 
         /// <inheritdoc />
         protected override void OnSourceQueryCreated()
@@ -110,7 +112,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
 
                 SqlQuerySourceExpression querySource;
-                if (!this.IsGroupJoin && otherDataSqlQuery.IsTableOnly())
+                if (!this.UseOtherDataSource && otherDataSqlQuery.IsTableOnly())
                 {
                     querySource = otherDataSqlQuery.InitialDataSource.DataSource;
                 }
@@ -119,7 +121,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                     querySource = otherDataSqlQuery;
                 }
 
-                if (this.IsGroupJoin)
+                if (this.UseOtherDataSource)
                 {
                     this.joinedDataSource = new SqlDataSourceExpression(Guid.NewGuid(), querySource, modelPath: ModelPath.Empty, tag: null, nodeType: SqlExpressionType.OtherDataSource);
                     this.SourceQuery.AddOtherDataSource(this.joinedDataSource, null);
@@ -132,18 +134,19 @@ namespace Atis.LinqToSql.ExpressionConverters
 
                 var otherColumnLambda = this.GetArgumentLambda(this.OtherColumnsArgIndex);
                 var selectLambda = this.GetArgumentLambda(this.SelectArgIndex);
-                if (this.IsGroupJoin)
+                if (this.UseOtherDataSource)
                 {
                     this.ParameterMap.TrySetParameterMap(otherColumnLambda.Parameters[0], querySource);
                 }
-                
-                else {
+
+                else
+                {
                     this.ParameterMap.TrySetParameterMap(otherColumnLambda.Parameters[0], this.joinedDataSource);
                 }
 
                 this.ParameterMap.RemoveParameterMap(selectLambda.Parameters[0]);
                 this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[0], this.SourceQuery);
-                if (this.IsGroupJoin)
+                if (this.UseOtherDataSource)
                 {
                     this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[1], querySource);
                 }
@@ -225,7 +228,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                     joinPredicate = new SqlBinaryExpression(sourceColumnSelection, otherColumnSelection, SqlExpressionType.Equal);
                 }
 
-                if (this.IsGroupJoin)
+                if (this.UseOtherDataSource)
                 {
                     (this.joinedDataSource.DataSource as SqlQueryExpression)?.ApplyWhere(joinPredicate);
                     this.SourceQuery.UpdateOtherDataSourceJoinCondition(this.joinedDataSource, joinPredicate);
@@ -242,18 +245,18 @@ namespace Atis.LinqToSql.ExpressionConverters
             var otherColumnSelection = arguments[2];
             var projection = arguments[3];
 
-            if (!IsGroupJoin)
+            if (!this.UseOtherDataSource)
             {
                 var joinType = joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
                 var joinExpression = new SqlJoinExpression(joinType, joinedDataSource, joinCondition);
                 SourceQuery.ApplyJoin(joinExpression);
             }
 
-            if (HasProjection)
+            if (this.HasProjection)
             {
-                if (HasAutoProjection())
+                if (this.HasAutoProjection())
                 {
-                    ApplyAutoProjection(sqlQuery.AllDataSources);
+                    this.ApplyAutoProjection(sqlQuery.AllDataSources);
                 }
                 else
                 {
