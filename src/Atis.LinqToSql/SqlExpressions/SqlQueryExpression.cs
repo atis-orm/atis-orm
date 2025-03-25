@@ -19,18 +19,6 @@ namespace Atis.LinqToSql.SqlExpressions
         Union,
     }
 
-    public class OtherDataSourceLink
-    {
-        public OtherDataSourceLink(SqlDataSourceExpression otherDataSource, SqlBinaryExpression joinCondition)
-        {
-            this.OtherDataSource = otherDataSource;
-            this.JoinCondition = joinCondition;
-        }
-
-        public SqlDataSourceExpression OtherDataSource { get; set; }
-        public SqlBinaryExpression JoinCondition { get; set; }
-    }
-
     /// <summary>
     ///     <para>
     ///         Represents a SQL query expression.
@@ -125,7 +113,7 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         Gets both normal data sources and CTE data sources combined.
         ///     </para>
         /// </summary>
-        public IReadOnlyCollection<SqlDataSourceExpression> AllDataSources => CombinedDataSources.Where(x => !(x.DataSource is SqlCteReferenceExpression)).Concat(this.cteDataSources).Concat(this.otherDataSources.Select(x => x.OtherDataSource)).ToArray();
+        public IReadOnlyCollection<SqlDataSourceExpression> AllDataSources => CombinedDataSources.Where(x => !(x.DataSource is SqlCteReferenceExpression)).Concat(this.cteDataSources).Concat(this.otherDataSources).ToArray();
 
         private readonly List<SqlJoinExpression> joins = new List<SqlJoinExpression>();
         /// <summary>
@@ -151,7 +139,7 @@ namespace Atis.LinqToSql.SqlExpressions
         ///     </para>
         /// </summary>
         public IReadOnlyCollection<SqlDataSourceExpression> CteDataSources => this.cteDataSources;
-        private readonly List<OtherDataSourceLink> otherDataSources = new List<OtherDataSourceLink>();
+        private readonly List<SqlDataSourceExpression> otherDataSources = new List<SqlDataSourceExpression>();
         /// <summary>
         ///     <para>
         ///         Gets the list of other data sources that were created and added to sql query.
@@ -160,7 +148,7 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         Usually GroupJoin data sources are added to this collection.
         ///     </para>
         /// </summary>
-        public IReadOnlyCollection<SqlDataSourceExpression> OtherDataSources => this.otherDataSources.Select(x => x.OtherDataSource).ToList();
+        public IReadOnlyCollection<SqlDataSourceExpression> OtherDataSources => this.otherDataSources;
         /// <summary>
         ///     <para>
         ///         Gets the list of Union expressions applied to the query.
@@ -255,17 +243,9 @@ namespace Atis.LinqToSql.SqlExpressions
             return usualDataSourceOrCteDataSource;
         }
 
-        public void AddOtherDataSource(SqlDataSourceExpression sqlDataSourceExpression, SqlBinaryExpression joinCondition)
+        public void AddOtherDataSource(SqlDataSourceExpression sqlDataSourceExpression)
         {
-            this.otherDataSources.Add(new OtherDataSourceLink(sqlDataSourceExpression, joinCondition));
-        }
-
-        public void UpdateOtherDataSourceJoinCondition(SqlDataSourceExpression sqlDataSourceExpression, SqlBinaryExpression joinCondition)
-        {
-            var otherDataSource = this.otherDataSources.FirstOrDefault(x => x.OtherDataSource == sqlDataSourceExpression);
-            if (otherDataSource is null)
-                throw new InvalidOperationException($"Other data source not found in the query.");
-            otherDataSource.JoinCondition = joinCondition;
+            this.otherDataSources.Add(sqlDataSourceExpression);
         }
 
         /// <summary>
@@ -559,10 +539,7 @@ namespace Atis.LinqToSql.SqlExpressions
                     if (colDictionary.ContainsKey(currentCol.ColumnAlias))
                     {
                         columnAlias = this.GenerateUniqueColumnAlias(colDictionary, currentCol.ColumnAlias);
-                        if (currentCol is SqlOuterApplyQueryColumnExpression outerApplyCol)
-                            colToAdd = new SqlOuterApplyQueryColumnExpression(outerApplyCol.ColumnExpression, columnAlias, outerApplyCol.ModelPath, outerApplyCol.OuterApplyQuery);
-                        else
-                            colToAdd = new SqlColumnExpression(currentCol.ColumnExpression, columnAlias, currentCol.ModelPath);
+                        colToAdd = this.ChangeSqlColumnExpressionAlias(currentCol, columnAlias);
                         projectionChanged = true;
                     }
                     colDictionary.Add(columnAlias, colToAdd);
@@ -572,6 +549,16 @@ namespace Atis.LinqToSql.SqlExpressions
             }
 
             return projection;
+        }
+
+        private SqlColumnExpression ChangeSqlColumnExpressionAlias(SqlColumnExpression sqlColumnExpression, string columnAlias)
+        {
+            SqlColumnExpression colToAdd;
+            if (sqlColumnExpression is SqlOuterApplyQueryColumnExpression outerApplyCol)
+                colToAdd = new SqlOuterApplyQueryColumnExpression(outerApplyCol.ColumnExpression, columnAlias, outerApplyCol.ModelPath, outerApplyCol.OuterApplyQuery);
+            else
+                colToAdd = new SqlColumnExpression(sqlColumnExpression.ColumnExpression, columnAlias, sqlColumnExpression.ModelPath);
+            return colToAdd;
         }
 
         private string GenerateUniqueColumnAlias(Dictionary<string, SqlColumnExpression> columns, string columnAlias)

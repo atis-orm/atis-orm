@@ -57,10 +57,9 @@ namespace Atis.LinqToSql.Postprocessors
                 // this is the top-most query
                 foreach (var cteDataSource in this.cteDataSources)
                 {
-                    // here it will create new Data Source same as cteDataSource except that
-                    // it will not be attached to any query
+                    // here it will create a detached copy of cteDataSource (data source)
                     var newDataSource = new SqlDataSourceExpression(cteDataSource);
-                    // and when we call this method this will attach the new data source
+                    // and when we call this method this will attach that copy
                     // to the query
                     updatedQuery.AddCteDataSource(newDataSource);
                 }

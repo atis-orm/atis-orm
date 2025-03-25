@@ -11,7 +11,7 @@ namespace Atis.LinqToSql.SqlExpressions
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         <see cref="ModelPath"/> is crucial in the LINQ-to-SQL normalization process, ensuring that model paths are 
+    ///         <see cref="ModelPath"/> is crucial in the LINQ Expression to SqlExpression normalization process, ensuring that model paths are 
     ///         consistently tracked and mapped between LINQ expressions and SQL expressions. It helps in correctly 
     ///         generating column aliases and mapping database results back to object graphs.
     ///     </para>

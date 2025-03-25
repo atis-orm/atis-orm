@@ -124,7 +124,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 if (this.UseOtherDataSource)
                 {
                     this.joinedDataSource = new SqlDataSourceExpression(Guid.NewGuid(), querySource, modelPath: ModelPath.Empty, tag: null, nodeType: SqlExpressionType.OtherDataSource);
-                    this.SourceQuery.AddOtherDataSource(this.joinedDataSource, null);
+                    this.SourceQuery.AddOtherDataSource(this.joinedDataSource);
                 }
                 else
                 {
@@ -155,41 +155,6 @@ namespace Atis.LinqToSql.ExpressionConverters
                     // map 2nd argument of select argument to other data source
                     this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[1], this.joinedDataSource);
                 }
-
-
-                //if (this.IsGroupJoin && this.HasProjection)
-                //{
-                //    var dataSourcePropertyInfoExtractor = new DataSourcePropertyInfoExtractor();
-                //    var updatedMapping = dataSourcePropertyInfoExtractor.RecalculateMemberMapping(this.GetArgumentLambda(this.SelectArgIndex));
-                //    if (updatedMapping.NewDataSourceMemberInfo == null)
-                //        throw new InvalidOperationException($"Unable to find the new data source in the 2nd argument of Join Query Method, make sure you have selected the 2nd parameter in New Data Source Expression.");
-
-                //    if (updatedMapping.CurrentDataSourceMemberInfo == null)
-                //    {
-                //        var dataSourceWithModelPath = this.SourceQuery.AllDataSources
-                //                                                        .Where(x => !x.ModelPath.IsEmpty)
-                //                                                        .Select(x => new { Ds = x, DsModelPath = x.ModelPath.GetLastElement() })
-                //                                                        .ToDictionary(x => x.DsModelPath, x => x.Ds);
-                //        foreach (var kv in updatedMapping.NewMap)
-                //        {
-                //            if (dataSourceWithModelPath.TryGetValue(kv.Value.Name, out var ds))
-                //            {
-                //                ds.ReplaceModelPathPrefix(kv.Key.Name);
-                //            }
-                //        }
-                //    }
-                //    else
-                //    {
-                //        foreach (var ds in this.SourceQuery.AllDataSources)
-                //        {
-                //            if (ds != this.joinedDataSource)
-                //            {
-                //                ds.AddModelPathPrefix(updatedMapping.CurrentDataSourceMemberInfo.Name);
-                //            }
-                //        }
-                //    }
-                //    this.joinedDataSource.AddModelPathPrefix(updatedMapping.NewDataSourceMemberInfo.Name);
-                //}
             }
             else if (argIndex == this.SourceColumnsArgIndex)
             {
@@ -231,7 +196,6 @@ namespace Atis.LinqToSql.ExpressionConverters
                 if (this.UseOtherDataSource)
                 {
                     (this.joinedDataSource.DataSource as SqlQueryExpression)?.ApplyWhere(joinPredicate);
-                    this.SourceQuery.UpdateOtherDataSourceJoinCondition(this.joinedDataSource, joinPredicate);
                 }
 
                 this.joinCondition = joinPredicate;
@@ -241,33 +205,31 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <inheritdoc />
         protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
         {
-            var sourceColumnSelection = arguments[1];
-            var otherColumnSelection = arguments[2];
             var projection = arguments[3];
 
             if (!this.UseOtherDataSource)
             {
                 var joinType = joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
                 var joinExpression = new SqlJoinExpression(joinType, joinedDataSource, joinCondition);
-                SourceQuery.ApplyJoin(joinExpression);
+                sqlQuery.ApplyJoin(joinExpression);
             }
 
             if (this.HasProjection)
             {
-                if (this.HasAutoProjection())
+                if (this.HasDefaultProjection())
                 {
-                    this.ApplyAutoProjection(sqlQuery.AllDataSources);
+                    this.UpdateModelMaps(sqlQuery.AllDataSources);
                 }
                 else
                 {
-                    SourceQuery.ApplyProjection(projection);
+                    sqlQuery.ApplyProjection(projection);
                 }
             }
 
             return sqlQuery;
         }
 
-        private void ApplyAutoProjection(IReadOnlyCollection<SqlDataSourceExpression> allDataSources)
+        private void UpdateModelMaps(IReadOnlyCollection<SqlDataSourceExpression> allDataSources)
         {
             var extractor = new DataSourcePropertyInfoExtractor();
             var updatedMap = extractor.RecalculateMemberMapping(GetArgumentLambda(SelectArgIndex));
@@ -275,7 +237,7 @@ namespace Atis.LinqToSql.ExpressionConverters
 
             if (updatedMap.CurrentDataSourceMemberInfo != null)
             {
-                foreach (var ds in SourceQuery.AllDataSources)
+                foreach (var ds in allDataSources)
                 {
                     if (ds != lastDs)
                     {
@@ -293,7 +255,7 @@ namespace Atis.LinqToSql.ExpressionConverters
 
         private bool HasProjection => this.Expression.Arguments.Count >= 5;
 
-        private bool HasAutoProjection()
+        private bool HasDefaultProjection()
         {
             if (this.HasProjection)
             {

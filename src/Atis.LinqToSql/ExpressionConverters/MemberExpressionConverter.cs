@@ -165,7 +165,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 throw new InvalidOperationException($"Unknown case");
 
             if (result.Length == 0)
-                throw new InvalidOperationException($"result.Length == 0");
+                throw new InvalidOperationException($"MemberExpression converter is unable to find any matching SqlExpression in Data Source for MemberExpression '{this.Expression}'. The parent expression extracted was '{parent.NodeType}'. This error usually occurs if the ModelPath is not correctly mapped in Data Source or Projection. For example, q.Select(x => new {{ f1 = new {{ p1 = x.Field1 }} }}).Select(x => x.f1.p1), in this example, when creating SqlColumnExpression, ModelPath for 1st SqlColumnExpression should be 'f1.p1', but if it is Empty or only 'p1' then it will not match with any projection in 2nd Select and will cause this error, x.f1.p1 (ModePath = f1.p1), while projection model path is 'p1'.");
             if (!result.Any(x => (x is SqlDataSourceReferenceExpression) ||
                                 (x is SqlColumnExpression)))
                 throw new InvalidOperationException($"result does not contain any {nameof(SqlDataSourceReferenceExpression)} or {nameof(SqlColumnExpression)}");
@@ -216,10 +216,10 @@ namespace Atis.LinqToSql.ExpressionConverters
                     return sqlColExpr.ColumnExpression;
                 else
                 {
-                        // it means firstItem will be SqlDataSourceReferenceExpression
-                        var resultAsDsRef = firstItem as SqlDataSourceReferenceExpression
-                                                ??
-                                                throw new InvalidOperationException($"Expected {nameof(SqlDataSourceReferenceExpression)} but got {firstItem.GetType().Name}");
+                    // it means firstItem will be SqlDataSourceReferenceExpression
+                    var resultAsDsRef = firstItem as SqlDataSourceReferenceExpression
+                                            ??
+                                            throw new InvalidOperationException($"Expected {nameof(SqlDataSourceReferenceExpression)} but got {firstItem.GetType().Name}");
                     var resultDs = resultAsDsRef.DataSource;
                     if (resultDs is SqlDataSourceExpression sqlQueryDs)
                     {
