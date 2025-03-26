@@ -89,19 +89,10 @@ namespace Atis.LinqToSql.ExpressionConverters
                     // if the projection has been applied, then we'll match with full or partial
                     // we cannot go anywhere else if the projection has been applied in the query
                     var columnExpressions = this.MatchWithProjection(path.Last(), sqlQuery);
-                    if (columnExpressions.Length == 1 && columnExpressions[0].ColumnExpression is SqlQueryExpression otherQuery)
-                    {
-                        otherQuery = otherQuery.CreateCopy();
-                        result = new SqlColumnExpression[] { new SqlColumnExpression(otherQuery, columnExpressions[0].ColumnAlias, columnExpressions[0].ModelPath) };
-                    }
-                    else if (columnExpressions.Length > 0 && columnExpressions.All(x => x is SqlSubQueryColumnExpression))
-                    {
-                        var firstCol = (SqlSubQueryColumnExpression)columnExpressions.First();
-                        var outerApplyQuery = firstCol.SubQuery.CreateCopy();
-                        result = new SqlColumnExpression[] { new SqlColumnExpression(outerApplyQuery, columnExpressions[0].ColumnAlias, columnExpressions[0].ModelPath) };
-                    }
-                    else
+                    if (!this.TryHandleSubQueryProjection(columnExpressions, out var newResult))
                         result = columnExpressions;
+                    else
+                        result = newResult;
                     resultSource = sqlQuery;
                 }
                 else
@@ -208,7 +199,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                     else if (result.Any(x => x is SqlDataSourceReferenceExpression))
                     {
                         // we'll usually reach here in case if the data source is directly selected in projection
-                        // e.g. q.Select(x => x.nestedShape)        where nestedShape = { t1, t2 }
+                        // e.g. q.Select(x => x.nestedShape)        <- nestedShape = { t1, t2 }
                         //      so before this selection, we had to select a field like this, x.nestedShape.t1.Field1
                         //      but after this selection we'll select field like this, x.t1.Field1
                         var newResult = new List<SqlExpression>();
@@ -217,6 +208,11 @@ namespace Atis.LinqToSql.ExpressionConverters
                             var ds = (result[i] as SqlDataSourceReferenceExpression).DataSource as SqlDataSourceExpression
                                         ??
                                         throw new InvalidOperationException($"result[{i}] does not contain SqlDataSourceExpression.");
+                            // from above example, path would be t1, so we'll create a new path using data source's path
+                            // like this,
+                            //      data source path = nestedShape.t1
+                            //      given path = t1     =>  remove until t1
+                            //      new path would be = t1
                             var newModelPath = ds.ModelPath.RemovePrefixPath(path);
                             newResult.Add(new SqlColumnExpression(new SqlDataSourceReferenceExpression(ds), null, newModelPath));
                         }
@@ -300,18 +296,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 }
 
                 var matchedProjections = this.MatchWithProjection(lastPathSegment, queryToUse);
-                if (matchedProjections.Length == 1 && matchedProjections[0].ColumnExpression is SqlQueryExpression otherQuery)
-                {
-                    otherQuery = otherQuery.CreateCopy();
-                    result = new SqlColumnExpression[] { new SqlColumnExpression(otherQuery, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath) };
-                }
-                else if (matchedProjections.Length > 0 && matchedProjections.All(x => x is SqlSubQueryColumnExpression))
-                {
-                    var firstCol = (SqlSubQueryColumnExpression)matchedProjections.First();
-                    var outerApplyQuery = firstCol.SubQuery.CreateCopy();
-                    result = new SqlColumnExpression[] { new SqlColumnExpression(outerApplyQuery, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath) };
-                }
-                else
+                if (!this.TryHandleSubQueryProjection(matchedProjections, out result))
                 {
                     /*
                      var q = QueryExtensions
@@ -372,5 +357,31 @@ namespace Atis.LinqToSql.ExpressionConverters
                         .Where(x => x.ModelPath.StartsWith(lastPathSegment))
                         .ToArray();
         }
+
+        private bool TryHandleSubQueryProjection(SqlColumnExpression[] matchedProjections, out SqlColumnExpression[] updatedResult)
+        {
+            if (matchedProjections.Length == 1 &&
+                matchedProjections[0].ColumnExpression is SqlQueryExpression singleQuery)
+            {
+                var copied = singleQuery.CreateCopy();
+                var projection = new SqlColumnExpression(copied, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath);
+                updatedResult = new[] { projection };
+                return true;
+            }
+
+            if (matchedProjections.Length > 0 &&
+                matchedProjections.All(x => x is SqlSubQueryColumnExpression))
+            {
+                var first = (SqlSubQueryColumnExpression)matchedProjections.First();
+                var copied = first.SubQuery.CreateCopy();
+                var projection = new SqlColumnExpression(copied, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath);
+                updatedResult = new[] { projection };
+                return true;
+            }
+
+            updatedResult = null;
+            return false;
+        }
+
     }
 }
