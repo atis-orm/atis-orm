@@ -11,7 +11,7 @@ namespace Atis.LinqToSql.SqlExpressions
     /// </summary>
     /// <remarks>
     ///     <para>
-    ///         <see cref="ModelPath"/> is crucial in the LINQ-to-SQL normalization process, ensuring that model paths are 
+    ///         <see cref="ModelPath"/> is crucial in the LINQ Expression to SqlExpression normalization process, ensuring that model paths are 
     ///         consistently tracked and mapped between LINQ expressions and SQL expressions. It helps in correctly 
     ///         generating column aliases and mapping database results back to object graphs.
     ///     </para>
@@ -97,6 +97,34 @@ namespace Atis.LinqToSql.SqlExpressions
         {
             var pathParts = startingPath?.Split('.');
             return StartsWith(pathParts);
+        }
+
+        public bool EndsWith(ModelPath path)
+        {
+            return this.EndsWith(path.PathElements);
+        }
+
+        public bool EndsWith(string[] path)
+        {
+            if (path is null || path.Length == 0)
+            {
+                return this.IsEmpty;
+            }
+            // if we are here it means pathParts is neither null nor empty
+            // that's why we are saying if this.Map is null or empty then return false
+            if (this.IsEmpty)
+                return false;
+            var myPathElements = this.PathElements;
+            var pathLength = path.Length;
+            var myPathLength = myPathElements.Length;
+            for (int i = 0; i < pathLength; i++)
+            {
+                if (i >= myPathLength || path[pathLength - i - 1] != myPathElements[myPathLength - i - 1])
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         /// <summary>
@@ -292,7 +320,7 @@ namespace Atis.LinqToSql.SqlExpressions
         /// <returns>A string that represents the current instance.</returns>
         public override string ToString()
         {
-            return this.Path ?? "(empty path)";
+            return this.IsEmpty ? "(empty path)" : this.Path;
         }
     }
 }

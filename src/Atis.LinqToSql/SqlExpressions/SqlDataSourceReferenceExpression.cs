@@ -91,5 +91,10 @@ namespace Atis.LinqToSql.SqlExpressions
 
             return this;
         }
+
+        public override string ToString()
+        {
+            return $"ds-ref: {this.DataSource.NodeType}";
+        }
     }
 }

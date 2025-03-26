@@ -83,7 +83,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         {
             var sqlExpression = this.GetDataSourceByParameterExpression()
                             ??
-                            throw new InvalidOperationException($"No SqlExpression found for '{this.Expression}'");
+                            throw new InvalidOperationException($"No SqlExpression found for ParameterExpression '{this.Expression}'. This error usually indicates that the Query Method converter is not converting the first parameter to SqlQueryExpression, e.g. Select(customExpression, x => x.Field1), assume that 'customExpression' is not converting correctly to SqlQueryExpression, therefore, parameter 'x' will not be linked to any SqlQueryExpression instance and will cause this error when translating 'x' part of 'x.Field1' expression. Another reason could be that a custom query method's LambdaExpression parameter is not being mapped to any Data Source. E.g. CustomMethod(query, x => x.Field1, (p1, p2) => new {{ p1, p2 }}), so 'p1' and 'p2' parameters might be presenting data sources but not mapped to any. This is the responsibility of CustomMethod converter class to map those using ILambdaParameterToDataSourceMapper.");
             var isLeafNode = !(this.ParentExpression is MemberExpression);
             // isLeafNode is true when the ParameterExpression is selected alone
             if (!(sqlExpression is SqlQueryExpression || sqlExpression is SqlDataSourceExpression))
@@ -97,13 +97,13 @@ namespace Atis.LinqToSql.ExpressionConverters
                     if (scalarVal != null)
                         return scalarVal;
                 }
-                if (sqlExpression is SqlDataSourceExpression ds && ds.NodeType == SqlExpressionType.OtherDataSource)
+                if (sqlExpression is SqlDataSourceExpression ds && ds.NodeType == SqlExpressionType.SubQueryDataSource)
                 {
                     var otherDataSourceQuery = ds.DataSource as SqlQueryExpression
                                                 ??
                                                 throw new InvalidOperationException($"'{ds.DataSource}' is not a SqlQueryExpression");
                     // other data source cannot be modified itself, it will always make a copy whenever used
-                    var newSqlQuery = otherDataSourceQuery.CreateCopy(clearModelMaps: true);
+                    var newSqlQuery = otherDataSourceQuery.CreateCopy();
                     result = newSqlQuery;
                 }
                 else

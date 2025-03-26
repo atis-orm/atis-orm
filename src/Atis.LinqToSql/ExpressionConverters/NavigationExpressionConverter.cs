@@ -103,9 +103,9 @@ namespace Atis.LinqToSql.ExpressionConverters
                 // Initially if the navigation property is directly applied to the parameter, for example, x.NavItem
                 // then this.navigationParent will be `x` that is the query itself
                 // if the nested navigation is used, for example, x.NavItem.NavItemBase
-                // in that case first call be landed here as x.NavItem which will be translated to a new SqlDataSourceExpression (NavItem_2)
+                // in that case first call landed here as x.NavItem which will be translated to a new SqlDataSourceExpression (NavItem_2)
                 // and this data source is going to be added in `x` query.
-                // Then 2nd time we'll land here for NavItem.NavItemBase, NavItem already be translated to NavItem_2 SqlDataSourceExpression
+                // Then 2nd time we'll land here for NavItem.NavItemBase, NavItem has already been translated to NavItem_2 SqlDataSourceExpression
                 // so NavItemBase will be added as a new SqlDataSourceExpression (NavItemBase_3), in `x` query. You might wonder why this
                 // new navigation is being added to `x` query instead of NavItem_2, because NavItem_2 is not really a query, it's simply a Data Source
                 // added to `x` and all the new nested navigations will be added to same query as joins
@@ -116,7 +116,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 // this.navigationParent can be a child data source within the query, navigationParentSqlQuery will
                 // be the parent SqlQueryExpression extracted through this.navigationParent
 
-                // below this.navigationParent is important pass because it can be a child Data Source
+                // in below call, `this.navigationParent` (1st parameter) is important pass because it can be a child Data Source
                 // notice the   !  (not)
                 //    _________/
                 //   /

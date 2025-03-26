@@ -68,6 +68,8 @@ namespace Atis.LinqToSql.ExpressionConverters
             var selector = arguments[0];
             if (selector is SqlCollectionExpression sqlCollection && !sqlCollection.SqlExpressions.Any(x => x is SqlColumnExpression))
             {
+                // if we are here, then it means user has directly selected the data source / column expression without
+                // doing a NewExpression
                 var projectionCreator = new ProjectionCreator();
                 var sqlColumns = projectionCreator.Create(sqlCollection);
                 selector = new SqlCollectionExpression(sqlColumns);

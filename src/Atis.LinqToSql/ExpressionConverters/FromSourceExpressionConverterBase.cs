@@ -51,7 +51,6 @@ namespace Atis.LinqToSql.ExpressionConverters
                 {
                     if (sqlQuery.Projection == null)
                         throw new InvalidOperationException($"Projection has not been applied to the SqlQueryExpression at index {i}");
-                    sqlQuery.AddModelPathPrefix(memberName);
                 }
                 // TODO: add the member name some how in the navigation
                 var sqlFromSourceExpression = new SqlFromSourceExpression(tableOrSubQuery, new ModelPath(memberName));

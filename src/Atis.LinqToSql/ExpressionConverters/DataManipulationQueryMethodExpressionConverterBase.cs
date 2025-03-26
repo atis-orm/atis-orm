@@ -49,12 +49,18 @@ namespace Atis.LinqToSql.ExpressionConverters
                         {
                             // we will be here for example in the above case for `ms.item`
                             var path = memberExpression.GetModelPath();
-                            var modelPath = new ModelPath(path);
-                            var dataSource = this.SourceQuery.DataSources.Where(x => x.ModelPath.Equals(modelPath)).FirstOrDefault();
-                            if (dataSource != null)
+
+                            var projections = this.SourceQuery.Projection.GetProjections();
+                            var matchedColumns = projections.Where(x => x.ModelPath.StartsWith(path)).ToArray();
+                            if (matchedColumns.Length > 0 &&
+                                matchedColumns.All(x => x.ColumnExpression is SqlDataSourceColumnExpression))
                             {
-                                convertedExpression = dataSource;
-                                return true;
+                                if (matchedColumns.GroupBy(x => ((SqlDataSourceColumnExpression)x.ColumnExpression).DataSource).Count() == 1)
+                                {
+                                    var ds = ((SqlDataSourceColumnExpression)matchedColumns.First().ColumnExpression).DataSource;
+                                    convertedExpression = ds;
+                                    return true;
+                                }
                             }
                         }
                     }
