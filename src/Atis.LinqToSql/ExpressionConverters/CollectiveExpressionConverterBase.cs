@@ -35,7 +35,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             var arguments = this.GetSqlExpressions(convertedChildren);
             var memberNames = this.GetMemberNames();
             var collection = this.CreateCollection(arguments, memberNames);
-            return new SqlCollectionExpression(collection);
+            return this.SqlFactory.CreateCollection(collection);
         }
 
         /// <summary>

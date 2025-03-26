@@ -69,7 +69,7 @@ namespace Atis.LinqToSql
 
         protected internal virtual SqlExpression VisitSqlDataSourceExpression(SqlDataSourceExpression sqlDataSourceExpression)
         {
-            var dataSource = this.VisitAndConvert(sqlDataSourceExpression.DataSource);
+            var dataSource = this.VisitAndConvert(sqlDataSourceExpression.QuerySource);
             return sqlDataSourceExpression.Update(dataSource);
         }
 
@@ -159,7 +159,7 @@ namespace Atis.LinqToSql
 
         protected internal virtual SqlExpression VisitCustom(SqlExpression node)
         {
-            return node;
+            return node.VisitChildren(this);
         }
 
         protected internal virtual SqlExpression VisitSqlTableExpression(SqlTableExpression sqlTableExpression)
@@ -167,11 +167,11 @@ namespace Atis.LinqToSql
             return sqlTableExpression;
         }
 
-        protected internal virtual SqlExpression VisitSqlFromSourceExpression(SqlFromSourceExpression sqlFromSourceExpression)
-        {
-            var dataSource = this.VisitAndConvert(sqlFromSourceExpression.DataSource);
-            return sqlFromSourceExpression.Update(dataSource);
-        }
+        //protected internal virtual SqlExpression VisitSqlFromSourceExpression(SqlFromSourceExpression sqlFromSourceExpression)
+        //{
+        //    var dataSource = this.VisitAndConvert(sqlFromSourceExpression.DataSource);
+        //    return sqlFromSourceExpression.Update(dataSource);
+        //}
 
         protected internal virtual SqlExpression VisitSqlUnionExpression(SqlUnionExpression sqlUnionExpression)
         {
@@ -212,5 +212,21 @@ namespace Atis.LinqToSql
             var operand = this.Visit(sqlNotExpression.Operand);
             return sqlNotExpression.Update(operand);
         }
+
+        protected internal SqlExpression VisitDataSourceReferenceExpression(SqlDataSourceReferenceExpression sqlDataSourceReferenceExpression)
+        {
+            return sqlDataSourceReferenceExpression;
+        }
+
+        protected internal SqlExpression VisitSelectedCollectionExpression(SqlSelectedCollectionExpression sqlSelectedCollectionExpression)
+        {
+            return sqlSelectedCollectionExpression;
+        }
+
+        //protected internal SqlExpression VisitSqlSubQueryColumnExpression(SqlSubQueryColumnExpression sqlSubQueryColumnExpression)
+        //{
+        //    var columnExpression = this.VisitAndConvert(sqlSubQueryColumnExpression.ColumnExpression);
+        //    return sqlSubQueryColumnExpression.Update(columnExpression);
+        //}
     }
 }

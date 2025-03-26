@@ -9,12 +9,12 @@ namespace Atis.LinqToSql
     {
         private readonly int maxIterations;
         protected List<IPostprocessor> PostProcessors { get; } = new List<IPostprocessor>();
-        public PostprocessorProvider(IEnumerable<IPostprocessor> postprocessors, int maxIterations = 50)
+        public PostprocessorProvider(ISqlExpressionFactory sqlFactory, IEnumerable<IPostprocessor> postprocessors, int maxIterations = 50)
         {
             if (postprocessors != null)
                 this.PostProcessors.AddRange(postprocessors);
-            this.PostProcessors.Add(new CteFixPostProcessor());
-            this.PostProcessors.Add(new CteCrossJoinPostprocessor());
+            this.PostProcessors.Add(new CteFixPostProcessor(sqlFactory));
+            this.PostProcessors.Add(new CteCrossJoinPostprocessor(sqlFactory));
             this.maxIterations = maxIterations;
         }
 

@@ -63,7 +63,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 var whereCondition = arguments[0];
                 sqlQuery.ApplyWhere(whereCondition);
             }
-            sqlQuery.ApplyTop(new SqlLiteralExpression(1));
+            sqlQuery.ApplyTop(this.SqlFactory.CreateLiteral(1));
             return sqlQuery;
         }
     }

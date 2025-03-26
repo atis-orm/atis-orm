@@ -17,6 +17,7 @@ namespace Atis.LinqToSql.SqlExpressions
                 SqlExpressionType.DataSource,
                 SqlExpressionType.CteDataSource,
                 SqlExpressionType.SubQueryDataSource,      // this data source will be added because of GroupJoin
+                SqlExpressionType.FromSource,
             };
         private static SqlExpressionType ValidateNodeType(SqlExpressionType nodeType)
             => _allowedTypes.Contains(nodeType)
@@ -36,18 +37,14 @@ namespace Atis.LinqToSql.SqlExpressions
         {
         }
 
-        public SqlDataSourceExpression(SqlQuerySourceExpression dataSource, ModelPath modelPath)
-            : this(dataSource, modelPath, tag: null)
-        {
-        }
-
         public SqlDataSourceExpression(SqlQuerySourceExpression dataSource, ModelPath modelPath, string tag)
             : this(Guid.NewGuid(), dataSource, modelPath, tag)
         {
         }
+
         public SqlDataSourceExpression(Guid dataSourceAlias, SqlQuerySourceExpression dataSource, ModelPath modelPath, string tag, SqlExpressionType nodeType = SqlExpressionType.DataSource)
         {
-            this.DataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+            this.QuerySource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
             this.DataSourceAlias = dataSourceAlias;// ?? throw new ArgumentNullException(nameof(dataSourceAlias));
             this.ModelPath = modelPath;
             this.Tag = tag;
@@ -57,7 +54,7 @@ namespace Atis.LinqToSql.SqlExpressions
 
         public SqlDataSourceExpression(SqlDataSourceExpression copyFrom)
         {
-            this.DataSource = copyFrom.DataSource;
+            this.QuerySource = copyFrom.QuerySource;
             this.DataSourceAlias = copyFrom.DataSourceAlias;
             this.ModelPath = copyFrom.ModelPath;
             this.Tag = copyFrom.Tag;
@@ -69,7 +66,7 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         Gets the data source expression.
         ///     </para>
         /// </summary>
-        public SqlQuerySourceExpression DataSource { get; }
+        public SqlQuerySourceExpression QuerySource { get; }
         /// <summary>
         ///     <para>
         ///         Gets the parent SQL query expression.
@@ -113,7 +110,7 @@ namespace Atis.LinqToSql.SqlExpressions
 
         public SqlDataSourceExpression Update(SqlQuerySourceExpression dataSource)
         {
-            if (dataSource == this.DataSource)
+            if (dataSource == this.QuerySource)
                 return this;
             return new SqlDataSourceExpression(this.DataSourceAlias, dataSource, this.ModelPath, this.Tag, nodeType: this.NodeType);
         }
@@ -138,7 +135,7 @@ namespace Atis.LinqToSql.SqlExpressions
         /// <returns>A string representation of the SQL data source expression.</returns>
         public override string ToString()
         {
-            return $"dataSource-{this.DataSource.NodeType}: {DebugAliasGenerator.GetAlias(this)}";
+            return $"dataSource-{this.QuerySource.NodeType}: {DebugAliasGenerator.GetAlias(this)}";
         }
 
         /// <summary>

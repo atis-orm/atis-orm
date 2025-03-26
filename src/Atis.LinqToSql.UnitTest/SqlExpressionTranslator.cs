@@ -222,12 +222,12 @@ namespace Atis.LinqToSql.UnitTest
                 if (sqlQueryExpression.CteDataSources.Count > 0)
                 {
                     initialDataSource = this.Translate(sqlQueryExpression.InitialDataSource);
-                    dataSourceToString = sqlQueryExpression.CteDataSources.Select(x => $"{this.GetSimpleAlias(x.DataSourceAlias, "cte")} as \r\n{this.Translate(x.DataSource).Replace("\r\n", "\t\r\n")}").ToArray();
+                    dataSourceToString = sqlQueryExpression.CteDataSources.Select(x => $"{this.GetSimpleAlias(x.DataSourceAlias, "cte")} as \r\n{this.Translate(x.QuerySource).Replace("\r\n", "\t\r\n")}").ToArray();
                     fromString = initialDataSource;
                 }
                 else
                 {
-                    dataSourceToString = sqlQueryExpression.DataSources.Take(1).Select(x => $"{this.GetSimpleAlias(x.DataSourceAlias, x.Tag)} as \r\n{this.Translate(x.DataSource).Replace("\r\n", "\t\r\n")}").ToArray();
+                    dataSourceToString = sqlQueryExpression.DataSources.Take(1).Select(x => $"{this.GetSimpleAlias(x.DataSourceAlias, x.Tag)} as \r\n{this.Translate(x.QuerySource).Replace("\r\n", "\t\r\n")}").ToArray();
                     fromString = this.GetSimpleAlias(sqlQueryExpression.InitialDataSource.DataSourceAlias, sqlQueryExpression.InitialDataSource.Tag);
                 }
             }
@@ -408,7 +408,7 @@ namespace Atis.LinqToSql.UnitTest
 
         private string TranslateSqlDataSourceExpression(SqlDataSourceExpression sqlDataSourceExpression)
         {
-            var dataSourceTranslated = this.Translate(sqlDataSourceExpression.DataSource);
+            var dataSourceTranslated = this.Translate(sqlDataSourceExpression.QuerySource);
             //if (sqlDataSourceExpression.DataSource is SqlQueryExpression)
             //{
             //    dataSourceTranslated = $"(\r\n\t{dataSourceTranslated.Replace("\r\n", "\r\n\t")}\r\n)";

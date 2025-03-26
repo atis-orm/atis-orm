@@ -138,7 +138,7 @@ namespace Atis.LinqToSql.UnitTest
             System.Diagnostics.Debug.WriteLine($"{nameof(SqlDataSourceExpression)} ({sqlDataSourceExpression.DataSourceAlias}):");
             System.Diagnostics.Debug.Indent();
             System.Diagnostics.Debug.WriteLine("DataSource:");
-            this.Visit(sqlDataSourceExpression.DataSource);
+            this.Visit(sqlDataSourceExpression.QuerySource);
             System.Diagnostics.Debug.Unindent();
             return sqlDataSourceExpression;
         }
@@ -158,21 +158,21 @@ namespace Atis.LinqToSql.UnitTest
             return sqlExistsExpression;
         }
 
-        protected override SqlExpression VisitSqlFromSourceExpression(SqlFromSourceExpression sqlFromSourceExpression)
-        {
-            var elem = XmlDoc.CreateElement(nameof(SqlFromSourceExpression));
-            elem.Attributes.Append(elem.OwnerDocument.CreateAttribute("DataSourceAlias")).Value = sqlFromSourceExpression.DataSourceAlias.ToString();
-            currentNode.AppendChild(elem);
-            currentNode = XmlDoc.CreateElement("DataSource");
-            elem.AppendChild(currentNode);
+        //protected override SqlExpression VisitSqlFromSourceExpression(SqlFromSourceExpression sqlFromSourceExpression)
+        //{
+        //    var elem = XmlDoc.CreateElement(nameof(SqlFromSourceExpression));
+        //    elem.Attributes.Append(elem.OwnerDocument.CreateAttribute("DataSourceAlias")).Value = sqlFromSourceExpression.DataSourceAlias.ToString();
+        //    currentNode.AppendChild(elem);
+        //    currentNode = XmlDoc.CreateElement("DataSource");
+        //    elem.AppendChild(currentNode);
 
-            System.Diagnostics.Debug.WriteLine($"{nameof(SqlFromSourceExpression)} ({sqlFromSourceExpression.DataSourceAlias}):");
-            System.Diagnostics.Debug.Indent();
-            System.Diagnostics.Debug.WriteLine("DataSource:");
-            this.Visit(sqlFromSourceExpression.DataSource);
-            System.Diagnostics.Debug.Unindent();
-            return sqlFromSourceExpression;
-        }
+        //    System.Diagnostics.Debug.WriteLine($"{nameof(SqlFromSourceExpression)} ({sqlFromSourceExpression.DataSourceAlias}):");
+        //    System.Diagnostics.Debug.Indent();
+        //    System.Diagnostics.Debug.WriteLine("DataSource:");
+        //    this.Visit(sqlFromSourceExpression.DataSource);
+        //    System.Diagnostics.Debug.Unindent();
+        //    return sqlFromSourceExpression;
+        //}
 
         protected override SqlExpression VisitSqlFunctionCallExpression(SqlFunctionCallExpression sqlFunctionCallExpression)
         {

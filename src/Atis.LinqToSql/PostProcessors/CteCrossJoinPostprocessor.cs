@@ -16,6 +16,12 @@ namespace Atis.LinqToSql.Postprocessors
 
         private readonly Stack<SqlDataSourceExpression> dataSourceStack = new Stack<SqlDataSourceExpression>();
         private readonly List<CteUsage> cteUsages = new List<CteUsage>();
+        private readonly ISqlExpressionFactory sqlFactory;
+
+        public CteCrossJoinPostprocessor(ISqlExpressionFactory sqlFactory)
+        {
+            this.sqlFactory = sqlFactory;
+        }
 
         /// <inheritdoc />
         public void Initialize()
@@ -40,8 +46,8 @@ namespace Atis.LinqToSql.Postprocessors
                 {
                     if (consumerDataSource.NodeType == SqlExpressionType.CteDataSource)
                     {
-                        var cteReference = new SqlCteReferenceExpression(sqlDataSourceColumnExpression.DataSource.DataSourceAlias);
-                        var cteReferenceDataSource = new SqlDataSourceExpression(cteReference.CteAlias, cteReference, modelPath: ModelPath.Empty, tag: null, nodeType: SqlExpressionType.DataSource);
+                        var cteReference = this.sqlFactory.CreateCteReference(sqlDataSourceColumnExpression.DataSource.DataSourceAlias);
+                        var cteReferenceDataSource =this.sqlFactory.CreateDataSourceForCteReference(cteReference.CteAlias, cteReference);
                         // now this new data source (cteReferenceDataSource) needs to be added in the consumer CTE (lastDataSource.ParentSqlQuery)
                         // but we cannot modify the SqlQueryExpression here it will disturb the whole visit process
                         // when it reaches back to SqlQueryExpression Visit method
@@ -53,7 +59,7 @@ namespace Atis.LinqToSql.Postprocessors
                                 NewCteReferenceToAdd = cteReferenceDataSource
                             });
                         }
-                        var newSqlDsColumn = new SqlDataSourceColumnExpression(cteReferenceDataSource, sqlDataSourceColumnExpression.ColumnName);
+                        var newSqlDsColumn = this.sqlFactory.CreateDataSourceColumn(cteReferenceDataSource, sqlDataSourceColumnExpression.ColumnName);
                         // here we are changing the cte_1 (CTE data source reference).Column to cte_1 (CTE reference).Column
                         return newSqlDsColumn;
                     }
@@ -69,7 +75,7 @@ namespace Atis.LinqToSql.Postprocessors
 
             if (updatedNode is SqlQueryExpression sqlQuery)
             {
-                var dataSourcesToAdd = this.cteUsages.Where(x => x.CteConsumer.DataSource == node).ToArray();
+                var dataSourcesToAdd = this.cteUsages.Where(x => x.CteConsumer.QuerySource == node).ToArray();
                 for (var i = 0; i < dataSourcesToAdd.Length; i++)
                 {
                     var cteUsage = dataSourcesToAdd[i];

@@ -37,7 +37,7 @@ namespace Atis.LinqToSql.ExpressionConverters
 
         protected override SqlExpression CreateDmSqlExpression(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource, SqlExpression[] arguments)
         {
-            var deleteSqlExpression = new SqlDeleteExpression(sqlQuery, selectedDataSource);
+            var deleteSqlExpression = this.SqlFactory.CreateDelete(sqlQuery, selectedDataSource);
             return deleteSqlExpression;
         }
 

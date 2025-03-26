@@ -8,6 +8,12 @@ namespace Atis.LinqToSql.Postprocessors
     {
         private readonly List<SqlDataSourceExpression> cteDataSources = new List<SqlDataSourceExpression>();
         private readonly Stack<SqlExpression> expressionStack = new Stack<SqlExpression>();
+        private readonly ISqlExpressionFactory sqlFactory;
+
+        public CteFixPostProcessor(ISqlExpressionFactory sqlFactory)
+        {
+            this.sqlFactory = sqlFactory;
+        }
 
         /// <inheritdoc />
         public void Initialize()
@@ -45,8 +51,8 @@ namespace Atis.LinqToSql.Postprocessors
                     this.cteDataSources.Add(cteDataSource);
 
                     var cteAlias = cteDataSource.DataSourceAlias;
-                    var cteReference = new SqlCteReferenceExpression(cteAlias);
-                    var newDataSource = new SqlDataSourceExpression(cteAlias, cteReference);
+                    var cteReference = this.sqlFactory.CreateCteReference(cteAlias);
+                    var newDataSource = this.sqlFactory.CreateDataSourceForCteReference(cteAlias, cteReference);
                     var updatedSqlQuery = updatedQuery.Update(newDataSource, updatedQuery.Joins, updatedQuery.WhereClause, updatedQuery.GroupBy, updatedQuery.Projection, updatedQuery.OrderBy, updatedQuery.Top, updatedQuery.CteDataSources, updatedQuery.HavingClause, updatedQuery.Unions);
                     updatedSqlQuery.SetAsNonCte();
                     return updatedSqlQuery;
@@ -58,7 +64,7 @@ namespace Atis.LinqToSql.Postprocessors
                 foreach (var cteDataSource in this.cteDataSources)
                 {
                     // here it will create a detached copy of cteDataSource (data source)
-                    var newDataSource = new SqlDataSourceExpression(cteDataSource);
+                    var newDataSource = this.sqlFactory.CreateDataSourceCopy(cteDataSource);
                     // and when we call this method this will attach that copy
                     // to the query
                     updatedQuery.AddCteDataSource(newDataSource);

@@ -96,7 +96,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             var entityType = this.reflectionService.GetEntityTypeFromQueryableType(this.Expression.Type);
             var tableName = this.model.GetTableName(entityType);
             var tableColumns = this.model.GetTableColumns(entityType);
-            var query = new SqlQueryExpression(new SqlDataSourceExpression(new SqlTableExpression(tableName, tableColumns)));
+            var query = this.SqlFactory.CreateQueryFromDataSource(this.SqlFactory.CreateDataSourceForTable(this.SqlFactory.CreateTable(tableName, tableColumns)));
             return query;
         }
     }

@@ -64,7 +64,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             if (this.Expression.Arguments.FirstOrDefault() == sourceExpression)
             {
                 // 1st parameter will be IQueryProvider so we'll simply return dummy
-                convertedExpression = new SqlLiteralExpression("dummy");
+                convertedExpression = this.SqlFactory.CreateLiteral("dummy");
                 return true;
             }
             convertedExpression = null;
@@ -120,12 +120,12 @@ namespace Atis.LinqToSql.ExpressionConverters
             if (dataSources is SqlCollectionExpression sqlExpressionCollection)
             {
                 var dataSourceList = this.GetDataSources(sqlExpressionCollection);
-                result = new SqlQueryExpression(dataSourceList);
+                result = this.SqlFactory.CreateQueryFromDataSources(dataSourceList);
             }
             else if (dataSources is SqlQueryExpression subQuery)
             {
                 var dataSource = this.GetDataSource(subQuery);
-                result = new SqlQueryExpression(dataSource);
+                result = this.SqlFactory.CreateQueryFromDataSource(dataSource);
             }
             else
                 throw new InvalidOperationException($"From method only supports NewExpression/MemberInitExpression or 'From' MethodCallExpression as argument");
@@ -138,29 +138,30 @@ namespace Atis.LinqToSql.ExpressionConverters
             var result = new List<SqlDataSourceExpression>();
             foreach (var sqlExpression in sqlExpressionCollection.SqlExpressions)
             {
-                var sqlColumnExpr = sqlExpression as SqlFromSourceExpression
+                var sqlColumnExpr = sqlExpression as SqlDataSourceExpression
                                        ??
-                                       throw new InvalidOperationException($"sqlExpression is not {nameof(SqlFromSourceExpression)}");
+                                       throw new InvalidOperationException($"sqlExpression is not {nameof(SqlDataSourceExpression)}");
                 var dataSource = this.GetDataSource(sqlColumnExpr);
                 result.Add(dataSource);
             }
             return result;
         }
 
-        private SqlFromSourceExpression GetDataSource(SqlExpression source)
+        private SqlDataSourceExpression GetDataSource(SqlExpression source)
         {
-            SqlFromSourceExpression fromSource = source as SqlFromSourceExpression;
-            SqlQueryExpression sqlQuery = fromSource?.DataSource as SqlQueryExpression
+            SqlDataSourceExpression fromSource = source as SqlDataSourceExpression;
+            SqlQueryExpression sqlQuery = fromSource?.QuerySource as SqlQueryExpression
                                             ??
                                             source as SqlQueryExpression;
             if (sqlQuery != null && sqlQuery.IsTableOnly())
             {
                 var firstDataSource = sqlQuery.DataSources.First();
-                return new SqlFromSourceExpression(firstDataSource.DataSourceAlias, firstDataSource.DataSource, fromSource?.ModelPath ?? ModelPath.Empty);
+                //return this.SqlFactory.CreateFromSource(firstDataSource.DataSourceAlias, firstDataSource.DataSource, fromSource?.ModelPath ?? ModelPath.Empty);
+                return this.SqlFactory.CreateFromSource(firstDataSource.QuerySource, fromSource?.ModelPath ?? ModelPath.Empty);
             }
             else if (fromSource != null)
             {
-                return new SqlFromSourceExpression(fromSource.DataSource, fromSource.ModelPath);
+                return this.SqlFactory.CreateFromSource(fromSource.QuerySource, fromSource.ModelPath);
             }
             throw new InvalidOperationException($"source is of type {source.GetType().Name}, which is not supported");
         }

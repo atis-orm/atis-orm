@@ -11,7 +11,7 @@ namespace Atis.LinqToSql.SqlExpressions
             this.DeletingDataSource = deletingDataSource ?? throw new ArgumentNullException(nameof(deletingDataSource));
             if (!this.SqlQuery.AllDataSources.Where(x => x == deletingDataSource).Any())
                 throw new ArgumentException("The deleting data source must be part of the query.", nameof(deletingDataSource));
-            if (!(deletingDataSource.DataSource is SqlTableExpression))
+            if (!(deletingDataSource.QuerySource is SqlTableExpression))
                 throw new ArgumentException("The deleting data source must be a table.", nameof(deletingDataSource));
         }
 

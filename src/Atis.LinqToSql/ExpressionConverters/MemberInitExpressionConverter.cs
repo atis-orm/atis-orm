@@ -61,7 +61,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         {
             if (sourceExpression == this.Expression.NewExpression)
             {
-                convertedExpression = new SqlLiteralExpression("dummy");
+                convertedExpression = this.SqlFactory.CreateLiteral("dummy");
                 return true;
             }
             convertedExpression = null;

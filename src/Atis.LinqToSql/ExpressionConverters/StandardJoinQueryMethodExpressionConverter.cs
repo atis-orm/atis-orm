@@ -114,7 +114,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 SqlQuerySourceExpression querySource;
                 if (!this.UseSubQueryDataSource && otherDataSqlQuery.IsTableOnly())
                 {
-                    querySource = otherDataSqlQuery.InitialDataSource.DataSource;
+                    querySource = otherDataSqlQuery.InitialDataSource.QuerySource;
                 }
                 else
                 {
@@ -123,12 +123,12 @@ namespace Atis.LinqToSql.ExpressionConverters
 
                 if (this.UseSubQueryDataSource)
                 {
-                    this.joinedDataSource = new SqlDataSourceExpression(Guid.NewGuid(), querySource, modelPath: ModelPath.Empty, tag: null, nodeType: SqlExpressionType.SubQueryDataSource);
+                    this.joinedDataSource = this.SqlFactory.CreateDataSourceForSubQuery(Guid.NewGuid(), querySource);
                     this.SourceQuery.AddSubQueryDataSource(this.joinedDataSource);
                 }
                 else
                 {
-                    this.joinedDataSource = new SqlDataSourceExpression(Guid.NewGuid(), querySource, modelPath: ModelPath.Empty, tag: null, nodeType: SqlExpressionType.DataSource);
+                    this.joinedDataSource = this.SqlFactory.CreateDataSourceForJoinedSource(Guid.NewGuid(), querySource);
                     this.SourceQuery.AddDataSource(this.joinedDataSource);
                 }
 
@@ -181,8 +181,8 @@ namespace Atis.LinqToSql.ExpressionConverters
                         {
                             var sourceColumn = sourceColumns[i].ColumnExpression;
                             var otherColumn = otherColumns[i].ColumnExpression;
-                            var condition = new SqlBinaryExpression(sourceColumn, otherColumn, SqlExpressionType.Equal);
-                            joinPredicate = joinPredicate == null ? condition : new SqlBinaryExpression(joinPredicate, condition, SqlExpressionType.AndAlso);
+                            var condition = this.SqlFactory.CreateBinary(sourceColumn, otherColumn, SqlExpressionType.Equal);
+                            joinPredicate = joinPredicate == null ? condition : this.SqlFactory.CreateBinary(joinPredicate, condition, SqlExpressionType.AndAlso);
                         }
                     }
                     else
@@ -190,12 +190,12 @@ namespace Atis.LinqToSql.ExpressionConverters
                 }
                 else
                 {
-                    joinPredicate = new SqlBinaryExpression(sourceColumnSelection, otherColumnSelection, SqlExpressionType.Equal);
+                    joinPredicate = this.SqlFactory.CreateBinary(sourceColumnSelection, otherColumnSelection, SqlExpressionType.Equal);
                 }
 
                 if (this.UseSubQueryDataSource)
                 {
-                    (this.joinedDataSource.DataSource as SqlQueryExpression)?.ApplyWhere(joinPredicate);
+                    (this.joinedDataSource.QuerySource as SqlQueryExpression)?.ApplyWhere(joinPredicate);
                 }
 
                 this.joinCondition = joinPredicate;
@@ -210,7 +210,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             if (!this.UseSubQueryDataSource)
             {
                 var joinType = joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
-                var joinExpression = new SqlJoinExpression(joinType, joinedDataSource, joinCondition);
+                var joinExpression = this.SqlFactory.CreateJoin(joinType, joinedDataSource, joinCondition);
                 sqlQuery.ApplyJoin(joinExpression);
             }
 

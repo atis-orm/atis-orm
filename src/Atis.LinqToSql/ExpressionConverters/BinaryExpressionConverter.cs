@@ -59,7 +59,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         {
             var left = convertedChildren[0];
             var right = convertedChildren[1];
-            var result = new SqlBinaryExpression(left, right, this.GetSqlExpressionType(this.Expression.NodeType));
+            SqlBinaryExpression result = this.SqlFactory.CreateBinary(left, right, this.GetSqlExpressionType(this.Expression.NodeType));
             return result;
         }
 

@@ -127,7 +127,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                                          ?? throw new InvalidOperationException($"Expected a SqlQuerySourceExpression but got {convertedExpression.GetType().Name}");
                     if (this.Expression.SqlJoinType != SqlJoinType.CrossApply && this.Expression.SqlJoinType != SqlJoinType.OuterApply)
                         sqlQuerySource = sqlQuerySource.ConvertToTableIfPossible();
-                    this.joinedDataSource = new SqlDataSourceExpression(sqlQuerySource, modelPath: ModelPath.Empty, tag: this.Expression.NavigationProperty);
+                    this.joinedDataSource = this.SqlFactory.CreateDataSourceForNavigation(sqlQuerySource, this.Expression.NavigationProperty);
                     navigationParentSqlQuery.AddJoinedDataSource(this.navigationParent, this.joinedDataSource, this.Expression.NavigationProperty);
                 }
 
@@ -185,12 +185,12 @@ namespace Atis.LinqToSql.ExpressionConverters
 
             if (applyJoin)
             {
-                var joinExpression = new SqlJoinExpression(this.Expression.SqlJoinType, joinedDataSource, joinConditionSqlExpression);
+                var joinExpression = this.SqlFactory.CreateJoin(this.Expression.SqlJoinType, joinedDataSource, joinConditionSqlExpression);
                 var navigationParentSqlQuery = this.GetNavigationParentSqlQuery();
                 navigationParentSqlQuery.ApplyJoin(joinExpression);
             }
 
-            return new SqlDataSourceReferenceExpression(this.joinedDataSource);
+            return this.SqlFactory.CreateDataSourceReference(this.joinedDataSource);
         }
 
         /// <inheritdoc/>

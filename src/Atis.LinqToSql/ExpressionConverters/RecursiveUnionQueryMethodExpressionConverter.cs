@@ -188,12 +188,12 @@ namespace Atis.LinqToSql.ExpressionConverters
                 //      from    cte_4 as a_2
                 //              inner join Employee as a_3 on(a_2.EmployeeId = a_3.ManagerId)
                 //
-                var cteReference = new SqlCteReferenceExpression(cteAlias);
+                var cteReference = this.SqlFactory.CreateCteReference(cteAlias);
                 // initial data source is the one which needs to be changed to CTE reference
                 // other data sources will be linking to the same data source, that's why
                 // it's crucial to use the same DataSourceAlias as all other joins and column selections
                 // will be using same DataSourceAlias
-                var newDataSource = new SqlDataSourceExpression(anchorMember.InitialDataSource.DataSourceAlias, cteReference);
+                var newDataSource = this.SqlFactory.CreateDataSourceForCteReference(anchorMember.InitialDataSource.DataSourceAlias, cteReference);
 
                 unionQuery = anchorMember.Update(newDataSource, anchorMember.Joins, anchorMember.WhereClause, anchorMember.GroupBy, anchorMember.Projection, anchorMember.OrderBy, anchorMember.Top, anchorMember.CteDataSources, anchorMember.HavingClause, anchorMember.Unions);
             }
@@ -217,14 +217,14 @@ namespace Atis.LinqToSql.ExpressionConverters
             unionQuery.ApplyAutoProjection();
             this.anchorQuery.ApplyUnion(unionQuery, unionAll: true);
 
-            var cteQuery = new SqlQueryExpression(cteAlias, this.anchorQuery);
+            var cteQuery = this.SqlFactory.CreateCteQuery(cteAlias, this.anchorQuery);
 
             return cteQuery;
         }
 
         private SqlQueryExpression ReplaceMainQueryWithCteReference(SqlQueryExpression mainQuery, SqlQueryExpression joinedQuery, Guid cteAlias)
         {
-            var cteReferenceReplacementVisitor = new CteReferenceReplacementVisitor(mainQuery, cteAlias);
+            var cteReferenceReplacementVisitor = new CteReferenceReplacementVisitor(mainQuery, cteAlias, this.SqlFactory);
             return cteReferenceReplacementVisitor.Visit(joinedQuery)
                     as SqlQueryExpression
                     ??
@@ -236,16 +236,19 @@ namespace Atis.LinqToSql.ExpressionConverters
         {
             private readonly SqlQueryExpression queryToReplace;
             private readonly Guid cteAlias;
+            private readonly ISqlExpressionFactory sqlFactory;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="CteReferenceReplacementVisitor"/> class.
             /// </summary>
             /// <param name="queryToReplace">The query to be replaced.</param>
             /// <param name="cteAlias">The CTE alias.</param>
-            public CteReferenceReplacementVisitor(SqlQueryExpression queryToReplace, Guid cteAlias)
+            /// <param name="sqlFactory"></param>
+            public CteReferenceReplacementVisitor(SqlQueryExpression queryToReplace, Guid cteAlias, ISqlExpressionFactory sqlFactory)
             {
                 this.queryToReplace = queryToReplace;
                 this.cteAlias = cteAlias;
+                this.sqlFactory = sqlFactory;
             }
 
             /// <inheritdoc />
@@ -253,8 +256,8 @@ namespace Atis.LinqToSql.ExpressionConverters
             {
                 if (sqlQueryExpression == this.queryToReplace)
                 {
-                    var cteReference = new SqlCteReferenceExpression(this.cteAlias);
-                    var newDataSource = new SqlDataSourceExpression(sqlQueryExpression.InitialDataSource.DataSourceAlias, cteReference);
+                    var cteReference = this.sqlFactory.CreateCteReference(this.cteAlias);
+                    var newDataSource = this.sqlFactory.CreateDataSourceForCteReference(sqlQueryExpression.InitialDataSource.DataSourceAlias, cteReference);
                     var updatedSqlQuery = sqlQueryExpression.Update(newDataSource, sqlQueryExpression.Joins, sqlQueryExpression.WhereClause, sqlQueryExpression.GroupBy, sqlQueryExpression.Projection, sqlQueryExpression.OrderBy, sqlQueryExpression.Top, sqlQueryExpression.CteDataSources, sqlQueryExpression.HavingClause, sqlQueryExpression.Unions);
                     return updatedSqlQuery;
                 }
@@ -264,10 +267,10 @@ namespace Atis.LinqToSql.ExpressionConverters
             /// <inheritdoc />
             protected internal override SqlExpression VisitSqlDataSourceExpression(SqlDataSourceExpression sqlDataSourceExpression)
             {
-                if (sqlDataSourceExpression.DataSource == this.queryToReplace)
+                if (sqlDataSourceExpression.QuerySource == this.queryToReplace)
                 {
-                    var cteReference = new SqlCteReferenceExpression(this.cteAlias);
-                    var newDataSource = new SqlDataSourceExpression(sqlDataSourceExpression.DataSourceAlias, cteReference);
+                    var cteReference = this.sqlFactory.CreateCteReference(this.cteAlias);
+                    var newDataSource = this.sqlFactory.CreateDataSourceForCteReference(sqlDataSourceExpression.DataSourceAlias, cteReference);
                     // when new data source is returned here, it will be returned back to VisitSqlQueryExpression method
                     // which will call Update method of SqlQueryExpression because of new SqlDataSourceExpression, in turn,
                     // SqlQueryExpression's Update method will set the ParentSqlQuery in this new SqlDataSourceExpression instance.

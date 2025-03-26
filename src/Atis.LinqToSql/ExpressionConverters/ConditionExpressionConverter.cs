@@ -60,7 +60,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             var test = convertedChildren[0];
             var ifTrue = convertedChildren[1];
             var ifFalse = convertedChildren[2];
-            var result = new SqlConditionalExpression(test, ifTrue, ifFalse);
+            var result = this.SqlFactory.CreateCondition(test, ifTrue, ifFalse);
             return result;
         }
     }

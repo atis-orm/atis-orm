@@ -72,7 +72,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 ascending = false;      // descending
             else
                 ascending = true;
-            var orderByExpression = new SqlOrderByExpression(orderByPart, ascending);
+            SqlOrderByExpression orderByExpression = this.SqlFactory.CreateOrderBy(orderByPart, ascending);
             sqlQuery.ApplyOrderBy(orderByExpression);
             return sqlQuery;
         }

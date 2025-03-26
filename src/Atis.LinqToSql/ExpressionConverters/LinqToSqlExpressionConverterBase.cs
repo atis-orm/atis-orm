@@ -23,6 +23,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         ///     </para>
         /// </summary>
         public IConversionContext Context { get; }
+        public ISqlExpressionFactory SqlFactory { get; }
 
         /// <summary>
         ///     <para>
@@ -36,6 +37,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             : base(expression, converters)
         {
             this.Context = context;
+            this.SqlFactory = this.Context.GetExtensionRequired<ISqlExpressionFactory>();
         }
 
         /// <summary>

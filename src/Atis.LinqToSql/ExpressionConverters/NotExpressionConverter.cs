@@ -33,7 +33,7 @@ namespace Atis.LinqToSql.ExpressionConverters
 
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            return new SqlNotExpression(convertedChildren[0]);
+            return this.SqlFactory.CreateNot(convertedChildren[0]);
         }
     }
 }

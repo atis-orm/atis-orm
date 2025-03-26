@@ -60,7 +60,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             var sourceExpression = convertedChildren[0];
-            return new SqlFunctionCallExpression("len", new SqlExpression[] { sourceExpression });
+            return this.SqlFactory.CreateFunctionCall("len", new SqlExpression[] { sourceExpression });
         }
     }
 }

@@ -70,9 +70,9 @@ namespace Atis.LinqToSql.ExpressionConverters
             {
                 // if we are here, then it means user has directly selected the data source / column expression without
                 // doing a NewExpression
-                var projectionCreator = new ProjectionCreator();
+                var projectionCreator = new ProjectionCreator(this.SqlFactory);
                 var sqlColumns = projectionCreator.Create(sqlCollection);
-                selector = new SqlCollectionExpression(sqlColumns);
+                selector = this.SqlFactory.CreateCollection(sqlColumns);
             }
             sqlQuery.ApplyProjection(selector);
             return sqlQuery;

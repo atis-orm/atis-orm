@@ -60,7 +60,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            return new SqlParameterExpression(this.Expression.Value);
+            return this.SqlFactory.CreateParameter(this.Expression.Value);
         }
     }
 }

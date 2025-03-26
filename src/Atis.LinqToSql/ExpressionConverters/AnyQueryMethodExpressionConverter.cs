@@ -63,7 +63,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 var whereCondition = arguments[0];
                 sqlQuery.ApplyWhere(whereCondition);
             }
-            var existsQuery = new SqlExistsExpression(sqlQuery);
+            var existsQuery = this.SqlFactory.CreateExists(sqlQuery);
             return existsQuery;
         }
     }

@@ -17,7 +17,7 @@ namespace Atis.LinqToSql.SqlExpressions
                 throw new ArgumentException("The number of columns must match the number of values.", nameof(columns));
             if (!this.SqlQuery.AllDataSources.Where(x => x == updatingDataSource).Any())
                 throw new ArgumentException("The updating data source must be part of the query.", nameof(updatingDataSource));
-            if (!(updatingDataSource.DataSource is SqlTableExpression))
+            if (!(updatingDataSource.QuerySource is SqlTableExpression))
                 throw new ArgumentException("The updating data source must be a table.", nameof(updatingDataSource));
         }
 
