@@ -320,7 +320,7 @@ namespace Atis.LinqToSql.SqlExpressions
         /// <returns>A string that represents the current instance.</returns>
         public override string ToString()
         {
-            return this.Path ?? "(empty path)";
+            return this.IsEmpty ? "(empty path)" : this.Path;
         }
     }
 }

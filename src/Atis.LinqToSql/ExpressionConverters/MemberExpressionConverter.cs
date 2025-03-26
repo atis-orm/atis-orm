@@ -207,15 +207,20 @@ namespace Atis.LinqToSql.ExpressionConverters
                     }
                     else if (result.Any(x => x is SqlDataSourceReferenceExpression))
                     {
+                        // we'll usually reach here in case if the data source is directly selected in projection
+                        // e.g. q.Select(x => x.nestedShape)        where nestedShape = { t1, t2 }
+                        //      so before this selection, we had to select a field like this, x.nestedShape.t1.Field1
+                        //      but after this selection we'll select field like this, x.t1.Field1
+                        var newResult = new List<SqlExpression>();
                         for (var i = 0; i < result.Length; i++)
                         {
                             var ds = (result[i] as SqlDataSourceReferenceExpression).DataSource as SqlDataSourceExpression
                                         ??
                                         throw new InvalidOperationException($"result[{i}] does not contain SqlDataSourceExpression.");
                             var newModelPath = ds.ModelPath.RemovePrefixPath(path);
-                            ds.UpdateModelPath(newModelPath.Path);
-                            result[i] = new SqlDataSourceReferenceExpression(ds);
+                            newResult.Add(new SqlColumnExpression(new SqlDataSourceReferenceExpression(ds), null, newModelPath));
                         }
+                        result = newResult.ToArray();
                     }
                     else
                         throw new InvalidOperationException($"result.Length > 1 and collection type is neither SqlColumnExpression nor SqlDataSourceReferenceExpression.");

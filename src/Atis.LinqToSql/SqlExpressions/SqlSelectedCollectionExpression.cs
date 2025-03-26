@@ -46,7 +46,8 @@ namespace Atis.LinqToSql.SqlExpressions
         /// <inheritdoc />
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            throw new InvalidOperationException($"{nameof(SqlSelectedCollectionExpression)} does not support visit.");
+            //throw new InvalidOperationException($"{nameof(SqlSelectedCollectionExpression)} does not support visit.");
+            return this;
         }
     }
 }

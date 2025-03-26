@@ -1447,68 +1447,6 @@ namespace Atis.LinqToSql.SqlExpressions
 
         /// <summary>
         ///     <para>
-        ///         Adds a model path prefix to the project or the data sources.
-        ///     </para>
-        /// </summary>
-        /// <param name="modelPathPrefix">Model path prefix to be added.</param>
-        public void AddModelPathPrefix(string modelPathPrefix)
-        {
-            this.AddOrReplaceModelPathPrefix(modelPathPrefix, replace: false);
-        }
-
-        /// <summary>
-        ///     <para>
-        ///         Replaces the model path prefix in the project or the data sources.
-        ///     </para>
-        /// </summary>
-        /// <param name="modelPathPrefix">A new model path prefix to be replaced.</param>
-        public void ReplaceModelPathPrefix(string modelPathPrefix)
-        {
-            this.AddOrReplaceModelPathPrefix(modelPathPrefix, replace: true);
-        }
-
-        /// <summary>
-        ///     <para>
-        ///         Adds or replaces the model path prefix in the project or the data sources.
-        ///     </para>
-        /// </summary>
-        /// <param name="modelPathPrefix">A new model path prefix to be added or replaced.</param>
-        /// <param name="replace">If <c>true</c> then the model path prefix will be replaced; otherwise, it will be added.</param>
-        public void AddOrReplaceModelPathPrefix(string modelPathPrefix, bool replace)
-        {
-            if (this.Projection != null)
-            {
-                if (this.Projection is SqlCollectionExpression sqlCollection)
-                {
-                    var newCollection = new List<SqlExpression>();
-                    foreach (var sqlExpression in sqlCollection.SqlExpressions)
-                    {
-                        if (sqlExpression is SqlColumnExpression sqlColumn)
-                        {
-                            var updatedSqlColumn = new SqlColumnExpression(sqlColumn.ColumnExpression, sqlColumn.ColumnAlias, replace ? sqlColumn.ModelPath.ReplaceLastPathEntry(modelPathPrefix) : new ModelPath(modelPathPrefix).Append(sqlColumn.ModelPath));
-                            newCollection.Add(updatedSqlColumn);
-                        }
-                        else
-                            newCollection.Add(sqlExpression);
-                    }
-                    this.Projection = new SqlCollectionExpression(newCollection);
-                }
-            }
-            else
-            {
-                foreach (var ds in this.CombinedDataSources)
-                {
-                    ds.AddOrReplaceModelPathPrefix(modelPathPrefix, replace);
-                }
-                foreach (var ds in this.cteDataSources)
-                {
-                    ds.AddOrReplaceModelPathPrefix(modelPathPrefix, replace);
-                }
-            }
-        }
-
-        /// <summary>
-        ///     <para>
         ///         Updates the join type of the given data source.
         ///     </para>
         /// </summary>

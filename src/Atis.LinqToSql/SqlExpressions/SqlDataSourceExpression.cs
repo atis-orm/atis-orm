@@ -89,7 +89,11 @@ namespace Atis.LinqToSql.SqlExpressions
         /// </summary>
         public ModelPath ModelPath { get; private set; }
 
-
+        /// <summary>
+        ///     <para>
+        ///         Gets the tag associated with the data source.
+        ///     </para>
+        /// </summary>
         public string Tag { get; }
 
         /// <summary>
@@ -174,11 +178,6 @@ namespace Atis.LinqToSql.SqlExpressions
             this.AddOrReplaceModelPathPrefix(modelPathPrefix, replace: true);
         }
 
-        public void ClearModelPath()
-        {
-            this.ModelPath = ModelPath.Empty;
-        }
-
         /// <summary>
         ///     <para>
         ///         Adds a new prefix to the Model Path.
@@ -208,58 +207,14 @@ namespace Atis.LinqToSql.SqlExpressions
             this.AddOrReplaceModelPathPrefix(modelPathPrefix, replace: false);
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Adds or replaces the path prefix from the Model Path.
-        ///     </para>
-        /// </summary>
-        /// <remarks>
-        ///     <para>
-        ///         This the core method called by <see cref="ReplaceModelPathPrefix(string)"/> and <see cref="AddModelPathPrefix(string)"/> methods.
-        ///     </para>
-        ///     <para>
-        ///         Throws <see cref="InvalidOperationException"/> if <see cref="ModelPath"/> is null and <paramref name="replace"/> is <see langword="true"/>.
-        ///     </para>
-        /// </remarks>
-        /// <param name="modelPathPrefix">Prefix to be added or replaced.</param>
-        /// <param name="replace">If <see langword="true"/> then replaces, otherwise, adds the <paramref name="modelPathPrefix"/> in <see cref="ModelPath"/>.</param>
-        /// <exception cref="InvalidOperationException"></exception>
-        public void AddOrReplaceModelPathPrefix(string modelPathPrefix, bool replace)
+        private void AddOrReplaceModelPathPrefix(string modelPathPrefix, bool replace)
         {
             if (replace)
                 if (this.ModelPath.IsEmpty)
                     throw new InvalidOperationException($"replace == true while this.ModelPath is null");
             this.ModelPath = replace ? this.ModelPath.ReplaceLastPathEntry(modelPathPrefix) : new ModelPath(modelPathPrefix).Append(this.ModelPath);
-            //if (this.DataSource is SqlQueryExpression subQuery)
-            //{
-            //    // in this case sub-query will always has projection so it won't be nested any further
-            //    subQuery.AddOrReplaceModelPathPrefix(modelPathPrefix, replace);
-            //}
-            //else if (this.DataSource is SqlCteReferenceExpression cteRef)
-            //{
-            //    if (this.ParentSqlQuery is null)
-            //        throw new InvalidOperationException("ParentSqlQuery is not set.");
-            //    var cteDataSource = this.ParentSqlQuery.CteDataSources.Where(x => x.DataSourceAlias == cteRef.CteAlias).FirstOrDefault()
-            //                            ??
-            //                            throw new InvalidOperationException($"CteDataSource with alias '{cteRef.CteAlias}' not found in parent query.");
-            //    if (cteDataSource.DataSource is SqlQueryExpression cteInnerQuery)
-            //    {
-            //        cteInnerQuery.AddOrReplaceModelPathPrefix(modelPathPrefix, replace);
-            //    }
-            //}
         }
-
-        /// <summary>
-        ///     <para>
-        ///         Updates the <see cref="ModelPath"/> of this instance.
-        ///     </para>
-        /// </summary>
-        /// <param name="modelPath">New model path to be used.</param>
-        public void UpdateModelPath(string modelPath)
-        {
-            this.ModelPath = new ModelPath(modelPath);
-        }
-
+        
         /// <summary>
         ///     <para>
         ///         Gets the join type of this data source expression.
