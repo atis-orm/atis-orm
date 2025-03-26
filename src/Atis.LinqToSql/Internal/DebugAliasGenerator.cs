@@ -83,8 +83,8 @@ namespace Atis.LinqToSql.Internal
                     return "t";
                 case SqlExpressionType.CteDataSource:
                     return "t_cte";
-                case SqlExpressionType.OtherDataSource:
-                    return "t_other";
+                case SqlExpressionType.SubQueryDataSource:
+                    return "t_subquery";
                 default:
                     return "t_ds";
             }

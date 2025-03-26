@@ -113,7 +113,7 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         Gets both normal data sources and CTE data sources combined.
         ///     </para>
         /// </summary>
-        public IReadOnlyCollection<SqlDataSourceExpression> AllDataSources => CombinedDataSources.Where(x => !(x.DataSource is SqlCteReferenceExpression)).Concat(this.cteDataSources).Concat(this.otherDataSources).ToArray();
+        public IReadOnlyCollection<SqlDataSourceExpression> AllDataSources => CombinedDataSources.Where(x => !(x.DataSource is SqlCteReferenceExpression)).Concat(this.cteDataSources).Concat(this.subQueryDataSources).ToArray();
 
         private readonly List<SqlJoinExpression> joins = new List<SqlJoinExpression>();
         /// <summary>
@@ -139,7 +139,7 @@ namespace Atis.LinqToSql.SqlExpressions
         ///     </para>
         /// </summary>
         public IReadOnlyCollection<SqlDataSourceExpression> CteDataSources => this.cteDataSources;
-        private readonly List<SqlDataSourceExpression> otherDataSources = new List<SqlDataSourceExpression>();
+        private readonly List<SqlDataSourceExpression> subQueryDataSources = new List<SqlDataSourceExpression>();
         /// <summary>
         ///     <para>
         ///         Gets the list of other data sources that were created and added to sql query.
@@ -148,7 +148,7 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         Usually GroupJoin data sources are added to this collection.
         ///     </para>
         /// </summary>
-        public IReadOnlyCollection<SqlDataSourceExpression> OtherDataSources => this.otherDataSources;
+        public IReadOnlyCollection<SqlDataSourceExpression> SubQueryDataSources => this.subQueryDataSources;
         /// <summary>
         ///     <para>
         ///         Gets the list of Union expressions applied to the query.
@@ -243,9 +243,10 @@ namespace Atis.LinqToSql.SqlExpressions
             return usualDataSourceOrCteDataSource;
         }
 
-        public void AddOtherDataSource(SqlDataSourceExpression sqlDataSourceExpression)
+        public void AddSubQueryDataSource(SqlDataSourceExpression sqlDataSourceExpression)
         {
-            this.otherDataSources.Add(sqlDataSourceExpression);
+            sqlDataSourceExpression.AttachToParentSqlQuery(this);
+            this.subQueryDataSources.Add(sqlDataSourceExpression);
         }
 
         /// <summary>
@@ -496,7 +497,7 @@ namespace Atis.LinqToSql.SqlExpressions
                 {
                     var subQueryProjection = subQueryProjections[i];
                     var newSubQueryColumnSelection = new SqlDataSourceColumnExpression(subQueryAsDataSourceInThisQuery, subQueryProjection.ColumnAlias);
-                    var newProjection = new SqlOuterApplyQueryColumnExpression(newSubQueryColumnSelection, subQueryProjection.ColumnAlias, sqlColumnExpression.ModelPath.Append(subQueryProjection.ColumnAlias), subQuery);
+                    var newProjection = new SqlSubQueryColumnExpression(newSubQueryColumnSelection, subQueryProjection.ColumnAlias, sqlColumnExpression.ModelPath.Append(subQueryProjection.ColumnAlias), subQuery);
                     projections.Add(newProjection);
                 }
             }
@@ -554,8 +555,8 @@ namespace Atis.LinqToSql.SqlExpressions
         private SqlColumnExpression ChangeSqlColumnExpressionAlias(SqlColumnExpression sqlColumnExpression, string columnAlias)
         {
             SqlColumnExpression colToAdd;
-            if (sqlColumnExpression is SqlOuterApplyQueryColumnExpression outerApplyCol)
-                colToAdd = new SqlOuterApplyQueryColumnExpression(outerApplyCol.ColumnExpression, columnAlias, outerApplyCol.ModelPath, outerApplyCol.OuterApplyQuery);
+            if (sqlColumnExpression is SqlSubQueryColumnExpression outerApplyCol)
+                colToAdd = new SqlSubQueryColumnExpression(outerApplyCol.ColumnExpression, columnAlias, outerApplyCol.ModelPath, outerApplyCol.SubQuery);
             else
                 colToAdd = new SqlColumnExpression(sqlColumnExpression.ColumnExpression, columnAlias, sqlColumnExpression.ModelPath);
             return colToAdd;
@@ -736,29 +737,6 @@ namespace Atis.LinqToSql.SqlExpressions
             this.autoJoins.Clear();
         }
 
-        public void ClearModelMaps()
-        {
-            foreach (var ds in this.AllDataSources)
-            {
-                ds.ClearModelPath();
-            }
-            if (this.Projection != null)
-            {
-                if (this.Projection is SqlColumnExpression columnExpression)
-                {
-                    columnExpression.ClearModelPath();
-                }
-                else if (this.Projection is SqlCollectionExpression collection)
-                {
-                    var columnExpressions = collection.SqlExpressions.OfType<SqlColumnExpression>();
-                    foreach (var col in columnExpressions)
-                    {
-                        col.ClearModelPath();
-                    }
-                }
-            }
-        }
-
         /// <summary>
         ///     <para>
         ///         Creates of copy of <paramref name="source"/>.
@@ -903,11 +881,9 @@ namespace Atis.LinqToSql.SqlExpressions
         ///     </para>
         /// </summary>
         /// <returns>A new instance of <see cref="SqlQueryExpression"/> with copied properties.</returns>
-        public virtual SqlQueryExpression CreateCopy(bool clearModelMaps = false)
+        public virtual SqlQueryExpression CreateCopy()
         {
             var copy = CreateCopy(this);
-            if (clearModelMaps)
-                copy.ClearModelMaps();
             return copy;
         }
 

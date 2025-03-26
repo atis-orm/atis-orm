@@ -97,13 +97,13 @@ namespace Atis.LinqToSql.ExpressionConverters
                     if (scalarVal != null)
                         return scalarVal;
                 }
-                if (sqlExpression is SqlDataSourceExpression ds && ds.NodeType == SqlExpressionType.OtherDataSource)
+                if (sqlExpression is SqlDataSourceExpression ds && ds.NodeType == SqlExpressionType.SubQueryDataSource)
                 {
                     var otherDataSourceQuery = ds.DataSource as SqlQueryExpression
                                                 ??
                                                 throw new InvalidOperationException($"'{ds.DataSource}' is not a SqlQueryExpression");
                     // other data source cannot be modified itself, it will always make a copy whenever used
-                    var newSqlQuery = otherDataSourceQuery.CreateCopy(clearModelMaps: true);
+                    var newSqlQuery = otherDataSourceQuery.CreateCopy();
                     result = newSqlQuery;
                 }
                 else

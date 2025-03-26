@@ -91,7 +91,7 @@ namespace Atis.LinqToSql.SqlExpressions
         /// <returns>A string representation of the collection of SQL expressions.</returns>
         public override string ToString()
         {
-            return string.Join(", ", this.SqlExpressions.Select(x => x.ToString()));
+            return $"collection: [{string.Join(", ", this.SqlExpressions.Select(x => x.ToString()))}]";
         }
     }
 }

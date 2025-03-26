@@ -83,7 +83,7 @@ namespace Atis.LinqToSql.ExpressionConverters
 
         private bool IsGroupJoin => this.Expression.Method.Name == nameof(Queryable.GroupJoin);
         // SelectMany will flatten the result, so we'll consider the GroupJoin as normal Join
-        private bool UseOtherDataSource => IsGroupJoin && !(this.ConverterStack.FirstOrDefault() is SelectManyQueryMethodExpressionConverter);
+        private bool UseSubQueryDataSource => IsGroupJoin && !(this.ConverterStack.FirstOrDefault() is SelectManyQueryMethodExpressionConverter);
 
         /// <inheritdoc />
         protected override void OnSourceQueryCreated()
@@ -112,7 +112,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
 
                 SqlQuerySourceExpression querySource;
-                if (!this.UseOtherDataSource && otherDataSqlQuery.IsTableOnly())
+                if (!this.UseSubQueryDataSource && otherDataSqlQuery.IsTableOnly())
                 {
                     querySource = otherDataSqlQuery.InitialDataSource.DataSource;
                 }
@@ -121,10 +121,10 @@ namespace Atis.LinqToSql.ExpressionConverters
                     querySource = otherDataSqlQuery;
                 }
 
-                if (this.UseOtherDataSource)
+                if (this.UseSubQueryDataSource)
                 {
-                    this.joinedDataSource = new SqlDataSourceExpression(Guid.NewGuid(), querySource, modelPath: ModelPath.Empty, tag: null, nodeType: SqlExpressionType.OtherDataSource);
-                    this.SourceQuery.AddOtherDataSource(this.joinedDataSource);
+                    this.joinedDataSource = new SqlDataSourceExpression(Guid.NewGuid(), querySource, modelPath: ModelPath.Empty, tag: null, nodeType: SqlExpressionType.SubQueryDataSource);
+                    this.SourceQuery.AddSubQueryDataSource(this.joinedDataSource);
                 }
                 else
                 {
@@ -134,7 +134,7 @@ namespace Atis.LinqToSql.ExpressionConverters
 
                 var otherColumnLambda = this.GetArgumentLambda(this.OtherColumnsArgIndex);
                 var selectLambda = this.GetArgumentLambda(this.SelectArgIndex);
-                if (this.UseOtherDataSource)
+                if (this.UseSubQueryDataSource)
                 {
                     this.ParameterMap.TrySetParameterMap(otherColumnLambda.Parameters[0], querySource);
                 }
@@ -146,7 +146,7 @@ namespace Atis.LinqToSql.ExpressionConverters
 
                 this.ParameterMap.RemoveParameterMap(selectLambda.Parameters[0]);
                 this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[0], this.SourceQuery);
-                if (this.UseOtherDataSource)
+                if (this.UseSubQueryDataSource)
                 {
                     this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[1], querySource);
                 }
@@ -193,7 +193,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                     joinPredicate = new SqlBinaryExpression(sourceColumnSelection, otherColumnSelection, SqlExpressionType.Equal);
                 }
 
-                if (this.UseOtherDataSource)
+                if (this.UseSubQueryDataSource)
                 {
                     (this.joinedDataSource.DataSource as SqlQueryExpression)?.ApplyWhere(joinPredicate);
                 }
@@ -207,7 +207,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         {
             var projection = arguments[3];
 
-            if (!this.UseOtherDataSource)
+            if (!this.UseSubQueryDataSource)
             {
                 var joinType = joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
                 var joinExpression = new SqlJoinExpression(joinType, joinedDataSource, joinCondition);

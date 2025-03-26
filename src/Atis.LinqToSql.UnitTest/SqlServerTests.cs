@@ -166,14 +166,14 @@ namespace Atis.LinqToSql.UnitTest
             //var testVisitor = new TestVisitor();
             //testVisitor.Visit(q.Expression);
 
-            var query = new Queryable<Asset>(new QueryProvider());
-            if (query is IQueryable<IModelWithItem> queryWithItem)
-            {
-                var q = queryWithItem.Where(x => x.NavItem().ItemDescription.Contains("abc")).Select(x => x).Where(x => x.NavItem().ItemId == "123");
-                var preprocessedExpression = PreprocessExpression(q.Expression);
-                Console.WriteLine(q.Expression);
-                Console.WriteLine(preprocessedExpression);
-            }
+            //var query = new Queryable<Asset>(new QueryProvider());
+            //if (query is IQueryable<IModelWithItem> queryWithItem)
+            //{
+            //    var q = queryWithItem.Where(x => x.NavItem().ItemDescription.Contains("abc")).Select(x => x).Where(x => x.NavItem().ItemId == "123");
+            //    var preprocessedExpression = PreprocessExpression(q.Expression);
+            //    Console.WriteLine(q.Expression);
+            //    Console.WriteLine(preprocessedExpression);
+            //}
         }
 
         //private class TestVisitor : ExpressionVisitor

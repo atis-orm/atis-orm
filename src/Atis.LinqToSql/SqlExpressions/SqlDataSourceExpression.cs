@@ -16,7 +16,7 @@ namespace Atis.LinqToSql.SqlExpressions
             {
                 SqlExpressionType.DataSource,
                 SqlExpressionType.CteDataSource,
-                SqlExpressionType.OtherDataSource,      // this data source will be added because of GroupJoin
+                SqlExpressionType.SubQueryDataSource,      // this data source will be added because of GroupJoin
             };
         private static SqlExpressionType ValidateNodeType(SqlExpressionType nodeType)
             => _allowedTypes.Contains(nodeType)
@@ -230,23 +230,23 @@ namespace Atis.LinqToSql.SqlExpressions
                 if (this.ModelPath.IsEmpty)
                     throw new InvalidOperationException($"replace == true while this.ModelPath is null");
             this.ModelPath = replace ? this.ModelPath.ReplaceLastPathEntry(modelPathPrefix) : new ModelPath(modelPathPrefix).Append(this.ModelPath);
-            if (this.DataSource is SqlQueryExpression subQuery)
-            {
-                // in this case sub-query will always has projection so it won't be nested any further
-                subQuery.AddOrReplaceModelPathPrefix(modelPathPrefix, replace);
-            }
-            else if (this.DataSource is SqlCteReferenceExpression cteRef)
-            {
-                if (this.ParentSqlQuery is null)
-                    throw new InvalidOperationException("ParentSqlQuery is not set.");
-                var cteDataSource = this.ParentSqlQuery.CteDataSources.Where(x => x.DataSourceAlias == cteRef.CteAlias).FirstOrDefault()
-                                        ??
-                                        throw new InvalidOperationException($"CteDataSource with alias '{cteRef.CteAlias}' not found in parent query.");
-                if (cteDataSource.DataSource is SqlQueryExpression cteInnerQuery)
-                {
-                    cteInnerQuery.AddOrReplaceModelPathPrefix(modelPathPrefix, replace);
-                }
-            }
+            //if (this.DataSource is SqlQueryExpression subQuery)
+            //{
+            //    // in this case sub-query will always has projection so it won't be nested any further
+            //    subQuery.AddOrReplaceModelPathPrefix(modelPathPrefix, replace);
+            //}
+            //else if (this.DataSource is SqlCteReferenceExpression cteRef)
+            //{
+            //    if (this.ParentSqlQuery is null)
+            //        throw new InvalidOperationException("ParentSqlQuery is not set.");
+            //    var cteDataSource = this.ParentSqlQuery.CteDataSources.Where(x => x.DataSourceAlias == cteRef.CteAlias).FirstOrDefault()
+            //                            ??
+            //                            throw new InvalidOperationException($"CteDataSource with alias '{cteRef.CteAlias}' not found in parent query.");
+            //    if (cteDataSource.DataSource is SqlQueryExpression cteInnerQuery)
+            //    {
+            //        cteInnerQuery.AddOrReplaceModelPathPrefix(modelPathPrefix, replace);
+            //    }
+            //}
         }
 
         /// <summary>

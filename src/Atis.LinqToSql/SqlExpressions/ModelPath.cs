@@ -99,6 +99,34 @@ namespace Atis.LinqToSql.SqlExpressions
             return StartsWith(pathParts);
         }
 
+        public bool EndsWith(ModelPath path)
+        {
+            return this.EndsWith(path.PathElements);
+        }
+
+        public bool EndsWith(string[] path)
+        {
+            if (path is null || path.Length == 0)
+            {
+                return this.IsEmpty;
+            }
+            // if we are here it means pathParts is neither null nor empty
+            // that's why we are saying if this.Map is null or empty then return false
+            if (this.IsEmpty)
+                return false;
+            var myPathElements = this.PathElements;
+            var pathLength = path.Length;
+            var myPathLength = myPathElements.Length;
+            for (int i = 0; i < pathLength; i++)
+            {
+                if (i >= myPathLength || path[pathLength - i - 1] != myPathElements[myPathLength - i - 1])
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         /// <summary>
         ///     <para>
         ///         Determines whether the current path starts with the specified starting path elements.
