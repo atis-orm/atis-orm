@@ -141,7 +141,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                             SqlJoinType sqlJoinType = SqlJoinType.CrossApply;
                             if (otherSqlQuery.IsDefaultIfEmpty)
                                 sqlJoinType = SqlJoinType.OuterApply;
-                            var crossApplyJoin = this.SqlFactory.CreateCrossApplyOrOuterApplyJoin(sqlJoinType, newDataSource);
+                            var crossApplyJoin = this.SqlFactory.CreateJoin(sqlJoinType, newDataSource, joinPredicate: null);
                             this.SourceQuery.ApplyJoin(crossApplyJoin);
                         }
 

@@ -80,7 +80,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             if (sourceExpression == this.Expression.JoinedDataSource)
             {
                 var navigationParentSqlQuery = this.GetNavigationParentSqlQuery();
-                if (navigationParentSqlQuery.TryGetDataSourceChildByIdentifier(this.navigationParent, this.Expression.NavigationProperty, out var ds))
+                if (navigationParentSqlQuery.TryGetNavigationDataSource(this.navigationParent, this.Expression.NavigationProperty, out var ds))
                 {
                     convertedExpression = ds;
                     return true;
@@ -120,7 +120,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 // notice the   !  (not)
                 //    _________/
                 //   /
-                if (!navigationParentSqlQuery.TryGetDataSourceChildByIdentifier(this.navigationParent, this.Expression.NavigationProperty, out this.joinedDataSource))
+                if (!navigationParentSqlQuery.TryGetNavigationDataSource(this.navigationParent, this.Expression.NavigationProperty, out this.joinedDataSource))
                 {
                     this.applyJoin = true;
                     var sqlQuerySource = convertedExpression as SqlQuerySourceExpression
@@ -128,7 +128,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                     if (this.Expression.SqlJoinType != SqlJoinType.CrossApply && this.Expression.SqlJoinType != SqlJoinType.OuterApply)
                         sqlQuerySource = sqlQuerySource.ConvertToTableIfPossible();
                     this.joinedDataSource = this.SqlFactory.CreateDataSourceForNavigation(sqlQuerySource, this.Expression.NavigationProperty);
-                    navigationParentSqlQuery.AddJoinedDataSource(this.navigationParent, this.joinedDataSource, this.Expression.NavigationProperty);
+                    navigationParentSqlQuery.AddNavigationDataSource(this.navigationParent, this.joinedDataSource, this.Expression.NavigationProperty);
                 }
 
                 if (this.Expression.JoinCondition != null)

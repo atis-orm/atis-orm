@@ -24,19 +24,25 @@ namespace Atis.LinqToSql
         SqlDataSourceExpression CreateDataSourceForJoinedSource(Guid guid, SqlQuerySourceExpression querySource);
         SqlDataSourceExpression CreateDataSourceCopy(SqlDataSourceExpression cteDataSource);
         SqlDataSourceReferenceExpression CreateDataSourceReference(SqlDataSourceExpression dataSource);
-        SqlDataSourceReferenceExpression CreateQueryReference(SqlQueryExpression sqlQuery2);
+        SqlDataSourceReferenceExpression CreateQueryReference(SqlQueryExpression sqlQuery);
         SqlDeleteExpression CreateDelete(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource);
         SqlExistsExpression CreateExists(SqlQueryExpression sqlQuery);
         SqlDataSourceExpression CreateFromSource(SqlQuerySourceExpression dataSource, ModelPath modelPath);
         SqlJoinExpression CreateJoin(SqlJoinType sqlJoinType, SqlDataSourceExpression joinedDataSource, SqlExpression joinPredicate);
-        SqlJoinExpression CreateCrossApplyOrOuterApplyJoin(SqlJoinType sqlJoinType, SqlDataSourceExpression newDataSource);
         SqlNotExpression CreateNot(SqlExpression sqlExpression);
         SqlParameterExpression CreateParameter(object value);
         SqlQueryExpression CreateCteQuery(Guid cteAlias, SqlQueryExpression anchorQuery);
         SqlQueryExpression CreateQueryFromDataSources(IEnumerable<SqlDataSourceExpression> dataSourceList);
         SqlQueryExpression CreateQueryFromDataSource(SqlDataSourceExpression sqlDataSourceExpression);
-        SqlSelectedCollectionExpression CreateSelectedCollection(SqlExpression resultSource, SqlExpression[] result);
+        SqlSelectedCollectionExpression CreateSelectedCollection(SqlExpression collectionSource, SqlExpression[] collection);
         SqlTableExpression CreateTable(string tableName, TableColumn[] tableColumns);
         SqlUpdateExpression CreateUpdate(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource, string[] columnNames, SqlExpression[] values);
+        SqlColumnExpression ChangeColumnAlias(SqlColumnExpression sqlColumnExpression, string alias);
+        SqlColumnExpression CreateSubQueryColumn(SqlDataSourceColumnExpression dataSourceColumn, string columnAlias, ModelPath modelPath);
+        SqlAliasExpression CreateAlias(string columnAlias);
+        SqlUnionExpression CreateUnionAll(SqlQueryExpression sqlQuery);
+        SqlUnionExpression CreateUnion(SqlQueryExpression sqlQuery);
+        SqlDataSourceExpression CreateDataSourceForCteQuery(Guid cteAlias, SqlQueryExpression cteSource);
+        SqlColumnExpression CreateScalarColumn(SqlExpression columnExpression, string columnAlias, ModelPath modelPath);
     }
 }
