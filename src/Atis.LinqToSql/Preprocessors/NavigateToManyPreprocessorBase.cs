@@ -12,7 +12,7 @@ namespace Atis.LinqToSql.Preprocessors
     ///         Abstract base class for preprocessing navigation expressions that navigate to collections.
     ///     </para>
     /// </summary>
-    public abstract class NavigateToManyPreprocessorBase : IExpressionPreprocessor
+    public abstract class NavigateToManyPreprocessorBase : ExpressionVisitor, IExpressionPreprocessor
     {
         /// <summary>
         ///     <para>
@@ -51,21 +51,32 @@ namespace Atis.LinqToSql.Preprocessors
         protected abstract NavigationInfo GetNavigationInfo(Expression node);
 
         /// <inheritdoc/>
-        public Expression Preprocess(Expression node, Expression[] expressionsStack)
+        public Expression Preprocess(Expression node)
         {
-            if (this.IsNavigationExpression(node))
+            return this.Visit(node);
+        }
+
+        /// <inheritdoc/>
+        public override Expression Visit(Expression node)
+        {
+            if (node is null) return null;
+
+            var updatedNode = base.Visit(node);
+
+            if (this.IsNavigationExpression(updatedNode))
             {
                 // node would be something like this
                 //      x.NavLines
-                var navigationInfo = this.GetNavigationInfo(node);
+                var navigationInfo = this.GetNavigationInfo(updatedNode);
                 if (navigationInfo.NavigationType == NavigationType.ToChildren)
                 {
-                    var parentExpression = this.GetParentExpression(node);      // this should return "x"
-                    var queryExpression = this.GetQueryExpression(navigationInfo, node, parentExpression);
+                    var parentExpression = this.GetParentExpression(updatedNode);      // this should return "x"
+                    var queryExpression = this.GetQueryExpression(navigationInfo, updatedNode, parentExpression);
                     return queryExpression;
                 }
             }
-            return node;
+
+            return updatedNode;
         }
 
         /// <summary>
@@ -185,12 +196,6 @@ namespace Atis.LinqToSql.Preprocessors
             var predicateBody = ExpressionReplacementVisitor.Replace(parameterToReplace, parentExpression, relationLambda.Body);
             var predicateLambda = Expression.Lambda<Func<T, bool>>(predicateBody, parameterToKeep);
             return predicateLambda;
-        }
-
-        /// <inheritdoc />
-        public virtual void BeforeVisit(Expression node, Expression[] expressionsStack)
-        {
-            // do nothing
         }
 
         /// <inheritdoc />

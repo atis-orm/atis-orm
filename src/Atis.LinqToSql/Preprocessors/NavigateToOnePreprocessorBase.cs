@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Collections.Generic;
 
 namespace Atis.LinqToSql.Preprocessors
 {
@@ -14,12 +15,13 @@ namespace Atis.LinqToSql.Preprocessors
     ///         Base class for preprocessing navigation expressions that navigate to a single entity.
     ///     </para>
     /// </summary>
-    public abstract class NavigateToOnePreprocessorBase : IExpressionPreprocessor
+    public abstract class NavigateToOnePreprocessorBase : ExpressionVisitor, IExpressionPreprocessor
     {
 
         private readonly static MethodInfo createJoinedDataSourceOpenMethodInfo = typeof(NavigateToOnePreprocessorBase).GetMethod(nameof(CreateJoinedDataSourceGen), BindingFlags.NonPublic | BindingFlags.Instance);
         
         private readonly IReflectionService reflectionService;
+        private readonly Stack<Expression> expressionsStack = new Stack<Expression>();
 
         /// <summary>
         ///     <para>
@@ -32,11 +34,6 @@ namespace Atis.LinqToSql.Preprocessors
             this.reflectionService = reflectionService;
         }
 
-        /// <inheritdoc />
-        public void BeforeVisit(Expression node, Expression[] expressionsStack)
-        {
-
-        }
 
         /// <inheritdoc />
         public void Initialize()
@@ -45,56 +42,76 @@ namespace Atis.LinqToSql.Preprocessors
         }
 
         /// <inheritdoc />
-        public Expression Preprocess(Expression node, Expression[] expressionsStack)
+        public Expression Preprocess(Expression node)
         {
-            if (this.IsNavigation(node, expressionsStack))
+            return this.Visit(node);   
+        }
+
+        /// <inheritdoc />
+        public override Expression Visit(Expression node)
+        {
+            if (node is null) return null;
+
+            this.expressionsStack.Push(node);
+
+            var updatedNode = base.Visit(node);
+
+            var stack = this.expressionsStack.ToArray();
+            try
             {
-                // IsNavigation should return true in-case if MemberExpression itself is a navigation
-                // e.g. NavigationProp().Column             <- should return false
-                //      x.NavigationProp()                  <- should return true
-                //      x.NavigationProp                    <- should return true
-                //      ParentNavigation().NavigationProp() <- should return true
-                //      ParentNavigation.NavigationProp     <- should return true
-
-                // this method will be called on the leaf-node which means in the following case
-                //      x.NavProp1().NavProp2().NavProp3().Column
-                // we'll land here for x.NavProp1()
-
-                var navigationInfo = this.GetNavigationInfo(node, expressionsStack);
-
-                // this should return the parent expression, for example, in-case of
-                //          x.NavProp1()                            -> should return x
-                //          ParentNavigation().NavigationProp()     -> should return ParentNavigation()
-                //          x.NavProp1                              -> should return x
-                //          ParentNavigation.NavigationProp         -> should return ParentNavigation
-
-                // however, since this method is being executed from leaf to root, so we'll be converting
-                // each expression and we'll be getting the NavigationExpression as parent in later cases,
-                // for example, x.NavProp1() is converted to a NavigationExpression, so when we'll reach
-                // to node = NavProp1().NavProp2(), it will be received here as node = ->NavProp1->NavProp2()
-
-                Expression sourceExpression = this.GetParentExpression(node, expressionsStack);
-                string navigationProperty = this.GetNavigationPropertyName(node, expressionsStack);
-                Expression joinedDataSource = navigationInfo.JoinedSource ?? this.CreateJoinedDataSource(node.Type);
-                var joinedDataSourceType = this.GetJoinedDataSourceType(joinedDataSource);
-                LambdaExpression joinCondition = null;
-                if (navigationInfo.JoinCondition != null)
-                    joinCondition = this.CreateJoinCondition(sourceExpression, navigationInfo.JoinCondition, navigationInfo.NavigationType);
-                SqlJoinType joinType = this.GetJoinType(navigationInfo);
-                if (joinType == SqlJoinType.Inner)                                      // if new join is inner
+                if (this.IsNavigation(updatedNode, stack))
                 {
-                    if (sourceExpression is NavigationExpression parentNavigation)      // if parent is also a navigation
+                    // IsNavigation should return true in-case if MemberExpression itself is a navigation
+                    // e.g. NavigationProp().Column             <- should return false
+                    //      x.NavigationProp()                  <- should return true
+                    //      x.NavigationProp                    <- should return true
+                    //      ParentNavigation().NavigationProp() <- should return true
+                    //      ParentNavigation.NavigationProp     <- should return true
+
+                    // this method will be called on the leaf-node which means in the following case
+                    //      x.NavProp1().NavProp2().NavProp3().Column
+                    // we'll land here for x.NavProp1()
+
+                    var navigationInfo = this.GetNavigationInfo(updatedNode, stack);
+
+                    // this should return the parent expression, for example, in-case of
+                    //          x.NavProp1()                            -> should return x
+                    //          ParentNavigation().NavigationProp()     -> should return ParentNavigation()
+                    //          x.NavProp1                              -> should return x
+                    //          ParentNavigation.NavigationProp         -> should return ParentNavigation
+
+                    // however, since this method is being executed from leaf to root, so we'll be converting
+                    // each expression and we'll be getting the NavigationExpression as parent in later cases,
+                    // for example, x.NavProp1() is converted to a NavigationExpression, so when we'll reach
+                    // to node = NavProp1().NavProp2(), it will be received here as node = ->NavProp1->NavProp2()
+
+                    Expression sourceExpression = this.GetParentExpression(updatedNode, stack);
+                    string navigationProperty = this.GetNavigationPropertyName(updatedNode, stack);
+                    Expression joinedDataSource = navigationInfo.JoinedSource ?? this.CreateJoinedDataSource(updatedNode.Type);
+                    var joinedDataSourceType = this.GetJoinedDataSourceType(joinedDataSource);
+                    LambdaExpression joinCondition = null;
+                    if (navigationInfo.JoinCondition != null)
+                        joinCondition = this.CreateJoinCondition(sourceExpression, navigationInfo.JoinCondition, navigationInfo.NavigationType);
+                    SqlJoinType joinType = this.GetJoinType(navigationInfo);
+                    if (joinType == SqlJoinType.Inner)                                      // if new join is inner
                     {
-                        if (parentNavigation.SqlJoinType == SqlJoinType.Left || parentNavigation.SqlJoinType == SqlJoinType.OuterApply)
+                        if (sourceExpression is NavigationExpression parentNavigation)      // if parent is also a navigation
                         {
-                            joinType = SqlJoinType.Left;
+                            if (parentNavigation.SqlJoinType == SqlJoinType.Left || parentNavigation.SqlJoinType == SqlJoinType.OuterApply)
+                            {
+                                joinType = SqlJoinType.Left;
+                            }
                         }
                     }
+                    var navigationExpression = new NavigationExpression(sourceExpression, navigationProperty, joinedDataSource, joinedDataSourceType, joinCondition, joinType);
+                    return navigationExpression;
                 }
-                var navigationExpression = new NavigationExpression(sourceExpression, navigationProperty, joinedDataSource, joinedDataSourceType, joinCondition, joinType);
-                return navigationExpression;
+                return updatedNode;
             }
-            return node;
+            finally
+            {
+                this.expressionsStack.Pop();
+            }
         }
 
         /// <summary>

@@ -27,7 +27,7 @@ namespace Atis.LinqToSql.Preprocessors
     ///         later in the conversion process.
     ///     </para>
     /// </remarks>
-    public partial class ChildJoinReplacementPreprocessor : IExpressionPreprocessor
+    public partial class ChildJoinReplacementPreprocessor : ExpressionVisitor, IExpressionPreprocessor
     {
         private readonly IReflectionService reflectionService;
 
@@ -42,18 +42,27 @@ namespace Atis.LinqToSql.Preprocessors
         }
 
         /// <inheritdoc/>
-        public Expression Preprocess(Expression node, Expression[] expressionsStack)
+        public Expression Preprocess(Expression node)
         {
-            if (node is MethodCallExpression methodCallExpression &&
+            return this.Visit(node);
+        }
+
+        /// <inheritdoc/>
+        protected override Expression VisitMethodCall(MethodCallExpression node)
+        {
+            var updatedNode = base.VisitMethodCall(node);
+
+            if (updatedNode is MethodCallExpression methodCallExpression && 
                 methodCallExpression.Method.Name == nameof(Queryable.SelectMany) &&
                 methodCallExpression.Arguments.Count >= 2)
             {
-                return this.VisitMethodCall(methodCallExpression);
+                return this.VisitMethodCallInternal(methodCallExpression);
             }
-            return node;
+
+            return updatedNode;
         }
 
-        private Expression VisitMethodCall(MethodCallExpression node)
+        private Expression VisitMethodCallInternal(MethodCallExpression node)
         {
             // e.g. arg1 can be
             //      Quote (        e => employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId).Where(x => x.Degree == "123" && x.RowId == e.RowId)        )
@@ -210,11 +219,6 @@ namespace Atis.LinqToSql.Preprocessors
             return childJoinArg2Body;
         }
 
-        /// <inheritdoc />
-        public void BeforeVisit(Expression node, Expression[] expressionsStack)
-        {
-            // do nothing
-        }
 
         /// <inheritdoc />
         public void Initialize()
