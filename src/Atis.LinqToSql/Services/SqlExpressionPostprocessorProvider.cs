@@ -7,11 +7,11 @@ using System.Collections.Generic;
 
 namespace Atis.LinqToSql.Services
 {
-    public class PostprocessorProvider : ISqlExpressionPostprocessorProvider
+    public class SqlExpressionPostprocessorProvider : ISqlExpressionPostprocessorProvider
     {
         private readonly int maxIterations;
         protected List<ISqlExpressionPostprocessor> PostProcessors { get; } = new List<ISqlExpressionPostprocessor>();
-        public PostprocessorProvider(ISqlExpressionFactory sqlFactory, IEnumerable<ISqlExpressionPostprocessor> postprocessors, int maxIterations = 50)
+        public SqlExpressionPostprocessorProvider(ISqlExpressionFactory sqlFactory, IEnumerable<ISqlExpressionPostprocessor> postprocessors, int maxIterations = 50)
         {
             if (postprocessors != null)
                 this.PostProcessors.AddRange(postprocessors);

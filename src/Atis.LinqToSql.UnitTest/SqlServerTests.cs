@@ -61,7 +61,7 @@ namespace Atis.LinqToSql.UnitTest
             var contextExtensions = new object[] { sqlFactory, /*componentIdentifier,*/ model, parameterMapper, /*navigationMapper,*/ reflectionService/*, propertyMapper*/ };
             var conversionContext = new ConversionContext(contextExtensions);
             var expressionConverterProvider = new LinqToSqlExpressionConverterProvider(conversionContext, factories: null);
-            var postProcessorProvider = new PostprocessorProvider(sqlFactory, postprocessors: null);
+            var postProcessorProvider = new SqlExpressionPostprocessorProvider(sqlFactory, postprocessors: null);
             var linqToSqlConverter = new LinqToSqlConverter(reflectionService, expressionConverterProvider, postProcessorProvider);
             var result = linqToSqlConverter.Convert(updatedQueryExpression);
             return result;
