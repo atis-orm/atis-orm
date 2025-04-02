@@ -1,9 +1,11 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
+using Atis.LinqToSql.Exceptions;
 using Atis.LinqToSql.Postprocessors;
 using Atis.LinqToSql.SqlExpressions;
 using System.Collections.Generic;
 
-namespace Atis.LinqToSql
+namespace Atis.LinqToSql.Services
 {
     public class PostprocessorProvider : IPostprocessorProvider
     {

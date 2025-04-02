@@ -1,9 +1,8 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.Infrastructure;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.Internal;
 using Atis.LinqToSql.SqlExpressions;
 using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Atis.LinqToSql

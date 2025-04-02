@@ -1,7 +1,7 @@
 ﻿using Atis.LinqToSql.SqlExpressions;
 using System.Linq.Expressions;
 
-namespace Atis.LinqToSql.ContextExtensions
+namespace Atis.LinqToSql.Abstractions
 {
     /// <summary>
     ///     <para>

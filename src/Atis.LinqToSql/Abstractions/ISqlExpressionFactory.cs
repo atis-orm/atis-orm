@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Atis.LinqToSql
+namespace Atis.LinqToSql.Abstractions
 {
     public interface ISqlExpressionFactory
     {

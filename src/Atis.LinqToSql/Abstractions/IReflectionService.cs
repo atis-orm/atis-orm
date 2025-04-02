@@ -2,7 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Atis.LinqToSql.Infrastructure
+namespace Atis.LinqToSql.Abstractions
 {
     /// <summary>
     ///     <para>

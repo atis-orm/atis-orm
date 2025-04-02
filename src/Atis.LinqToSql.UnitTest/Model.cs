@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Atis.LinqToSql.UnitTest
 {
-    internal class Model : ContextExtensions.Model
+    internal class Model : Services.Model
     {
         public override TableColumn[] GetTableColumns(Type type)
         {

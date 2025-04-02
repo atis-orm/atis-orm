@@ -1,4 +1,5 @@
-﻿using Atis.LinqToSql.SqlExpressions;
+﻿using Atis.LinqToSql.Abstractions;
+using Atis.LinqToSql.SqlExpressions;
 using System.Collections.Generic;
 using System.Linq;
 

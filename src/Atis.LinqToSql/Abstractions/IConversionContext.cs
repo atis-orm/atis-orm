@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Atis.LinqToSql
+namespace Atis.LinqToSql.Abstractions
 {
     public interface IConversionContext
     {

@@ -17,10 +17,10 @@
 
 using System.Linq.Expressions;
 using Atis.Expressions;
-using Atis.LinqToSql.ContextExtensions;
 using Atis.LinqToSql.SqlExpressions;
 using Atis.LinqToSql.Preprocessors;
 using Atis.LinqToSql.ExpressionExtensions;
+using Atis.LinqToSql.Services;
 
 namespace Atis.LinqToSql.UnitTest
 {

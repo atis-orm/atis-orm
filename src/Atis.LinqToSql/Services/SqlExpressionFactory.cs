@@ -1,9 +1,10 @@
-﻿using Atis.LinqToSql.SqlExpressions;
+﻿using Atis.LinqToSql.Abstractions;
+using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Atis.LinqToSql
+namespace Atis.LinqToSql.Services
 {
     public class SqlExpressionFactory : ISqlExpressionFactory
     {

@@ -1,10 +1,11 @@
-﻿using Atis.LinqToSql.SqlExpressions;
+﻿using Atis.LinqToSql.Abstractions;
+using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace Atis.LinqToSql.ContextExtensions
+namespace Atis.LinqToSql.Services
 {
     /// <summary>
     ///     <para>

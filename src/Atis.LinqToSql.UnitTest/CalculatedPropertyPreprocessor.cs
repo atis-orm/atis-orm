@@ -1,5 +1,5 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.Infrastructure;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.Preprocessors;
 using System;
 using System.Collections;

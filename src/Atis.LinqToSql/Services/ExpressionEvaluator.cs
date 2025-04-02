@@ -1,4 +1,4 @@
-﻿using Atis.LinqToSql.Infrastructure;
+﻿using Atis.LinqToSql.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
-namespace Atis.LinqToSql
+namespace Atis.LinqToSql.Services
 {
     public class ExpressionEvaluator : IExpressionEvaluator
     {
