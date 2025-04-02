@@ -4,13 +4,13 @@ using System.Linq;
 
 namespace Atis.LinqToSql.Postprocessors
 {
-    public class CteFixPostProcessor : SqlExpressionVisitor, IPostprocessor
+    public class CteFixPostprocessor : SqlExpressionVisitor, IPostprocessor
     {
         private readonly List<SqlDataSourceExpression> cteDataSources = new List<SqlDataSourceExpression>();
         private readonly Stack<SqlExpression> expressionStack = new Stack<SqlExpression>();
         private readonly ISqlExpressionFactory sqlFactory;
 
-        public CteFixPostProcessor(ISqlExpressionFactory sqlFactory)
+        public CteFixPostprocessor(ISqlExpressionFactory sqlFactory)
         {
             this.sqlFactory = sqlFactory;
         }

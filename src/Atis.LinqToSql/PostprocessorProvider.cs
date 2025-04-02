@@ -13,7 +13,7 @@ namespace Atis.LinqToSql
         {
             if (postprocessors != null)
                 this.PostProcessors.AddRange(postprocessors);
-            this.PostProcessors.Add(new CteFixPostProcessor(sqlFactory));
+            this.PostProcessors.Add(new CteFixPostprocessor(sqlFactory));
             this.PostProcessors.Add(new CteCrossJoinPostprocessor(sqlFactory));
             this.maxIterations = maxIterations;
         }
