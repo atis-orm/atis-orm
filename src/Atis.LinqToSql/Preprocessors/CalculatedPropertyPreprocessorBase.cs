@@ -16,14 +16,8 @@ namespace Atis.LinqToSql.Preprocessors
     ///         how calculated properties will be identified and processed.
     ///     </para>
     /// </remarks>
-    public abstract class CalculatedPropertyPreprocessorBase : IExpressionPreprocessor
+    public abstract class CalculatedPropertyPreprocessorBase : ExpressionVisitor, IExpressionPreprocessor
     {
-        /// <inheritdoc/>
-        public void BeforeVisit(Expression node, Expression[] expressionsStack)
-        {
-            // do nothing
-        }
-
         /// <inheritdoc/>
         public void Initialize()
         {
@@ -31,23 +25,32 @@ namespace Atis.LinqToSql.Preprocessors
         }
 
         /// <inheritdoc/>
-        public Expression Preprocess(Expression node, Expression[] expressionsStack)
+        public Expression Preprocess(Expression node)
         {
-            if (node is MemberExpression memberExpression &&
+            return this.Visit(node);
+        }
+
+        /// <inheritdoc/>
+        protected override Expression VisitMember(MemberExpression node)
+        {
+            var updatedNode = base.VisitMember(node);
+
+            if (updatedNode is MemberExpression memberExpression &&
                 this.TryGetCalculatedExpression(memberExpression, out LambdaExpression calculatedPropertyExpression))
             {
                 if (calculatedPropertyExpression.Parameters.Count == 0)
-                    throw new InvalidOperationException($"Preprocessing expression '{node}' for calculated property, but returned LambdaExpression does not have any parameters.");
+                    throw new InvalidOperationException($"Preprocessing expression '{memberExpression}' for calculated property, but returned LambdaExpression does not have any parameters.");
                 try
                 {
                     return ExpressionReplacementVisitor.Replace(calculatedPropertyExpression.Parameters[0], memberExpression.Expression, calculatedPropertyExpression.Body);
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"An error occurred while extracting the expression for the calculated property node '{node}', see inner exception for details.", ex);
+                    throw new InvalidOperationException($"An error occurred while extracting the expression for the calculated property node '{memberExpression}', see inner exception for details.", ex);
                 }
             }
-            return node;
+
+            return updatedNode;
         }
 
         /// <summary>

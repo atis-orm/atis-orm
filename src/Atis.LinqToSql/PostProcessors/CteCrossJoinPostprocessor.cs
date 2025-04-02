@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Atis.LinqToSql.Postprocessors
 {
-    public class CteCrossJoinPostprocessor : SqlExpressionVisitor, IPostprocessor
+    public class CteCrossJoinPostprocessor : SqlExpressionVisitor, ISqlExpressionPostprocessor
     {
         private class CteUsage
         {
@@ -32,7 +32,7 @@ namespace Atis.LinqToSql.Postprocessors
             this.cteUsages.Clear();
         }
 
-        public SqlExpression Process(SqlExpression sqlExpression)
+        public SqlExpression Postprocess(SqlExpression sqlExpression)
         {
             sqlExpression = this.Visit(sqlExpression);
             return sqlExpression;

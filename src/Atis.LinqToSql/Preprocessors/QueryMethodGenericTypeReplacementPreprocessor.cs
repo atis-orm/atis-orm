@@ -10,7 +10,7 @@ namespace Atis.LinqToSql.Preprocessors
     ///         with the appropriate types during the preprocessing phase of expression tree traversal.
     ///     </para>
     /// </summary>
-    public partial class QueryMethodGenericTypeReplacementPreprocessor : IExpressionPreprocessor
+    public partial class QueryMethodGenericTypeReplacementPreprocessor : ExpressionVisitor, IExpressionPreprocessor
     {
         private readonly IReflectionService reflectionService;
 
@@ -24,27 +24,29 @@ namespace Atis.LinqToSql.Preprocessors
         }
 
         /// <inheritdoc />
-        public void BeforeVisit(Expression node, Expression[] expressionsStack)
-        {
-            // do nothing
-        }
-
-        /// <inheritdoc />
         public void Initialize()
         {
             // do nothing
         }
 
         /// <inheritdoc />
-        public Expression Preprocess(Expression node, Expression[] expressionsStack)
+        public Expression Preprocess(Expression node)
         {
-            if (node is MethodCallExpression methodCallExpr && this.reflectionService.IsQueryMethod(node))
+            return this.Visit(node);
+        }
+
+        /// <inheritdoc />
+        protected override Expression VisitMethodCall(MethodCallExpression node)
+        {
+            var updatedNode = base.VisitMethodCall(node);
+            if (updatedNode is MethodCallExpression methodCallExpression &&
+                    this.reflectionService.IsQueryMethod(methodCallExpression))
             {
                 var queryMethodReturnTypeReplacer = new FixLinqMethodCallTSource(this.reflectionService);
-                var newMethodCall = queryMethodReturnTypeReplacer.Transform(methodCallExpr);
+                var newMethodCall = queryMethodReturnTypeReplacer.Transform(methodCallExpression);
                 return newMethodCall;
             }
-            return node;
+            return updatedNode;
         }
     }
 }

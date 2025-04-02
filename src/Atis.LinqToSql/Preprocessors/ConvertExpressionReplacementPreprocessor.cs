@@ -8,14 +8,8 @@ namespace Atis.LinqToSql.Preprocessors
     ///         Preprocesses casting expressions and picks the actual property using Expression's Type.
     ///     </para>
     /// </summary>
-    public class ConvertExpressionReplacementPreprocessor : IExpressionPreprocessor
+    public class ConvertExpressionReplacementPreprocessor : ExpressionVisitor, IExpressionPreprocessor
     {
-        /// <inheritdoc />
-        public void BeforeVisit(Expression node, Expression[] expressionsStack)
-        {
-            // do nothing
-        }
-
         /// <inheritdoc />
         public void Initialize()
         {
@@ -23,18 +17,28 @@ namespace Atis.LinqToSql.Preprocessors
         }
 
         /// <inheritdoc />
-        public Expression Preprocess(Expression node, Expression[] expressionsStack)
+        public Expression Preprocess(Expression node)
         {
+            return this.Visit(node);
+        }
+
+        /// <inheritdoc />
+        protected override Expression VisitMember(MemberExpression node)
+        {
+            var updatedNode = base.VisitMember(node);
+
             // ((SomeType)x).Column  where `Column` as a MemberInfo does not belong to type `x` instead it belongs to SomeType.
             // Note that, type of `x` do have `Column` member but from reflection standpoint this `Column` member is part of `SomeType`,
             // therefore, below we are testing this and picking the correct MemberInfo (`Column` property) from the actual type of `x`
-            if (node is MemberExpression memberExpr && memberExpr.Expression is UnaryExpression unaryExpr)
+            if (updatedNode is MemberExpression memberExpression &&                
+                    memberExpression.Expression is UnaryExpression unaryExpr)
             {
-                var actualPropertyInfo = unaryExpr.Operand.Type.GetProperty(memberExpr.Member.Name);
+                var actualPropertyInfo = unaryExpr.Operand.Type.GetProperty(memberExpression.Member.Name);
                 if (actualPropertyInfo != null)
                     return Expression.MakeMemberAccess(unaryExpr.Operand, actualPropertyInfo);
             }
-            return node;
+
+            return updatedNode;
         }
     }
 }

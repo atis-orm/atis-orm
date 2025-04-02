@@ -11,7 +11,7 @@ namespace Atis.LinqToSql.Preprocessors
     ///         Represents a preprocessor that replaces query variables in an expression tree with their corresponding expressions.
     ///     </para>
     /// </summary>
-    public class QueryVariableReplacementPreprocessor : IExpressionPreprocessor
+    public class QueryVariableReplacementPreprocessor : ExpressionVisitor, IExpressionPreprocessor
     {
         /// <summary>
         ///     <para>
@@ -26,10 +26,20 @@ namespace Atis.LinqToSql.Preprocessors
         }
 
         /// <inheritdoc />
-        public Expression Preprocess(Expression node, Expression[] expressionsStack)
+        public Expression Preprocess(Expression node)
         {
-            if (this.IsQueryType(node.Type) &&
-                node is MemberExpression memberExpr &&
+            return this.Visit(node);
+        }
+
+        /// <inheritdoc />
+        public override Expression Visit(Expression node)
+        {
+            if (node is null) return null;
+
+            var updatedNode = base.Visit(node);
+
+            if (this.IsQueryType(updatedNode.Type) &&
+                updatedNode is MemberExpression memberExpr &&
                 memberExpr.Expression is ConstantExpression constExpr &&
                 constExpr.Value != null)
             {
@@ -43,21 +53,17 @@ namespace Atis.LinqToSql.Preprocessors
                         ?? throw new InvalidOperationException($"Field {fieldInfo.Name} is not initialized or is not of type {typeof(IQueryable)}");
                 throw new InvalidOperationException($"Member {memberExpr.Member.Name} is not a property or field");
             }
-            else if (this.IsQueryType(node.Type) &&
-                     node is ConstantExpression constExpr2 &&
+            else if (this.IsQueryType(updatedNode.Type) &&
+                     updatedNode is ConstantExpression constExpr2 &&
                      constExpr2.Value is IQueryable q &&
-                     q.Expression == node)
+                     q.Expression == updatedNode)
             {
-                return Expression.Call(typeof(QueryExtensions), nameof(QueryExtensions.DataSet), new Type[] { node.Type.GetGenericArguments().First() }, Expression.Constant(q.Provider));
+                return Expression.Call(typeof(QueryExtensions), nameof(QueryExtensions.DataSet), new Type[] { updatedNode.Type.GetGenericArguments().First() }, Expression.Constant(q.Provider));
             }
-            return node;
-        }
 
-        /// <inheritdoc />
-        public void BeforeVisit(Expression node, Expression[] expressionsStack)
-        {
-            // do nothing
-        }
+            return updatedNode;
+        }        
+        
 
         /// <inheritdoc />
         public void Initialize()

@@ -11,7 +11,7 @@ namespace Atis.LinqToSql
     {
         private readonly LinqToSqlConverterInternal linqToSqlConverterInternal;
 
-        public LinqToSqlConverter(IReflectionService reflectionService, IExpressionConverterProvider<Expression, SqlExpression> expressionConverterProvider, IPostprocessorProvider postProcessorProvider)
+        public LinqToSqlConverter(IReflectionService reflectionService, IExpressionConverterProvider<Expression, SqlExpression> expressionConverterProvider, ISqlExpressionPostprocessorProvider postProcessorProvider)
         {
             this.linqToSqlConverterInternal = new LinqToSqlConverterInternal(reflectionService, expressionConverterProvider, postProcessorProvider, this.OnQueryClosed);
         }
@@ -31,9 +31,9 @@ namespace Atis.LinqToSql
         {
             private readonly ExpressionConverterVisitor<Expression, SqlExpression> visitor;
             private readonly LinqQueryContextManager linqQueryManager;
-            private readonly IPostprocessorProvider postprocessorProvider;
+            private readonly ISqlExpressionPostprocessorProvider postprocessorProvider;
 
-            public LinqToSqlConverterInternal(IReflectionService reflectionService, IExpressionConverterProvider<Expression, SqlExpression> expressionConverterProvider, IPostprocessorProvider postProcessorProvider, Action<SqlQueryExpression> onQueryClosed)
+            public LinqToSqlConverterInternal(IReflectionService reflectionService, IExpressionConverterProvider<Expression, SqlExpression> expressionConverterProvider, ISqlExpressionPostprocessorProvider postProcessorProvider, Action<SqlQueryExpression> onQueryClosed)
             {
                 this.visitor = new ExpressionConverterVisitor<Expression, SqlExpression>(expressionConverterProvider);
                 this.linqQueryManager = new LinqQueryContextManager(reflectionService)
@@ -53,7 +53,7 @@ namespace Atis.LinqToSql
                 var sqlExpression = this.visitor.GetConvertedExpression();
 
                 if (this.postprocessorProvider != null)
-                    sqlExpression = this.postprocessorProvider.Process(sqlExpression);
+                    sqlExpression = this.postprocessorProvider.Postprocess(sqlExpression);
 
                 return sqlExpression;
             }

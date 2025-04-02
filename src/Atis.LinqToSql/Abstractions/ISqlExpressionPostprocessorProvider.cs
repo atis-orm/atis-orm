@@ -5,8 +5,8 @@ using System.Text;
 
 namespace Atis.LinqToSql.Abstractions
 {
-    public interface IPostprocessorProvider
+    public interface ISqlExpressionPostprocessorProvider
     {
-        SqlExpression Process(SqlExpression sqlExpression);
+        SqlExpression Postprocess(SqlExpression sqlExpression);
     }
 }
