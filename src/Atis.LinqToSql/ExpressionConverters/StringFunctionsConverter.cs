@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Linq;
@@ -100,53 +101,68 @@ namespace Atis.LinqToSql.ExpressionConverters
             {
                 case nameof(string.Substring):
                     {
-                        var lastArgument = arguments.Length == 3 ? arguments[2] : new SqlLiteralExpression(int.MaxValue);
-                        var arg1 = new SqlBinaryExpression(arguments[1], new SqlLiteralExpression(1), SqlExpressionType.Add);
-                        return new SqlFunctionCallExpression("substring", arguments[0], arg1, lastArgument);
+                        var lastArgument = arguments.Length == 3 ? arguments[2] : this.SqlFactory.CreateLiteral(int.MaxValue);
+                        var arg1 = this.CreateSqlBinary(arguments[1], this.SqlFactory.CreateLiteral(1), SqlExpressionType.Add);
+                        return this.CreateSqlFunction("substring", arguments[0], arg1, lastArgument);
                     }
                 case nameof(string.ToLower):
                     {
-                        return new SqlFunctionCallExpression("lower", arguments[0]);
+                        return this.CreateSqlFunction("lower", arguments[0]);
                     }
                 case nameof(string.ToUpper):
                     {
-                        return new SqlFunctionCallExpression("upper", arguments[0]);
+                        return this.CreateSqlFunction("upper", arguments[0]);
                     }
                 case nameof(string.Trim):
                     {
-                        return new SqlFunctionCallExpression("rTrim", new SqlFunctionCallExpression("lTrim", arguments[0]));
+                        return this.CreateSqlFunction("rTrim", this.CreateSqlFunction("lTrim", arguments[0]));
                     }
                 case nameof(string.TrimEnd):
                     {
-                        return new SqlFunctionCallExpression("rTrim", arguments[0]);
+                        return this.CreateSqlFunction("rTrim", arguments[0]);
                     }
                 case nameof(string.TrimStart):
                     {
-                        return new SqlFunctionCallExpression("lTrim", arguments[0]);
+                        return this.CreateSqlFunction("lTrim", arguments[0]);
                     }
                 case nameof(string.Contains):
                     {
-                        return new SqlBinaryExpression(arguments[0], new SqlBinaryExpression(new SqlLiteralExpression("%"), new SqlBinaryExpression(arguments[1], new SqlLiteralExpression("%"), SqlExpressionType.Add), SqlExpressionType.Add), SqlExpressionType.Like);
+                        return this.CreateSqlBinary(arguments[0], this.CreateSqlBinary(this.GetPercent(), this.CreateSqlBinary(arguments[1], this.GetPercent(), SqlExpressionType.Add), SqlExpressionType.Add), SqlExpressionType.Like);
                     }
                 case nameof(string.StartsWith):
                     {
-                        return new SqlBinaryExpression(arguments[0], new SqlBinaryExpression(arguments[1], new SqlLiteralExpression("%"), SqlExpressionType.Add), SqlExpressionType.Like);
+                        return this.CreateSqlBinary(arguments[0], this.CreateSqlBinary(arguments[1], this.GetPercent(), SqlExpressionType.Add), SqlExpressionType.Like);
                     }
                 case nameof(string.EndsWith):
                     {
-                        return new SqlBinaryExpression(arguments[0], new SqlBinaryExpression(new SqlLiteralExpression("%"), arguments[1], SqlExpressionType.Add), SqlExpressionType.Like);
+                        return this.CreateSqlBinary(arguments[0], this.CreateSqlBinary(this.GetPercent(), arguments[1], SqlExpressionType.Add), SqlExpressionType.Like);
                     }
                 case nameof(string.IndexOf):
                     {
-                        return new SqlFunctionCallExpression("charIndex", arguments[1], arguments[0], arguments.Skip(2).FirstOrDefault());
+                        return this.CreateSqlFunction("charIndex", arguments[1], arguments[0], arguments.Skip(2).FirstOrDefault());
                     }
                 case nameof(string.Replace):
                     {
-                        return new SqlFunctionCallExpression("replace", arguments[0], arguments[1], arguments[2]);
+                        return this.CreateSqlFunction("replace", arguments[0], arguments[1], arguments[2]);
                     }
                 default:
                     throw new InvalidOperationException($"String method '{methodName}' is not supported.");
             }
+        }
+
+        private SqlFunctionCallExpression CreateSqlFunction(string functionName, params SqlExpression[] arguments)
+        {
+            return this.SqlFactory.CreateFunctionCall(functionName, arguments);
+        }
+
+        private SqlLiteralExpression GetPercent()
+        {
+            return this.SqlFactory.CreateLiteral("%");
+        }
+
+        private SqlBinaryExpression CreateSqlBinary(SqlExpression left, SqlExpression right, SqlExpressionType operation)
+        {
+            return this.SqlFactory.CreateBinary(left, right, operation);
         }
 
         /// <inheritdoc />

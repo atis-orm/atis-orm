@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.Internal;
 using Atis.LinqToSql.SqlExpressions;
 using System;
@@ -33,7 +34,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <inheritdoc />
         protected override IEnumerable<SqlExpression> CreateCollection(SqlExpression[] arguments, string[] memberNames)
         {
-            var projectionCreator = new ProjectionCreator();
+            var projectionCreator = new ProjectionCreator(this.SqlFactory);
             return projectionCreator.Create(arguments, memberNames);
         }
     }

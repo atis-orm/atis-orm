@@ -135,5 +135,10 @@ namespace Atis.LinqToSql.SqlExpressions
         {
             return sqlExpressionVisitor.VisitCustom(this);
         }
+
+        protected internal virtual SqlExpression VisitChildren(SqlExpressionVisitor sqlExpressionVisitor)
+        {
+            return this;
+        }
     }
 }

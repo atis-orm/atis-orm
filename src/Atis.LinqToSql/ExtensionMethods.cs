@@ -13,7 +13,7 @@ namespace Atis.LinqToSql
         {
             if (IsTableOnly(sqlExpression))
             {
-                return ((SqlQueryExpression)sqlExpression).DataSources.First().DataSource;
+                return ((SqlQueryExpression)sqlExpression).DataSources.First().QuerySource;
             }
             return sqlExpression;
         }

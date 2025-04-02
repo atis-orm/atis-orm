@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Collections.Generic;
@@ -39,7 +40,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <inheritdoc />
         protected override IEnumerable<SqlExpression> CreateCollection(SqlExpression[] arguments, string[] memberNames)
         {
-            List<SqlFromSourceExpression> sourceExpressions = new List<SqlFromSourceExpression>();
+            List<SqlDataSourceExpression> sourceExpressions = new List<SqlDataSourceExpression>();
             for (var i = 0; i < memberNames.Length; i++)
             {
                 var memberName = memberNames[i];
@@ -53,7 +54,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                         throw new InvalidOperationException($"Projection has not been applied to the SqlQueryExpression at index {i}");
                 }
                 // TODO: add the member name some how in the navigation
-                var sqlFromSourceExpression = new SqlFromSourceExpression(tableOrSubQuery, new ModelPath(memberName));
+                var sqlFromSourceExpression = this.SqlFactory.CreateFromSource(tableOrSubQuery, new ModelPath(memberName));
                 sourceExpressions.Add(sqlFromSourceExpression);
             }
             return sourceExpressions;

@@ -1,5 +1,5 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.ContextExtensions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.Internal;
 using Atis.LinqToSql.SqlExpressions;
 using System;
@@ -110,7 +110,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                         bool crossJoin;
                         if (otherSqlQuery.IsTableOnly())
                         {
-                            newQuerySource = otherSqlQuery.InitialDataSource.DataSource;
+                            newQuerySource = otherSqlQuery.InitialDataSource.QuerySource;
                             //dataSourceAlias = otherSqlQuery.InitialDataSource.DataSourceAlias;
                             crossJoin = true;
                         }
@@ -130,7 +130,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                             //dataSourceAlias = this.Context.GenerateAlias();
                         }
 
-                        var newDataSource = new SqlDataSourceExpression(newQuerySource);
+                        var newDataSource = this.SqlFactory.CreateDataSourceForQuerySource(newQuerySource);
                         if (crossJoin)
                         {
                             this.SourceQuery.AddDataSource(newDataSource);
@@ -141,7 +141,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                             SqlJoinType sqlJoinType = SqlJoinType.CrossApply;
                             if (otherSqlQuery.IsDefaultIfEmpty)
                                 sqlJoinType = SqlJoinType.OuterApply;
-                            var crossApplyJoin = new SqlJoinExpression(sqlJoinType, newDataSource, joinCondition: null);
+                            var crossApplyJoin = this.SqlFactory.CreateJoin(sqlJoinType, newDataSource, joinPredicate: null);
                             this.SourceQuery.ApplyJoin(crossApplyJoin);
                         }
 
@@ -174,7 +174,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                          */
 
                         if (otherSqlExpr is SqlDataSourceExpression otherDs &&
-                                otherDs.DataSource.IsDefaultIfEmpty)
+                                otherDs.QuerySource.IsDefaultIfEmpty)
                         {
                             var join = this.SourceQuery.Joins.Where(x => x.JoinedSource == otherDs).FirstOrDefault();
                             if (join != null)
@@ -236,7 +236,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                     {
                         // pick-up the last data source that was added to the query and apply projection
                         var lastDataSource = sqlQuery.DataSources.Last();
-                        projection = new SqlDataSourceReferenceExpression(lastDataSource);
+                        projection = this.SqlFactory.CreateDataSourceReference(lastDataSource);
                     }
                     else
                     {

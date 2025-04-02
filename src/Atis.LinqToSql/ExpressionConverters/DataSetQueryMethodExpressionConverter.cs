@@ -1,6 +1,5 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.ContextExtensions;
-using Atis.LinqToSql.Infrastructure;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Linq;
@@ -70,7 +69,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         {
             if (this.Expression.Arguments.FirstOrDefault() == sourceExpression)
             {
-                convertedExpression = new SqlLiteralExpression("dummy");
+                convertedExpression = this.SqlFactory.CreateLiteral("dummy");
                 return true;
             }
             convertedExpression = null;
@@ -83,9 +82,9 @@ namespace Atis.LinqToSql.ExpressionConverters
             var sourceType = this.reflectionService.GetEntityTypeFromQueryableType(this.Expression.Type);
             var tableName = this.model.GetTableName(sourceType);
             var tableColumns = this.model.GetTableColumns(sourceType);
-            var table = new SqlTableExpression(tableName, tableColumns);
-            var tableDataSource = new SqlDataSourceExpression(table);
-            var result = new SqlQueryExpression(tableDataSource);
+            var table = this.SqlFactory.CreateTable(tableName, tableColumns);
+            var tableDataSource = this.SqlFactory.CreateDataSourceForTable(table);
+            var result = this.SqlFactory.CreateQueryFromDataSource(tableDataSource);
             return result;
         }
     }

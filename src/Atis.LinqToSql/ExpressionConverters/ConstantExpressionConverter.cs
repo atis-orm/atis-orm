@@ -1,13 +1,7 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.ContextExtensions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Atis.LinqToSql.ExpressionConverters
 {
@@ -60,7 +54,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            return new SqlParameterExpression(this.Expression.Value);
+            return this.SqlFactory.CreateParameter(this.Expression.Value);
         }
     }
 }

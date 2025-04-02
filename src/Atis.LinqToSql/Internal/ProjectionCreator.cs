@@ -1,4 +1,5 @@
-﻿using Atis.LinqToSql.SqlExpressions;
+﻿using Atis.LinqToSql.Abstractions;
+using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -80,6 +81,13 @@ namespace Atis.LinqToSql.Internal
     /// </remarks>
     public class ProjectionCreator
     {
+        private readonly ISqlExpressionFactory sqlFactory;
+
+        public ProjectionCreator(ISqlExpressionFactory sqlFactory)
+        {
+            this.sqlFactory = sqlFactory;
+        }
+
         /// <summary>
         ///     <para>
         ///         Creates a flat list of SqlColumnExpression by wrapping a single SqlCollectionExpression. This is a convenience
@@ -133,7 +141,7 @@ namespace Atis.LinqToSql.Internal
                     expr = NormalizeSqlCollection(collection);
                 }
 
-                normalizedExpressions.Add(new SqlColumnExpression(
+                normalizedExpressions.Add(this.sqlFactory.CreateColumn(
                     expr,
                     memberNames[i],
                     new ModelPath(memberNames[i])
@@ -173,10 +181,10 @@ namespace Atis.LinqToSql.Internal
                     throw new InvalidOperationException("Expected SqlDataSourceReferenceExpression or SqlColumnExpression");
                 }
 
-                wrappedChildren.Add(new SqlColumnExpression(columnExpr, columnAlias, columnModelPath));
+                wrappedChildren.Add(this.sqlFactory.CreateColumn(columnExpr, columnAlias, columnModelPath));
             }
 
-            return new SqlCollectionExpression(wrappedChildren);
+            return this.sqlFactory.CreateCollection(wrappedChildren);
         }
 
         private void Flatten(IEnumerable<SqlColumnExpression> inputs, ModelPath parentPath, List<SqlColumnExpression> output)
@@ -199,7 +207,7 @@ namespace Atis.LinqToSql.Internal
                 }
                 else
                 {
-                    var flattened = new SqlColumnExpression(
+                    var flattened = this.sqlFactory.CreateColumn(
                         input.ColumnExpression,
                         input.ColumnAlias,
                         parentPath.Append(input.ModelPath)

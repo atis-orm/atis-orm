@@ -1,5 +1,5 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.ContextExtensions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Linq;
@@ -128,7 +128,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             var methodArguments = allArguments.Skip(1).ToArray();
 
             SqlExpression result;
-            var functionCallExpression = new SqlFunctionCallExpression(this.Expression.Method.Name, methodArguments);
+            var functionCallExpression = this.SqlFactory.CreateFunctionCall(this.Expression.Method.Name, methodArguments);
             if (firstArg is SqlQueryExpression sqlQuery)
             {
                 sqlQuery.ApplyProjection(functionCallExpression);

@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System.Linq.Expressions;
 
@@ -60,7 +61,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             var sourceExpression = convertedChildren[0];
-            return new SqlFunctionCallExpression("len", new SqlExpression[] { sourceExpression });
+            return this.SqlFactory.CreateFunctionCall("len", new SqlExpression[] { sourceExpression });
         }
     }
 }

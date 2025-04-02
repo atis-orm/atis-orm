@@ -78,20 +78,15 @@ namespace Atis.LinqToSql.SqlExpressions
         /// <inheritdoc />
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            // We are NOT allowing this class to be visited because this class is going to be used as detection of the Data Source Reference,
-            // if allow to traverse further, then it will be infinite recursion.
-            // e.g.
-            //      From<Student>().Select(s => new { STD_OBJ = s })
-            //      From<Student>().Select(s => new { ID = s.StudentId, Total = From<StudentGrades>().Where(g => g.StudentId == s.StudentId).Sum(g => g.Grade) })
-            // In above case, if we translate both "s" in 1st and From<>.. in 2nd case to SqlQueryExpression, then Select converter plugin
-            // will not be able to differentiate between the 2nd case and 1st case. So, we are using this class to detect the Reference to the Data Source.
-            // In this way, the first case will be translated to Column selection while the 2nd case will be translated to SubQuery.
-
-            //throw new NotSupportedException($"{nameof(SqlDataSourceReferenceExpression)} is not supported by {nameof(SqlExpressionVisitor)}");
-
-            return this;
+            return sqlExpressionVisitor.VisitDataSourceReferenceExpression(this);
         }
 
+        /// <summary>
+        ///     <para>
+        ///         Converts the current object to its string representation.
+        ///     </para>
+        /// </summary>
+        /// <returns>String representation of the current object.</returns>
         public override string ToString()
         {
             return $"ds-ref: {this.DataSource.NodeType}";

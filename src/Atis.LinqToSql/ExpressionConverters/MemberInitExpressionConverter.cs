@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Linq;
@@ -61,7 +62,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         {
             if (sourceExpression == this.Expression.NewExpression)
             {
-                convertedExpression = new SqlLiteralExpression("dummy");
+                convertedExpression = this.SqlFactory.CreateLiteral("dummy");
                 return true;
             }
             convertedExpression = null;

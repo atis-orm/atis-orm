@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Collections.Generic;
@@ -98,7 +99,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 else
                 {
                     var matchedDataSources = sqlQuery.AllDataSources.Where(x => x.ModelPath.StartsWith(path)).ToArray();
-                    var dataSourceReferences = matchedDataSources.Select(x => new SqlDataSourceReferenceExpression(x)).ToArray();
+                    var dataSourceReferences = matchedDataSources.Select(x => this.SqlFactory.CreateDataSourceReference(x)).ToArray();
                     result = dataSourceReferences;
                     resultSource = sqlQuery;
                     // x.Field, in-case of if x is a SqlQueryExpression and there is only 1 data source available
@@ -123,7 +124,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 {
                     // it means we have to match in the data sources because there are multiple data sources
                     result = dsCollection.Where(x => x.ModelPath.StartsWith(path))
-                                .Select(x => new SqlDataSourceReferenceExpression(x))
+                                .Select(x => this.SqlFactory.CreateDataSourceReference(x))
                                 .ToArray();
                     resultSource = parent;
                 }
@@ -193,7 +194,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                     if (result.Any(x => x is SqlColumnExpression))
                     {
                         result = result.Cast<SqlColumnExpression>()
-                                        .Select(x => new SqlColumnExpression(x.ColumnExpression, x.ColumnAlias, x.ModelPath.RemovePrefixPath(path)))
+                                        .Select(x => this.CreateSqlColumn(x.ColumnExpression, x.ColumnAlias, x.ModelPath.RemovePrefixPath(path)))
                                         .ToArray();
                     }
                     else if (result.Any(x => x is SqlDataSourceReferenceExpression))
@@ -214,7 +215,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                             //      given path = t1     =>  remove until t1
                             //      new path would be = t1
                             var newModelPath = ds.ModelPath.RemovePrefixPath(path);
-                            newResult.Add(new SqlColumnExpression(new SqlDataSourceReferenceExpression(ds), null, newModelPath));
+                            newResult.Add(this.CreateSqlColumn(this.SqlFactory.CreateDataSourceReference(ds), null, newModelPath));
                         }
                         result = newResult.ToArray();
                     }
@@ -234,7 +235,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                     //          .Select(x => new { OuterProperty = new { InnerProperty = new { x.Field1, x.Field2 } } })
                     //          .Select(x => x.OuterProperty.InnerProperty );
                     // In above example, x.OuterProperty.InnerProperty is a collection of SqlColumnExpression, and we are at leaf node level.
-                    return new SqlSelectedCollectionExpression(resultSource, result);
+                    return this.SqlFactory.CreateSelectedCollection(resultSource, result);
                 }
 
                 var firstItem = result.First();
@@ -249,15 +250,15 @@ namespace Atis.LinqToSql.ExpressionConverters
                     var resultDs = resultAsDsRef.DataSource;
                     if (resultDs is SqlDataSourceExpression sqlQueryDs)
                     {
-                        if (sqlQueryDs.DataSource is SqlQueryExpression innerQuery &&
+                        if (sqlQueryDs.QuerySource is SqlQueryExpression innerQuery &&
                             innerQuery.Projection.TryGetScalarColumn(out var scalarColExpr))
-                            return new SqlDataSourceColumnExpression(sqlQueryDs, scalarColExpr.ColumnAlias);
+                            return this.CreateSqlDataSourceColumn(sqlQueryDs, scalarColExpr.ColumnAlias);
                         else if (sqlQueryDs.NodeType == SqlExpressionType.SubQueryDataSource)
                         {
                             // this in-case if other data source directly selected
-                            var otherDataSourceSqlQuery = sqlQueryDs.DataSource as SqlQueryExpression
+                            var otherDataSourceSqlQuery = sqlQueryDs.QuerySource as SqlQueryExpression
                                                             ??
-                                                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} but got {sqlQueryDs.DataSource.GetType().Name}");
+                                                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} but got {sqlQueryDs.QuerySource.GetType().Name}");
                             var newSqlQuery = otherDataSourceSqlQuery.CreateCopy();
                             return newSqlQuery;
                         }
@@ -268,20 +269,25 @@ namespace Atis.LinqToSql.ExpressionConverters
                 }
             }
             else
-                return new SqlCollectionExpression(result);
+                return this.SqlFactory.CreateCollection(result);
+        }
+
+        private SqlDataSourceColumnExpression CreateSqlDataSourceColumn(SqlDataSourceExpression dataSourceExpression, string alias)
+        {
+            return this.SqlFactory.CreateDataSourceColumn(dataSourceExpression, alias);
         }
 
         private SqlColumnExpression[] GetMatchingColumnsFromDataSource(string lastPathSegment, SqlDataSourceExpression ds)
         {
             SqlColumnExpression[] result;
-            if (ds.DataSource is SqlTableExpression table)
+            if (ds.QuerySource is SqlTableExpression table)
             {
                 var tableColumns = table.TableColumns.Where(x => x.ModelPropertyName == lastPathSegment).ToArray();
-                var dataSourceColumns = tableColumns.Select(x => new { x.ModelPropertyName, DsColumn = new SqlDataSourceColumnExpression(ds, x.DatabaseColumnName) });
-                var columns = dataSourceColumns.Select(x => new SqlColumnExpression(x.DsColumn, x.ModelPropertyName, ds.ModelPath.Append(x.ModelPropertyName))).ToArray();
+                var dataSourceColumns = tableColumns.Select(x => new { x.ModelPropertyName, DsColumn = this.CreateSqlDataSourceColumn(ds, x.DatabaseColumnName) });
+                var columns = dataSourceColumns.Select(x => this.CreateSqlColumn(x.DsColumn, x.ModelPropertyName, ds.ModelPath.Append(x.ModelPropertyName))).ToArray();
                 result = columns;
             }
-            else if (ds.DataSource is SqlQueryExpression subQuery)
+            else if (ds.QuerySource is SqlQueryExpression subQuery)
             {
                 SqlQueryExpression queryToUse;
                 if (subQuery.Projection != null)
@@ -290,9 +296,9 @@ namespace Atis.LinqToSql.ExpressionConverters
                 }
                 else
                 {
-                    queryToUse = subQuery.InitialDataSource.DataSource as SqlQueryExpression
+                    queryToUse = subQuery.InitialDataSource.QuerySource as SqlQueryExpression
                                         ??
-                                        throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} but got {subQuery.InitialDataSource.DataSource?.GetType().Name}.");
+                                        throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} but got {subQuery.InitialDataSource.QuerySource?.GetType().Name}.");
                 }
 
                 var matchedProjections = this.MatchWithProjection(lastPathSegment, queryToUse);
@@ -332,9 +338,9 @@ namespace Atis.LinqToSql.ExpressionConverters
                      */
 
                     var subQueryColumnAliases = this.MatchWithProjection(lastPathSegment, queryToUse)
-                                                        .Select(x => new { DsModel = ds.ModelPath.Append(x.ModelPath), ColExpr = new SqlDataSourceColumnExpression(ds, x.ColumnAlias) })
+                                                        .Select(x => new { DsModel = ds.ModelPath.Append(x.ModelPath), ColExpr = this.CreateSqlDataSourceColumn(ds, x.ColumnAlias) })
                                                         .ToArray();
-                    var columns = subQueryColumnAliases.Select(x => new SqlColumnExpression(x.ColExpr, x.ColExpr.ColumnName, x.DsModel)).ToArray();
+                    var columns = subQueryColumnAliases.Select(x => this.CreateSqlColumn(x.ColExpr, x.ColExpr.ColumnName, x.DsModel)).ToArray();
                     result = columns;
                 }
             }
@@ -354,7 +360,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             return collection
                         .SqlExpressions
                         .Cast<SqlColumnExpression>()
-                        .Where(x => x.ModelPath.StartsWith(lastPathSegment))
+                        .Where(x => x.ModelPath.StartsWith(new[] { lastPathSegment }))
                         .ToArray();
         }
 
@@ -364,17 +370,23 @@ namespace Atis.LinqToSql.ExpressionConverters
                 matchedProjections[0].ColumnExpression is SqlQueryExpression singleQuery)
             {
                 var copied = singleQuery.CreateCopy();
-                var projection = new SqlColumnExpression(copied, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath);
+                var projection = this.CreateSqlColumn(copied, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath);
                 updatedResult = new[] { projection };
                 return true;
             }
 
             if (matchedProjections.Length > 0 &&
-                matchedProjections.All(x => x is SqlSubQueryColumnExpression))
+                matchedProjections.All(x => x .NodeType == SqlExpressionType.SubQueryColumn))
             {
-                var first = (SqlSubQueryColumnExpression)matchedProjections.First();
-                var copied = first.SubQuery.CreateCopy();
-                var projection = new SqlColumnExpression(copied, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath);
+                var first = matchedProjections.First();
+                var subQueryColumn = first.ColumnExpression as SqlDataSourceColumnExpression
+                                    ??
+                                    throw new InvalidOperationException($"Expected {nameof(SqlDataSourceColumnExpression)} but got {first.ColumnExpression.GetType().Name}");
+                var subQuery = subQueryColumn.DataSource.QuerySource as SqlQueryExpression
+                                    ??
+                                    throw new InvalidOperationException($"Property '{nameof(SqlDataSourceColumnExpression.DataSource)}' in type '{nameof(SqlDataSourceColumnExpression)}' is not {nameof(SqlQueryExpression)}.");
+                var copied = subQuery.CreateCopy();
+                var projection = this.CreateSqlColumn(copied, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath);
                 updatedResult = new[] { projection };
                 return true;
             }
@@ -383,5 +395,9 @@ namespace Atis.LinqToSql.ExpressionConverters
             return false;
         }
 
+        private SqlColumnExpression CreateSqlColumn(SqlExpression sqlExpression, string columnAlias, ModelPath modelPath)
+        {
+            return this.SqlFactory.CreateColumn(sqlExpression, columnAlias, modelPath);
+        }
     }
 }

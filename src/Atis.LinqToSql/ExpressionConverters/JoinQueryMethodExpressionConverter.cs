@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.Internal;
 using Atis.LinqToSql.SqlExpressions;
 using System;
@@ -68,7 +69,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             {
                 if (sourceExpression == this.Expression.Arguments[newExpressionIndex])
                 {
-                    convertedExpression = new SqlLiteralExpression("dummy");
+                    convertedExpression = this.SqlFactory.CreateLiteral("dummy");
                     return true;
                 }
             }
@@ -142,14 +143,14 @@ namespace Atis.LinqToSql.ExpressionConverters
                 if (joinedQuery is SqlQueryExpression sqlQuery && sqlQuery.IsTableOnly())
                 {
                     var firstDataSource = sqlQuery.DataSources.First();
-                    joinedQuery = firstDataSource.DataSource;
+                    joinedQuery = firstDataSource.QuerySource;
                     //alias = firstDataSource.DataSourceAlias;
                 }
                 else
                 {
                     //alias = this.Context.GenerateAlias();
                 }
-                this.newJoinedDataSource = new SqlDataSourceExpression(joinedQuery);
+                this.newJoinedDataSource = this.SqlFactory.CreateDataSourceForQuerySource(joinedQuery);
                 this.SourceQuery.AddDataSource(this.newJoinedDataSource);
             }
             else if (this.GetNewExpressionIndex() == argIndex)
@@ -202,7 +203,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             var ds = this.newJoinedDataSource
                         ?? (otherDataSource as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression
                         ?? throw new InvalidOperationException($"2nd argument of Join Query Method must be a {nameof(SqlDataSourceExpression)}.");
-            var joinExpression = new SqlJoinExpression(joinType, ds, joinCondition);
+            var joinExpression = this.SqlFactory.CreateJoin(joinType, ds, joinCondition);
             sqlQuery.ApplyJoin(joinExpression);
             return sqlQuery;
         }

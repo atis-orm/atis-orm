@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Atis.LinqToSql.ContextExtensions
+namespace Atis.LinqToSql.Abstractions
 {
     /// <summary>
     ///     <para>

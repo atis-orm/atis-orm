@@ -1,5 +1,5 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.ContextExtensions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.ExpressionExtensions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
@@ -111,20 +111,20 @@ namespace Atis.LinqToSql.ExpressionConverters
                 SqlQuerySourceExpression joinedSource;
                 if (childSqlQuery.IsTableOnly())
                 {
-                    joinedSource = childSqlQuery.InitialDataSource.DataSource;      // SqlTableExpression
+                    joinedSource = childSqlQuery.InitialDataSource.QuerySource;      // SqlTableExpression
                 }
                 else
                 {
                     joinedSource = childSqlQuery;                                   // SqlQueryExpression
                 }
-                
+
                 // You might think why not put IsAutoAddedNavigationDataSource = true while creating below Data Source
                 // but we don't have to, since this ChildJoinExpression is a very special case used only in SelectMany
                 // if we set it to true, then it might make problems in extracting the data sources during projection,
                 // because later this data source is marked as DefaultDataSource in SqlQueryExpression, so it might become
                 // conflicting that same data source marked as Auto Added and then becoming Default Data Source.
 
-                this.joinedDataSource = new SqlDataSourceExpression(joinedSource, modelPath: ModelPath.Empty, tag: this.Expression.NavigationName);
+                this.joinedDataSource = this.SqlFactory.CreateDataSourceForNavigation(joinedSource, this.Expression.NavigationName);
                 this.sourceSqlQuery.AddDataSource(joinedDataSource);
 
                 if (this.Expression.JoinCondition != null)
@@ -163,7 +163,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             SqlJoinType sqlJoinType = SqlJoinType.Inner;
             if (this.defaultIfEmpty)
                 sqlJoinType = SqlJoinType.Left;
-            var joinExpression = new SqlJoinExpression(sqlJoinType, this.joinedDataSource, joinPredicate);
+            var joinExpression = this.SqlFactory.CreateJoin(sqlJoinType, this.joinedDataSource, joinPredicate);
             this.sourceSqlQuery.ApplyJoin(joinExpression);
 
             return this.sourceSqlQuery;

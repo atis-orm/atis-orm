@@ -1,4 +1,7 @@
-﻿namespace Atis.LinqToSql.SqlExpressions
+﻿using System.Collections.Generic;
+using System;
+
+namespace Atis.LinqToSql.SqlExpressions
 {
     /// <summary>
     ///     <para>
@@ -13,27 +16,17 @@
     /// </remarks>
     public class SqlColumnExpression : SqlExpression
     {
-        /// <summary>
-        ///     <para>
-        ///         Initializes a new instance of the <see cref="SqlColumnExpression"/> class.
-        ///     </para>
-        ///     <para>
-        ///         The <paramref name="columnExpression"/> parameter specifies the column expression.
-        ///     </para>
-        ///     <para>
-        ///         The <paramref name="columnAlias"/> parameter specifies the alias for the column.
-        ///     </para>
-        ///     <para>
-        ///         The <paramref name="modelPath"/> parameter specifies the model path for the column.
-        ///     </para>
-        /// </summary>
-        /// <param name="columnExpression">The column expression.</param>
-        /// <param name="columnAlias">The alias of the column.</param>
-        /// <param name="modelPath">The model path of the column.</param>
-        public SqlColumnExpression(SqlExpression columnExpression, string columnAlias, ModelPath modelPath)
-            : this(columnExpression, columnAlias, modelPath, scalar: false)
-        {            
-        }
+        private static readonly ISet<SqlExpressionType> _allowedTypes = new HashSet<SqlExpressionType>
+            {
+                SqlExpressionType.Column,
+                SqlExpressionType.ScalarColumn,
+                SqlExpressionType.SubQueryColumn,
+            };
+        private static SqlExpressionType ValidateNodeType(SqlExpressionType nodeType)
+            => _allowedTypes.Contains(nodeType)
+                ? nodeType
+                : throw new InvalidOperationException($"SqlExpressionType '{nodeType}' is not a valid {nameof(SqlColumnExpression)}.");
+
 
         /// <summary>
         ///     <para>
@@ -43,16 +36,14 @@
         /// <param name="columnExpression">The column expression.</param>
         /// <param name="columnAlias">The alias of the column.</param>
         /// <param name="modelPath">The model path of the column.</param>
-        /// <param name="scalar">If <c>true</c> the column is a scalar column, otherwise it is a regular column.</param>
-        public SqlColumnExpression(SqlExpression columnExpression, string columnAlias, ModelPath modelPath, bool scalar)
+        /// <param name="nodeType">The type of the SQL expression node.</param>
+        public SqlColumnExpression(SqlExpression columnExpression, string columnAlias, ModelPath modelPath, SqlExpressionType nodeType)
         {
             this.ColumnExpression = columnExpression;
             this.ColumnAlias = columnAlias;
             this.ModelPath = modelPath;
-            if (scalar)
-                this.NodeType = SqlExpressionType.ScalarColumn;
-            else
-                this.NodeType = SqlExpressionType.Column;
+            ValidateNodeType(nodeType);
+            this.NodeType = nodeType;
         }
 
         /// <summary>
@@ -84,7 +75,7 @@
         ///         Gets the model path of the column.
         ///     </para>
         /// </summary>
-        public ModelPath ModelPath { get; private set; }
+        public ModelPath ModelPath { get; }
 
         /// <summary>
         ///     <para>
@@ -96,14 +87,12 @@
         ///     </para>
         /// </summary>
         /// <param name="columnExpression">The new column expression.</param>
-        /// <param name="columnAlias">The new alias of the column.</param>
-        /// <param name="modelPath">The new model path of the column.</param>
         /// <returns>A new <see cref="SqlColumnExpression"/> instance with the updated values, or the current instance if unchanged.</returns>
         public SqlColumnExpression Update(SqlExpression columnExpression)
         {
             if (columnExpression == this.ColumnExpression)
                 return this;
-            return new SqlColumnExpression(columnExpression, this.ColumnAlias, this.ModelPath);
+            return new SqlColumnExpression(columnExpression, this.ColumnAlias, this.ModelPath, this.NodeType);
         }
 
         /// <summary>
@@ -118,10 +107,6 @@
             return sqlExpressionVisitor.VisitSqlColumnExpression(this);
         }
 
-        public void ClearModelPath()
-        {
-            this.ModelPath = new ModelPath(this.ColumnAlias);
-        }
 
         // not updating the ModelPath, because we were copying projection elsewhere, so we experienced same
         // Projection expression was copied in a sql expression, then the source sql expression was

@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System.Linq;
 using System.Linq.Expressions;
@@ -72,7 +73,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 ascending = false;      // descending
             else
                 ascending = true;
-            var orderByExpression = new SqlOrderByExpression(orderByPart, ascending);
+            SqlOrderByExpression orderByExpression = this.SqlFactory.CreateOrderBy(orderByPart, ascending);
             sqlQuery.ApplyOrderBy(orderByExpression);
             return sqlQuery;
         }

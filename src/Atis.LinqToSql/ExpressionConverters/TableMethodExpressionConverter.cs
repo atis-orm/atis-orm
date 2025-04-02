@@ -1,5 +1,5 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.ContextExtensions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System.Linq;
 using System.Linq.Expressions;
@@ -72,7 +72,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                                 throw new System.InvalidOperationException("Table method must have at least one generic argument.");
             var tableName = this.model.GetTableName(genericArg0);
             var tableColumns = this.model.GetTableColumns(genericArg0);
-            return new SqlTableExpression(tableName, tableColumns);
+            return this.SqlFactory.CreateTable(tableName, tableColumns);
         }
     }
 }

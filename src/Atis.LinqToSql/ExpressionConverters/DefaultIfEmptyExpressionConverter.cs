@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.ExpressionExtensions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
@@ -73,7 +74,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             if (sourceExpression is SqlDataSourceReferenceExpression dsRef)
             {
                 if (dsRef.DataSource is SqlDataSourceExpression ds)
-                    ds.DataSource.IsDefaultIfEmpty = true;
+                    ds.QuerySource.IsDefaultIfEmpty = true;
                 else if (dsRef.DataSource is SqlQuerySourceExpression sqlQ)
                     sqlQ.IsDefaultIfEmpty = true;
                 return sourceExpression;

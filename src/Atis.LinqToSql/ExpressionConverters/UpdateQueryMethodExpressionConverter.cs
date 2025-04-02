@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Linq;
@@ -56,7 +57,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             var columnNames = sqlColumns.Select(x => x.ColumnAlias).ToArray();
             var values = sqlColumns.Select(x => x.ColumnExpression).ToArray();
 
-            var updateSqlExpression = new SqlUpdateExpression(sqlQuery, selectedDataSource, columnNames, values);
+            var updateSqlExpression = this.SqlFactory.CreateUpdate(sqlQuery, selectedDataSource, columnNames, values);
 
             return updateSqlExpression;
         }

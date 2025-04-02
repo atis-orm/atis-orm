@@ -1,5 +1,5 @@
 ﻿using Atis.LinqToSql.ExpressionExtensions;
-using Atis.LinqToSql.Infrastructure;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
-namespace Atis.LinqToSql
+namespace Atis.LinqToSql.Services
 {
     public class ReflectionService : IReflectionService
     {
@@ -103,17 +103,17 @@ namespace Atis.LinqToSql
 
         public virtual bool IsQuerySource(Expression node)
         {
-            return (
+            return 
                     node is MethodCallExpression methodCallExpression &&
                             (
-                                (methodCallExpression.Method.Name == nameof(QueryExtensions.From) &&
-                                methodCallExpression.Method.DeclaringType == typeof(QueryExtensions))
+                                methodCallExpression.Method.Name == nameof(QueryExtensions.From) &&
+                                methodCallExpression.Method.DeclaringType == typeof(QueryExtensions)
                                 ||
-                                (methodCallExpression.Method.Name == nameof(QueryExtensions.DataSet) &&
-                                methodCallExpression.Method.DeclaringType == typeof(QueryExtensions))
+                                methodCallExpression.Method.Name == nameof(QueryExtensions.DataSet) &&
+                                methodCallExpression.Method.DeclaringType == typeof(QueryExtensions)
                             )
-                    ) ||
-                    (node is ConstantExpression constExpression && constExpression.Value is IQueryable);
+                     ||
+                    node is ConstantExpression constExpression && constExpression.Value is IQueryable;
         }
 
         public virtual bool IsChainedQueryMethod(Expression currentNode, Expression parentNode)
@@ -132,12 +132,12 @@ namespace Atis.LinqToSql
 
         public virtual bool IsQueryMethod(Expression node)
         {
-            return (
+            return 
                     node is MethodCallExpression methodCallExpression &&
                     (methodCallExpression.Method.DeclaringType == typeof(Queryable) ||
                     methodCallExpression.Method.DeclaringType == typeof(Enumerable) ||
                     this.IsQueryExtensionMethod(methodCallExpression))
-                    )
+                    
                     ||
                     node is ChainedQueryExpression;
         }

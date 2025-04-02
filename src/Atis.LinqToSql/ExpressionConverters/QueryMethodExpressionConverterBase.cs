@@ -1,5 +1,5 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.ContextExtensions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.ExpressionExtensions;
 using Atis.LinqToSql.SqlExpressions;
 using System;
@@ -139,7 +139,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             {
                 SqlQueryExpression sqlQuery = (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlQueryExpression
                                                 ??
-(                                                (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression)?.DataSource as SqlQueryExpression
+(                                                (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression)?.QuerySource as SqlQueryExpression
                                                 ??
                                                 convertedExpression as SqlQueryExpression;
                 

@@ -1,20 +1,22 @@
 ﻿using Atis.Expressions;
+using Atis.LinqToSql.Abstractions;
+using Atis.LinqToSql.Exceptions;
 using Atis.LinqToSql.Postprocessors;
 using Atis.LinqToSql.SqlExpressions;
 using System.Collections.Generic;
 
-namespace Atis.LinqToSql
+namespace Atis.LinqToSql.Services
 {
     public class PostprocessorProvider : IPostprocessorProvider
     {
         private readonly int maxIterations;
         protected List<IPostprocessor> PostProcessors { get; } = new List<IPostprocessor>();
-        public PostprocessorProvider(IEnumerable<IPostprocessor> postprocessors, int maxIterations = 50)
+        public PostprocessorProvider(ISqlExpressionFactory sqlFactory, IEnumerable<IPostprocessor> postprocessors, int maxIterations = 50)
         {
             if (postprocessors != null)
                 this.PostProcessors.AddRange(postprocessors);
-            this.PostProcessors.Add(new CteFixPostProcessor());
-            this.PostProcessors.Add(new CteCrossJoinPostprocessor());
+            this.PostProcessors.Add(new CteFixPostprocessor(sqlFactory));
+            this.PostProcessors.Add(new CteCrossJoinPostprocessor(sqlFactory));
             this.maxIterations = maxIterations;
         }
 

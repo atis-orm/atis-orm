@@ -65,11 +65,11 @@ namespace Atis.LinqToSql
             return base.VisitSqlDataSourceColumnExpression(sqlDataSourceColumnExpression);
         }
 
-        protected internal override SqlExpression VisitSqlFromSourceExpression(SqlFromSourceExpression sqlFromSourceExpression)
-        {
-            this.hashCode.Add(sqlFromSourceExpression.DataSourceAlias);
-            return base.VisitSqlFromSourceExpression(sqlFromSourceExpression);
-        }
+        //protected internal override SqlExpression VisitSqlFromSourceExpression(SqlFromSourceExpression sqlFromSourceExpression)
+        //{
+        //    this.hashCode.Add(sqlFromSourceExpression.DataSourceAlias);
+        //    return base.VisitSqlFromSourceExpression(sqlFromSourceExpression);
+        //}
 
         protected internal override SqlExpression VisitSqlAliasExpression(SqlAliasExpression sqlAliasExpression)
         {

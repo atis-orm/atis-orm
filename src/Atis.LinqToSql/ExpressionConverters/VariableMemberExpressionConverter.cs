@@ -1,5 +1,6 @@
 ﻿using Atis.Expressions;
-using Atis.LinqToSql.Infrastructure;
+using Atis.LinqToSql.Abstractions;
+using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System.Linq.Expressions;
 
@@ -81,7 +82,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <inheritdoc />
         public override bool TryOverrideChildConversion(Expression sourceExpression, out SqlExpression convertedExpression)
         {
-            convertedExpression = new SqlLiteralExpression("dummy");
+            convertedExpression = this.SqlFactory.CreateLiteral("dummy");
             return true;
         }
 
@@ -101,7 +102,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             var value = this.GetVariableValue(this.Expression);
-            return new SqlParameterExpression(value);
+            return this.SqlFactory.CreateParameter(value);
         }
     }
 }

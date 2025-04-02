@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Atis.LinqToSql
+namespace Atis.LinqToSql.Exceptions
 {
     /// <summary>
     /// Represents an exception that is thrown when the maximum number of iterations is exceeded during post processing.
