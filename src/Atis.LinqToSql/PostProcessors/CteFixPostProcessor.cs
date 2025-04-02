@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Atis.LinqToSql.Postprocessors
 {
-    public class CteFixPostprocessor : SqlExpressionVisitor, IPostprocessor
+    public class CteFixPostprocessor : SqlExpressionVisitor, ISqlExpressionPostprocessor
     {
         private readonly List<SqlDataSourceExpression> cteDataSources = new List<SqlDataSourceExpression>();
         private readonly Stack<SqlExpression> expressionStack = new Stack<SqlExpression>();
@@ -25,7 +25,7 @@ namespace Atis.LinqToSql.Postprocessors
         }
 
         /// <inheritdoc />
-        public SqlExpression Process(SqlExpression sqlExpression)
+        public SqlExpression Postprocess(SqlExpression sqlExpression)
         {
             return this.Visit(sqlExpression);
         }

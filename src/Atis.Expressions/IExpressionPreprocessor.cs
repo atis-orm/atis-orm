@@ -26,9 +26,9 @@ namespace Atis.Expressions
         ///         custom preprocessing logic.
         ///     </para>
         /// </summary>
-        /// <param name="node">The current expression node to preprocess.</param>
+        /// <param name="expression">The expression to preprocess.</param>
         /// <returns>The transformed or unmodified expression.</returns>
-        Expression Preprocess(Expression node);
+        Expression Preprocess(Expression expression);
     }
 
 }

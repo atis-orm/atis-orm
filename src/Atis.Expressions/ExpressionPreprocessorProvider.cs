@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Atis.Expressions
 {
-    public class ExpressionPreprocessorProvider
+    public class ExpressionPreprocessorProvider : IExpressionPreprocessorProvider
     {
         private readonly int maxIterations;
         protected List<IExpressionPreprocessor> ExpressionPreprocessors { get; } = new List<IExpressionPreprocessor>();

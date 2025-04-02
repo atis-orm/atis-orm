@@ -7,11 +7,11 @@ using System.Collections.Generic;
 
 namespace Atis.LinqToSql.Services
 {
-    public class PostprocessorProvider : IPostprocessorProvider
+    public class PostprocessorProvider : ISqlExpressionPostprocessorProvider
     {
         private readonly int maxIterations;
-        protected List<IPostprocessor> PostProcessors { get; } = new List<IPostprocessor>();
-        public PostprocessorProvider(ISqlExpressionFactory sqlFactory, IEnumerable<IPostprocessor> postprocessors, int maxIterations = 50)
+        protected List<ISqlExpressionPostprocessor> PostProcessors { get; } = new List<ISqlExpressionPostprocessor>();
+        public PostprocessorProvider(ISqlExpressionFactory sqlFactory, IEnumerable<ISqlExpressionPostprocessor> postprocessors, int maxIterations = 50)
         {
             if (postprocessors != null)
                 this.PostProcessors.AddRange(postprocessors);
@@ -20,7 +20,7 @@ namespace Atis.LinqToSql.Services
             this.maxIterations = maxIterations;
         }
 
-        public SqlExpression Process(SqlExpression sqlExpression)
+        public SqlExpression Postprocess(SqlExpression sqlExpression)
         {
             bool expressionChanged;
             int iterations = 0;
@@ -32,7 +32,7 @@ namespace Atis.LinqToSql.Services
                 foreach (var postProcessor in this.PostProcessors)
                 {
                     postProcessor.Initialize();
-                    var newSqlExpression = postProcessor.Process(sqlExpression);
+                    var newSqlExpression = postProcessor.Postprocess(sqlExpression);
 
                     if (newSqlExpression != sqlExpression)
                     {
