@@ -8,7 +8,8 @@ namespace Atis.LinqToSql.SqlExpressions
     ///         Represents a reference to a Common Table Expression (CTE) in a SQL query.
     ///     </para>
     ///     <para>
-    ///         This class is used to define and manage references to CTEs within SQL queries.
+    ///         The CTE itself is added as a sub-query data source in the <see cref="SqlQueryExpression"/>.
+    ///         When referencing the CTE, this expression is used.
     ///     </para>
     /// </summary>
     public class SqlCteReferenceExpression : SqlQuerySourceExpression
@@ -25,19 +26,10 @@ namespace Atis.LinqToSql.SqlExpressions
 
         /// <summary>
         ///     <para>
-        ///         Initializes a new instance of the <see cref="SqlCteReferenceExpression"/> class.
-        ///     </para>
-        ///     <para>
-        ///         Validates the CTE alias and sets it.
+        ///         Creates a new instance of the <see cref="SqlCteReferenceExpression"/> class.
         ///     </para>
         /// </summary>
-        /// <param name="cteAlias">The alias of the CTE.</param>
-        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="cteAlias"/> is null.</exception>
-        public SqlCteReferenceExpression()
-        {
-            this.CteAlias = Guid.NewGuid();// cteAlias ?? throw new ArgumentNullException(nameof(cteAlias));
-        }
-
+        /// <param name="cteAlias">Alias of the CTE.</param>
         public SqlCteReferenceExpression(Guid cteAlias)
         {
             this.CteAlias = cteAlias;

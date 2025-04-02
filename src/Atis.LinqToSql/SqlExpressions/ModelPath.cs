@@ -36,6 +36,11 @@ namespace Atis.LinqToSql.SqlExpressions
             this.PathElements = path?.Split('.') ?? Array.Empty<string>();
         }
 
+        /// <summary>
+        ///     <para>
+        ///         Gets an empty <see cref="ModelPath"/> instance.
+        ///     </para>
+        /// </summary>
         public static ModelPath Empty { get; } = new ModelPath(path: null);
 
         /// <summary>
@@ -88,38 +93,27 @@ namespace Atis.LinqToSql.SqlExpressions
 
         /// <summary>
         ///     <para>
-        ///         Determines whether the current path starts with the specified starting path.
+        ///         Determines whether the current path ends with the specified path elements.
         ///     </para>
         /// </summary>
-        /// <param name="startingPath">The starting path as a dot-separated string.</param>
-        /// <returns>True if the current path starts with the specified starting path; otherwise, false.</returns>
-        public bool StartsWith(string startingPath)
+        /// <param name="pathElements">The path elements as an array of strings.</param>
+        /// <returns></returns>
+        public bool EndsWith(string[] pathElements)
         {
-            var pathParts = startingPath?.Split('.');
-            return StartsWith(pathParts);
-        }
-
-        public bool EndsWith(ModelPath path)
-        {
-            return this.EndsWith(path.PathElements);
-        }
-
-        public bool EndsWith(string[] path)
-        {
-            if (path is null || path.Length == 0)
+            if (pathElements is null || pathElements.Length == 0)
             {
                 return this.IsEmpty;
             }
-            // if we are here it means pathParts is neither null nor empty
-            // that's why we are saying if this.Map is null or empty then return false
+            // if we are here it means pathElements is neither null nor empty
+            // that's why we are saying if this.IsEmpty then return false
             if (this.IsEmpty)
                 return false;
             var myPathElements = this.PathElements;
-            var pathLength = path.Length;
+            var pathLength = pathElements.Length;
             var myPathLength = myPathElements.Length;
             for (int i = 0; i < pathLength; i++)
             {
-                if (i >= myPathLength || path[pathLength - i - 1] != myPathElements[myPathLength - i - 1])
+                if (i >= myPathLength || pathElements[pathLength - i - 1] != myPathElements[myPathLength - i - 1])
                 {
                     return false;
                 }
@@ -132,22 +126,22 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         Determines whether the current path starts with the specified starting path elements.
         ///     </para>
         /// </summary>
-        /// <param name="startPathElements">The starting path elements as an array of strings.</param>
+        /// <param name="pathElements">The path elements as an array of strings.</param>
         /// <returns>True if the current path starts with the specified starting path elements; otherwise, false.</returns>
-        public bool StartsWith(string[] startPathElements)
+        public bool StartsWith(string[] pathElements)
         {
-            if (startPathElements is null || startPathElements.Length == 0)
+            if (pathElements is null || pathElements.Length == 0)
             {
                 return this.IsEmpty;
             }
-            // if we are here it means pathParts is neither null nor empty
-            // that's why we are saying if this.Map is null or empty then return false
+            // if we are here it means pathElements is neither null nor empty
+            // that's why we are saying if this.IsEmpty then return false
             if (this.IsEmpty)
                 return false;
             var myPathElements = this.PathElements;
-            for (int i = 0; i < startPathElements.Length; i++)
+            for (int i = 0; i < pathElements.Length; i++)
             {
-                if (i >= myPathElements.Length || startPathElements[i] != myPathElements[i])
+                if (i >= myPathElements.Length || pathElements[i] != myPathElements[i])
                 {
                     return false;
                 }

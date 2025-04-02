@@ -6,6 +6,13 @@ using System.Linq;
 
 namespace Atis.LinqToSql.SqlExpressions
 {
+    // CAUTION: when accepting the expressions within this SqlQueryExpression it's NOT recommended
+    //          to change the expression to something else. For example, getting the SqlDataSourceExpression
+    //          when creating the instance of this class, and during that creating if we changed the given
+    //          SqlDataSourceExpression to something else, it might break the caller part of the program
+    //          because caller might have cached or used that SqlDataSourceExpression and it will never
+    //          know this class is no longer using the given SqlDataSourceExpression.
+
     public enum SqlQueryOperation
     {
         Select,

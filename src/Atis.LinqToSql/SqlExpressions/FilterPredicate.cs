@@ -2,18 +2,6 @@
 
 namespace Atis.LinqToSql.SqlExpressions
 {
-    // WARNING: do NOT create another class on top of SqlQueryExpression, because SqlQueryExpression's instance is being used
-    //          in different places, so always do it very carefully.
-
-
-    // CAUTION: when accepting the expressions within this SqlQueryExpression it's NOT recommended
-    //          to change the expression to something else. For example, getting the SqlDataSourceExpression
-    //          when creating the instance of this class, and during that creating if we changed the given
-    //          SqlDataSourceExpression to something else, it might break the caller part of the program
-    //          because caller might have cached or used that SqlDataSourceExpression and it will never
-    //          know this class is no longer using the given SqlDataSourceExpression.
-
-
     /// <summary>
     ///     <para>
     ///         Represents a filtering condition used in SQL query `WHERE` or `HAVING` clauses.
@@ -53,7 +41,7 @@ namespace Atis.LinqToSql.SqlExpressions
         ///     </para>
         /// </summary>
         /// <param name="other">The other FilterPredicate instance to compare with.</param>
-        /// <returns>True if both instances have the same Predicate and IsOrOperator value; otherwise, false.</returns>
+        /// <returns>True if both instances have the same Predicate and UseOrOperator value; otherwise, false.</returns>
         public bool Equals(FilterPredicate other)
         {
             if (other == null)

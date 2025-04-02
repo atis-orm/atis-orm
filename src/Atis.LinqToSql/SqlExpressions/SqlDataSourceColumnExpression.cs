@@ -7,12 +7,16 @@ namespace Atis.LinqToSql.SqlExpressions
     ///     <para>
     ///         Represents a column in a data source with an alias.
     ///     </para>
-    ///     <para>
-    ///         This class is used to define a column in a data source with an alias and column name.
-    ///     </para>
     /// </summary>
     public class SqlDataSourceColumnExpression : SqlExpression
     {
+        /// <summary>
+        ///     <para>
+        ///         Creates a new instance of the <see cref="SqlDataSourceColumnExpression" /> class.
+        ///     </para>
+        /// </summary>
+        /// <param name="dataSource">Instance of <see cref="SqlDataSourceExpression"/> class.</param>
+        /// <param name="columnName">Column name in the data source.</param>
         public SqlDataSourceColumnExpression(SqlDataSourceExpression dataSource, string columnName)
         {
             this.DataSource = dataSource;
@@ -22,7 +26,17 @@ namespace Atis.LinqToSql.SqlExpressions
         /// <inheritdoc />
         public override SqlExpressionType NodeType => SqlExpressionType.DataSourceColumn;
 
-        // this will not be visited, this is just for reference
+        /// <summary>
+        ///     <para>
+        ///         Gets the data source of the column.
+        ///     </para>
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         This property will not be visited by the <see cref="SqlExpressionVisitor" />.
+        ///         This is just for the reference of the data source.
+        ///     </para>
+        /// </remarks>
         public SqlDataSourceExpression DataSource { get; }
 
         /// <summary>

@@ -36,7 +36,7 @@ namespace Atis.LinqToSql.SqlExpressions
         /// <param name="columnExpression">The column expression.</param>
         /// <param name="columnAlias">The alias of the column.</param>
         /// <param name="modelPath">The model path of the column.</param>
-        /// <param name="scalar">If <c>true</c> the column is a scalar column, otherwise it is a regular column.</param>
+        /// <param name="nodeType">The type of the SQL expression node.</param>
         public SqlColumnExpression(SqlExpression columnExpression, string columnAlias, ModelPath modelPath, SqlExpressionType nodeType)
         {
             this.ColumnExpression = columnExpression;
@@ -87,8 +87,6 @@ namespace Atis.LinqToSql.SqlExpressions
         ///     </para>
         /// </summary>
         /// <param name="columnExpression">The new column expression.</param>
-        /// <param name="columnAlias">The new alias of the column.</param>
-        /// <param name="modelPath">The new model path of the column.</param>
         /// <returns>A new <see cref="SqlColumnExpression"/> instance with the updated values, or the current instance if unchanged.</returns>
         public SqlColumnExpression Update(SqlExpression columnExpression)
         {

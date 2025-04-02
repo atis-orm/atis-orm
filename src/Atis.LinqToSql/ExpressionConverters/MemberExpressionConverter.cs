@@ -359,7 +359,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             return collection
                         .SqlExpressions
                         .Cast<SqlColumnExpression>()
-                        .Where(x => x.ModelPath.StartsWith(lastPathSegment))
+                        .Where(x => x.ModelPath.StartsWith(new[] { lastPathSegment }))
                         .ToArray();
         }
 

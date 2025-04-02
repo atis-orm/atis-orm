@@ -75,11 +75,18 @@ namespace Atis.LinqToSql.SqlExpressions
             DataSource = sqlQueryOrSqlDataSourceExpression;
         }
 
+        /// <inheritdoc />
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
             return sqlExpressionVisitor.VisitDataSourceReferenceExpression(this);
         }
 
+        /// <summary>
+        ///     <para>
+        ///         Converts the current object to its string representation.
+        ///     </para>
+        /// </summary>
+        /// <returns>String representation of the current object.</returns>
         public override string ToString()
         {
             return $"ds-ref: {this.DataSource.NodeType}";
