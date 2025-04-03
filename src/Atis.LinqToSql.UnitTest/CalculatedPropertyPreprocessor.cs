@@ -34,16 +34,19 @@ namespace Atis.LinqToSql.UnitTest
         protected override bool TryGetCalculatedExpression(MemberExpression memberExpression, out LambdaExpression? calculatedPropertyExpression)
         {
             var memberInfo = this.ResolveMember(memberExpression);
-            var calculatedPropertyAttribute = memberInfo.GetCustomAttribute<CalculatedPropertyAttribute>();
-            if (calculatedPropertyAttribute != null)
+            if (memberInfo != null)
             {
-                if (!this.reflectionService.IsPrimitiveType(this.reflectionService.GetPropertyOrFieldType(memberInfo)))
-                    throw new InvalidOperationException($"Calculated property '{memberInfo.Name}' must be a primitive type. Use relation navigation to create outer apply relation.");
-                var exprProp = memberInfo?.ReflectedType?.GetField(calculatedPropertyAttribute.ExpressionPropertyName, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-                if (exprProp != null && exprProp.GetValue(null) is LambdaExpression calcExpr)
+                var calculatedPropertyAttribute = memberInfo.GetCustomAttribute<CalculatedPropertyAttribute>();
+                if (calculatedPropertyAttribute != null)
                 {
-                    calculatedPropertyExpression = calcExpr;
-                    return true;
+                    if (!this.reflectionService.IsPrimitiveType(this.reflectionService.GetPropertyOrFieldType(memberInfo)))
+                        throw new InvalidOperationException($"Calculated property '{memberInfo.Name}' must be a primitive type. Use relation navigation to create outer apply relation.");
+                    var exprProp = memberInfo?.ReflectedType?.GetField(calculatedPropertyAttribute.ExpressionPropertyName, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (exprProp != null && exprProp.GetValue(null) is LambdaExpression calcExpr)
+                    {
+                        calculatedPropertyExpression = calcExpr;
+                        return true;
+                    }
                 }
             }
             calculatedPropertyExpression = null;
