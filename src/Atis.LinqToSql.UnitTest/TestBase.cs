@@ -34,10 +34,10 @@ namespace Atis.LinqToSql.UnitTest
         private SqlExpression ConvertExpressionToSqlExpression(Expression queryExpression)
         {
             Console.WriteLine("Original Expression:");
-            Console.WriteLine(queryExpression.ToString());
+            Console.WriteLine(ExpressionPrinter.PrintExpression(queryExpression));
             var updatedQueryExpression = PreprocessExpression(queryExpression);
             Console.WriteLine("Expression after Preprocessing:");
-            Console.WriteLine(updatedQueryExpression.ToString());
+            Console.WriteLine(ExpressionPrinter.PrintExpression(updatedQueryExpression));
 
             //var componentIdentifier = new QueryComponentIdentifier();
             var model = new Model();
