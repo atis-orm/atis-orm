@@ -1649,7 +1649,7 @@ namespace Atis.LinqToSql.SqlExpressions
                 var hasCteDataSource = CteDataSourceSearchVisitor.Find(this, sqlExpression);
                 if (hasCteDataSource)
                 {
-                    this.ApplyAutoProjection();
+                    this.ApplyAutoProjectionInternal(applyAll: true);
 
                     var copy = this.CreateCopy();
                     var cteDataSource = this.ConvertToCte(Guid.NewGuid(), copy);

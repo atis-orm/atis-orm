@@ -314,11 +314,11 @@ with cte_1 as
             cross join cte_1 as cte_1
 	where	(a_5.EmployeeId = cte_1.EmployeeId_1)
 	union all	
-	select	a_6.RowId as RowId, a_6.EmployeeId as EmployeeId, a_6.Name as Name, a_6.Department as Department, a_6.ManagerId as ManagerId, 
+	select	a_6.RowId as RowId, a_6.EmployeeId as EmployeeId, a_6.Name as Name, a_6.Department as Department, a_6.ManagerId as ManagerId
 	from	Employee as a_6	
 		    inner join cte_4 as a_7 on (a_6.EmployeeId = a_7.ManagerId)	
 )
-select	cte_1.EmployeeId as EmployeeId, NavEmployee_3.Name as Name, (
+select	cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, (
 	select	top (1)	cte_4.ManagerId as Col1
 	from	cte_4 as cte_4
 	where	(cte_4.Name like ('A' + '%'))
