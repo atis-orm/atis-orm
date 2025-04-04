@@ -7,24 +7,59 @@ using System.Linq;
 
 namespace Atis.LinqToSql.SqlExpressions
 {
-    // CAUTION: when accepting the expressions within this SqlQueryExpression it's NOT recommended
-    //          to change the expression to something else. For example, getting the SqlDataSourceExpression
-    //          when creating the instance of this class, and during that creating if we changed the given
-    //          SqlDataSourceExpression to something else, it might break the caller part of the program
-    //          because caller might have cached or used that SqlDataSourceExpression and it will never
-    //          know this class is no longer using the given SqlDataSourceExpression.
-
+    /// <summary>
+    /// Represents the various operations that can be performed in a SQL query.
+    /// </summary>
     public enum SqlQueryOperation
     {
+        /// <summary>
+        /// Represents a SELECT operation in a SQL query.
+        /// </summary>
         Select,
+
+        /// <summary>
+        /// Represents a JOIN operation in a SQL query.
+        /// </summary>
         Join,
+
+        /// <summary>
+        /// Represents a WHERE operation in a SQL query.
+        /// </summary>
         Where,
+
+        /// <summary>
+        /// Represents a GROUP BY operation in a SQL query.
+        /// </summary>
         GroupBy,
+
+        /// <summary>
+        /// Represents an ORDER BY operation in a SQL query.
+        /// </summary>
         OrderBy,
+
+        /// <summary>
+        /// Represents a TOP operation in a SQL query.
+        /// </summary>
         Top,
+
+        /// <summary>
+        /// Represents a DISTINCT operation in a SQL query.
+        /// </summary>
         Distinct,
+
+        /// <summary>
+        /// Represents a ROW OFFSET operation in a SQL query.
+        /// </summary>
         RowOffset,
+
+        /// <summary>
+        /// Represents a ROWS PER PAGE operation in a SQL query.
+        /// </summary>
         RowsPerPage,
+
+        /// <summary>
+        /// Represents a UNION operation in a SQL query.
+        /// </summary>
         Union,
     }
 
@@ -738,7 +773,6 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         Wraps this query in a sub-query.
         ///     </para>
         /// </summary>
-        /// <param name="applyAll"></param>
         /// <remarks>
         ///     <para>
         ///         This method checks if projection has been applied, if not then it applies auto projection 
@@ -752,7 +786,6 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         everywhere.
         ///     </para>
         /// </remarks>
-        // TODO: probably we need to remove the uniqueColumns parameter, because it's always passed as true
         public virtual void WrapInSubQuery()
         {
             ApplyAutoProjectionInternal(applyAll: true);
@@ -1575,7 +1608,7 @@ namespace Atis.LinqToSql.SqlExpressions
         private SqlQueryOperation? lastMethodBeforeSelect;
         protected SqlQueryOperation? LastSqlOperation { get; set; }
 
-        protected SqlExpression WrapIfRequired(SqlExpression expression, SqlQueryOperation newOperation)
+        protected virtual SqlExpression WrapIfRequired(SqlExpression expression, SqlQueryOperation newOperation)
         {
             if (expression != null)
                 expression = this.CheckAndApplyCteExpression(expression);
@@ -1606,7 +1639,7 @@ namespace Atis.LinqToSql.SqlExpressions
             this.cteDataSources.Clear();
         }
 
-        protected bool IsWrapRequired(SqlQueryOperation newOperation)
+        protected virtual bool IsWrapRequired(SqlQueryOperation newOperation)
         {
             var performWrap = false;
             switch (this.LastSqlOperation)
