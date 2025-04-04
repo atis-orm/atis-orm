@@ -1,6 +1,6 @@
 using Atis.LinqToSql.SqlExpressions;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class ModelPathTests

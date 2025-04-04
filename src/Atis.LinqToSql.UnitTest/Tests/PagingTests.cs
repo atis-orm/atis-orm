@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class PagingTests : TestBase

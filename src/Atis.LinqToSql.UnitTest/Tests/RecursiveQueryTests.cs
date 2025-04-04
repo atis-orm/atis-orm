@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class RecursiveQueryTests : TestBase
@@ -420,7 +420,7 @@ from	cte_1 as cte_1
 
 
         [TestMethod]
-        public void Recursive_query_with_no_auto_projection()
+        public void Recursive_query_with_auto_projection()
         {
             IQueryable<Employee> employees = new Queryable<Employee>(new QueryProvider());
             var q = employees

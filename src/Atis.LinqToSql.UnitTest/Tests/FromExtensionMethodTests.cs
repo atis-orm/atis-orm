@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class FromExtensionMethodTests : TestBase
@@ -80,10 +80,9 @@ select	a_4.StudentId as StudentId, a_4.Grade as Grade, a_4.StudentId_1 as SgStud
         public void From_mixed_data_sources_then_new_data_source_added_using_dynamic_joining()
         {
             var queryProvider = new QueryProvider();
-            var q = QueryExtensions
-                            .From(queryProvider, () => new
+            var q = queryProvider                            .From(() => new
                             {
-                                q1 = QueryExtensions.From(queryProvider, () => new { e = QueryExtensions.Table<Employee>(), ed = QueryExtensions.Table<EmployeeDegree>() })
+                                q1 = queryProvider.From(() => new { e = QueryExtensions.Table<Employee>(), ed = QueryExtensions.Table<EmployeeDegree>() })
                                                             .LeftJoin(f1 => f1.ed, fj1 => fj1.e.EmployeeId == fj1.ed.EmployeeId)
                                                             .Schema(),
                                 m = QueryExtensions.Table<Employee>()

@@ -17,7 +17,7 @@
 
 using System.Linq.Expressions;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class GeneralTranslationTests : TestBase

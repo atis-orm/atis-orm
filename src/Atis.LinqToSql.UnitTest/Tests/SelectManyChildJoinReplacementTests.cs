@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class SelectManyChildJoinReplacementTests : TestBase
@@ -48,7 +48,7 @@ namespace Atis.LinqToSql.UnitTest
         {
             var employees = new Queryable<Employee>(this.dbc);
             var employeeDegrees = new Queryable<EmployeeDegree>(this.dbc);
-            var q = employees.SelectMany(e => employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId).Where(x => x.Degree == "123" || (x.University == "55" && x.RowId == e.RowId)));
+            var q = employees.SelectMany(e => employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId).Where(x => x.Degree == "123" || x.University == "55" && x.RowId == e.RowId));
             var updatedExpression = PreprocessExpression(q.Expression);
             Console.WriteLine(updatedExpression);
             if (((((updatedExpression as MethodCallExpression)?.Arguments?.Skip(1).FirstOrDefault() as UnaryExpression)?.Operand as LambdaExpression)?.Body as MethodCallExpression)?.Method.Name != "Where")

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class ComplexProjectionTests : TestBase
@@ -14,11 +14,10 @@ namespace Atis.LinqToSql.UnitTest
         public void Multiple_data_sources_with_full_data_source_selected_in_nested_anonymous_type_along_with_normal_columns()
         {
             var queryProvider = new QueryProvider();
-            var q = QueryExtensions
-                            .From(queryProvider, () => new { e = QueryExtensions.Table<Employee>(), ed = QueryExtensions.Table<EmployeeDegree>() })
+            var q = queryProvider                            .From(() => new { e = QueryExtensions.Table<Employee>(), ed = QueryExtensions.Table<EmployeeDegree>() })
                             .LeftJoin(x => x.ed, x => x.e.EmployeeId == x.ed.EmployeeId)
-                            .LeftJoin(QueryExtensions.DataSet<Employee>(queryProvider), (o, j) => new { o, m = j }, n => n.o.e.ManagerId == n.m.EmployeeId)
-                            .Select(x => new { FullDetail = new { Employee = x.o.e, Name = x.o.e.Name }, x.o.ed.RowId, x.m })
+                            .LeftJoin(queryProvider.DataSet<Employee>(), (o, j) => new { o, m = j }, n => n.o.e.ManagerId == n.m.EmployeeId)
+                            .Select(x => new { FullDetail = new { Employee = x.o.e, x.o.e.Name }, x.o.ed.RowId, x.m })
                             .Select(x => new { x.FullDetail.Employee.RowId, x.FullDetail.Employee.Name, EmployeeDegreeRowId = x.RowId, ManagerName = x.m.Name })
 
                     ;
@@ -44,10 +43,9 @@ select	a_4.RowId as RowId, a_4.Name as Name, a_4.RowId_1 as EmployeeDegreeRowId,
         public void Multiple_data_sources_with_full_data_source_selected_using_DTO_type_then_again_selected_fields_from_DTO()
         {
             var queryProvider = new QueryProvider();
-            var q = QueryExtensions
-                            .From(queryProvider, () => new { e = QueryExtensions.Table<Employee>(), ed = QueryExtensions.Table<EmployeeDegree>() })
+            var q = queryProvider                            .From(() => new { e = QueryExtensions.Table<Employee>(), ed = QueryExtensions.Table<EmployeeDegree>() })
                             .LeftJoin(x => x.ed, x => x.e.EmployeeId == x.ed.EmployeeId)
-                            .LeftJoin(QueryExtensions.DataSet<Employee>(queryProvider), (o, j) => new { o, m = j }, n => n.o.e.ManagerId == n.m.EmployeeId)
+                            .LeftJoin(queryProvider.DataSet<Employee>(), (o, j) => new { o, m = j }, n => n.o.e.ManagerId == n.m.EmployeeId)
                             .Select(x => new MultiLevelResult { Employee = x.o.e, EmployeeDegree = x.o.ed })
                             .Select(x => new { EmployeeRowId = x.Employee.RowId, DegreeRowId = x.EmployeeDegree.RowId, x.Employee.Name })
                             ;
@@ -68,8 +66,8 @@ select	a_4.RowId as EmployeeRowId, a_4.RowId_1 as DegreeRowId, a_4.Name as Name
         public void Fields_from_multiple_data_sources_selected_then_again_selected_few_field_on_top_of_that()
         {
             var provider = new QueryProvider();
-            var employees = QueryExtensions.DataSet<Employee>(provider);
-            var employeeDegrees = QueryExtensions.DataSet<EmployeeDegree>(provider);
+            var employees = provider.DataSet<Employee>();
+            var employeeDegrees = provider.DataSet<EmployeeDegree>();
             var q = employees
                 .LeftJoin(employeeDegrees, (e, ed) => new { e, ed }, j => j.e.EmployeeId == j.ed.EmployeeId)
                 .Select(x => new { x.e.EmployeeId, x.e.Name, x.ed.Degree })
@@ -90,9 +88,9 @@ select	a_3.EmployeeId as EmployeeId, a_3.Name as Name
         [TestMethod]
         public void Multiple_data_sources_selected_in_1_property_and_then_that_1_property_selected_in_projection_in_anonymous_type_should_select_all_the_columns_of_all_the_data_sources_under_that_1_property()
         {
-            var q = QueryExtensions.DataSet<Employee>(dbc)
-                    .LeftJoin(QueryExtensions.DataSet<EmployeeDegree>(dbc), (e, ed) => new { e, ed }, j => j.e.EmployeeId == j.ed.EmployeeId)
-                    .LeftJoin(QueryExtensions.DataSet<Employee>(dbc), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
+            var q = dbc.DataSet<Employee>()
+                    .LeftJoin(dbc.DataSet<EmployeeDegree>(), (e, ed) => new { e, ed }, j => j.e.EmployeeId == j.ed.EmployeeId)
+                    .LeftJoin(dbc.DataSet<Employee>(), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
                     .Select(x => new { t = x.o })
                     ;
             string? expectedResult = @"
@@ -107,9 +105,9 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
         [TestMethod]
         public void Multiple_data_sources_selected_in_1_property_and_then_that_1_property_selected_in_projection_should_select_all_the_columns_of_all_the_data_sources_under_that_1_property()
         {
-            var q = QueryExtensions.DataSet<Employee>(dbc)
-                    .LeftJoin(QueryExtensions.DataSet<EmployeeDegree>(dbc), (e, ed) => new { e, ed }, j => j.e.EmployeeId == j.ed.EmployeeId)
-                    .LeftJoin(QueryExtensions.DataSet<Employee>(dbc), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
+            var q = dbc.DataSet<Employee>()
+                    .LeftJoin(dbc.DataSet<EmployeeDegree>(), (e, ed) => new { e, ed }, j => j.e.EmployeeId == j.ed.EmployeeId)
+                    .LeftJoin(dbc.DataSet<Employee>(), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
                     .Select(x => x.o)
                     ;
             string? expectedResult = @"

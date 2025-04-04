@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class QuerySyntaxTests : TestBase
@@ -118,7 +118,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2
             var q = from e in employees
                     from ed in e.NavDegrees
                     from ms in ed.NavMarksheets
-                    select new { e.EmployeeId, e.Name, ed.Degree, ed.University, Course = ms.Course, Grade = ms.Grade }
+                    select new { e.EmployeeId, e.Name, ed.Degree, ed.University, ms.Course, ms.Grade }
                     ;
             string? expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as Degree, NavDegrees_2.University as University, NavMarksheets_3.Course as Course, NavMarksheets_3.Grade as Grade
@@ -175,7 +175,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3
             var q = from e in employees
                     from ed in e.NavDegrees.DefaultIfEmpty()
                     from ms in ed.NavMarksheets
-                    select new { e.EmployeeId, e.Name, ed.Degree, ed.University, Course = ms.Course, Grade = ms.Grade }
+                    select new { e.EmployeeId, e.Name, ed.Degree, ed.University, ms.Course, ms.Grade }
                     ;
             string? expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as Degree, NavDegrees_2.University as University, NavMarksheets_3.Course as Course, NavMarksheets_3.Grade as Grade
@@ -189,8 +189,8 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
         [TestMethod]
         public void Query_syntax_with_sub_query_having_Where_applied_with_no_outer_query_LambdaParameter_used_should_translate_to_cross_join()
         {
-            var employees = QueryExtensions.DataSet<Employee>(dbc);
-            var employeeDegrees = QueryExtensions.DataSet<EmployeeDegree>(dbc);
+            var employees = dbc.DataSet<Employee>();
+            var employeeDegrees = dbc.DataSet<EmployeeDegree>();
             var q = from e in employees
                     from ed in employeeDegrees.Where(x => x.Degree == "123")
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
@@ -210,8 +210,8 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3
         [TestMethod]
         public void Query_syntax_with_sub_query_having_Where_and_Select_applied_but_outer_query_LambdaParameter_used_in_Select_should_translate_to_cross_apply()
         {
-            var employees = QueryExtensions.DataSet<Employee>(dbc);
-            var employeeDegrees = QueryExtensions.DataSet<EmployeeDegree>(dbc);
+            var employees = dbc.DataSet<Employee>();
+            var employeeDegrees = dbc.DataSet<EmployeeDegree>();
             var q = from e in employees
                     from ed in employeeDegrees.Where(x => x.Degree == "123").Select(x => new { x.Degree, x.University, e.Department })
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
@@ -231,8 +231,8 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3
         [TestMethod]
         public void Query_syntax_with_sub_query_having_Where_and_Select_applied_but_outer_query_LambdaParameter_used_in_Select_and_DefaultIfEmpty_applied_should_translate_to_outer_apply()
         {
-            var employees = QueryExtensions.DataSet<Employee>(dbc);
-            var employeeDegrees = QueryExtensions.DataSet<EmployeeDegree>(dbc);
+            var employees = dbc.DataSet<Employee>();
+            var employeeDegrees = dbc.DataSet<EmployeeDegree>();
             var q = from e in employees
                     from ed in employeeDegrees.Where(x => x.Degree == "123").Select(x => new { x.Degree, x.University, e.Department }).DefaultIfEmpty()
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }

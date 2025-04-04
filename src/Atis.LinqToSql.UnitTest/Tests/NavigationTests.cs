@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class NavigationTests : TestBase
@@ -17,7 +17,7 @@ namespace Atis.LinqToSql.UnitTest
             Expression<Func<object>> temp = () =>
             dbc.DataSet<Equipment>()
             .Where(x => x.NavItem().UnitPrice > 500)
-            .Select(x => new { ItemId = x.NavItem().ItemId, UnitPrice = x.NavItem().UnitPrice, x.EquipId })
+            .Select(x => new { x.NavItem().ItemId, x.NavItem().UnitPrice, x.EquipId })
             //.Select(x => new { ItemId = LinqToSql.QueryExtensions.Nav<Equipment, ItemExtension, decimal?>(x, "NavItemId", dbc.DataSet<ItemExtension>(), param0 => param0.UnitPrice, SqlExpressions.SqlJoinType.Left, otherEntity => x.ItemId == otherEntity.ItemId) })
             ;
 
@@ -69,7 +69,7 @@ select	NavParentTransaction_2.TransactionId as TransactionId, NavParentTransacti
             Expression<Func<object>> temp = () =>
             dbc.DataSet<Equipment>()
             .Take(50)
-            .Select(x => new { ItemId = x.NavItem().ItemId })
+            .Select(x => new { x.NavItem().ItemId })
             ;
 
             string? expectedResult = @"
@@ -120,7 +120,7 @@ select	a_3.UnitPrice as Col1
         }
 
         [TestMethod]
-        public void Navigation_property_defined_as_left_outer_join_should_force_sub_sequent_inner_join_navigations_to_form_left_outer_join()
+        public void Navigation_property_defined_as_left_outer_join_should_force_subsequent_inner_join_navigations_to_form_left_outer_join()
         {
             // in this test we are seeing that NavItem in Equipment entity is parent optional
             // so the join will be left join, then we see that from NavItem to NavItemBase is
