@@ -223,6 +223,13 @@ namespace Atis.LinqToSql
             return sqlSelectedCollectionExpression;
         }
 
+        protected internal SqlExpression VisitInValuesExpression(SqlInValuesExpression sqlInValuesExpression)
+        {
+            var expression = this.Visit(sqlInValuesExpression.Expression);
+            var values = sqlInValuesExpression.Values.Select(this.Visit).ToArray();
+            return sqlInValuesExpression.Update(expression, values);
+        }
+
         //protected internal SqlExpression VisitSqlSubQueryColumnExpression(SqlSubQueryColumnExpression sqlSubQueryColumnExpression)
         //{
         //    var columnExpression = this.VisitAndConvert(sqlSubQueryColumnExpression.ColumnExpression);

@@ -145,10 +145,10 @@ namespace Atis.LinqToSql.ExpressionConverters
                     this.ParameterMap.TrySetParameterMap(otherColumnLambda.Parameters[0], this.joinedDataSource);
                 }
 
-                this.ParameterMap.RemoveParameterMap(selectLambda.Parameters[0]);
-                this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[0], this.SourceQuery);
                 if (this.UseSubQueryDataSource)
                 {
+                    this.ParameterMap.RemoveParameterMap(selectLambda.Parameters[0]);
+                    this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[0], this.SourceQuery);
                     this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[1], querySource);
                 }
                 else

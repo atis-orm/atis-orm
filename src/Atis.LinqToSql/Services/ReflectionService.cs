@@ -65,9 +65,14 @@ namespace Atis.LinqToSql.Services
             return type.GetProperties(BindingFlags.Instance | BindingFlags.Public);
         }
 
-        public virtual object Eval(Expression expression)
+        public virtual object Evalulate(Expression expression)
         {
-            return this.expressionEvaluator.Eval(expression);
+            return this.expressionEvaluator.Evaluate(expression);
+        }
+
+        public virtual bool CanEvaluate(Expression expression)
+        {
+            return this.expressionEvaluator.CanEvaluate(expression);
         }
 
         public virtual Type GetPropertyOrFieldType(MemberInfo member)
@@ -148,6 +153,28 @@ namespace Atis.LinqToSql.Services
                     &&
                     !(methodCallExpression.Method.Name == nameof(QueryExtensions.Schema))
                     ;
+        }
+
+        public virtual bool IsVariable(MemberExpression node)
+        {
+            return this.CanEvaluate(node);
+        }
+
+        /// <summary>
+        ///     <para>
+        ///         Checks if the specified value is enumerable.
+        ///     </para>
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         If value is IEnumerable, it returns <c>true</c>. However, if value is a string, it returns <c>false</c>.
+        ///     </para>
+        /// </remarks>
+        /// <param name="value">An object to check.</param>
+        /// <returns>Returns <c>true</c> if the value is enumerable but not string; otherwise, <c>false</c>.</returns>
+        public bool IsEnumerable(object value)
+        {
+            return value is System.Collections.IEnumerable && !(value is string);
         }
     }
 }

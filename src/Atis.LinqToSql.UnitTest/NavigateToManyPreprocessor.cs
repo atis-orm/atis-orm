@@ -69,9 +69,12 @@ namespace Atis.LinqToSql.UnitTest
             if (node is MemberExpression memberExpression)
             {
                 var member = this.ResolveMember(memberExpression);
-                var navPropAttribute = member.GetCustomAttribute<NavigationPropertyAttribute>();
-                return navPropAttribute != null &&
-                        navPropAttribute.NavigationType == NavigationType.ToChildren;
+                if (member != null)
+                {
+                    var navPropAttribute = member.GetCustomAttribute<NavigationPropertyAttribute>();
+                    return navPropAttribute != null &&
+                            navPropAttribute.NavigationType == NavigationType.ToChildren;
+                }
             }
             return false;
         }

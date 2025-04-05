@@ -1,12 +1,12 @@
 using Atis.LinqToSql.SqlExpressions;
 
-namespace Atis.LinqToSql.UnitTest
+namespace Atis.LinqToSql.UnitTest.Tests
 {
     [TestClass]
     public class ModelPathTests
     {
         [TestMethod]
-        public void EndsWith_ShouldReturnTrue_WhenPathEndsWithGivenElements()
+        public void EndsWith_should_return_True_when_path_ends_with_given_elements()
         {
             // Arrange
             var modelPath = new ModelPath("a.b.c.d");
@@ -20,7 +20,7 @@ namespace Atis.LinqToSql.UnitTest
         }
 
         [TestMethod]
-        public void EndsWith_ShouldReturnFalse_WhenPathDoesNotEndWithGivenElements()
+        public void EndsWith_should_return_False_when_path_does_not_end_with_given_elements()
         {
             // Arrange
             var modelPath = new ModelPath("a.b.c.d");
@@ -34,7 +34,7 @@ namespace Atis.LinqToSql.UnitTest
         }
 
         [TestMethod]
-        public void EndsWith_ShouldReturnFalse_WhenPathIsEmpty()
+        public void EndsWith_should_return_False_when_path_is_empty()
         {
             // Arrange
             var modelPath = ModelPath.Empty;
@@ -48,7 +48,7 @@ namespace Atis.LinqToSql.UnitTest
         }
 
         [TestMethod]
-        public void EndsWith_ShouldReturnTrue_WhenGivenElementsAreEmpty()
+        public void EndsWith_should_return_True_when_given_elements_are_empty()
         {
             // Arrange
             var modelPath = new ModelPath("a.b.c.d");
@@ -60,5 +60,37 @@ namespace Atis.LinqToSql.UnitTest
             // Assert
             Assert.IsFalse(result);
         }
+
+
+        [TestMethod]
+        public void ModelPath_equals_test()
+        {
+            var m1 = new ModelPath("a");
+            var m2 = new ModelPath("a");
+            if (!m1.Equals(m2))
+                Assert.Fail("ModelPath Equals Test Failed");
+
+            m1 = new ModelPath("a");
+            m2 = new ModelPath("b");
+            if (m1.Equals(m2))
+                Assert.Fail("ModelPath Equals Test Failed");
+
+            m1 = new ModelPath(path: null);
+            m2 = new ModelPath(path: null);
+            if (!m1.Equals(m2))
+                Assert.Fail("ModelPath Equals Test Failed");
+
+            m1 = new ModelPath("a.b");
+            m2 = new ModelPath("a.b");
+            if (!m1.Equals(m2))
+                Assert.Fail("ModelPath Equals Test Failed");
+
+            m1 = new ModelPath("b.a");
+            m2 = new ModelPath("a.b");
+            if (m1.Equals(m2))
+                Assert.Fail("ModelPath Equals Test Failed");
+        }
+
+
     }
 }

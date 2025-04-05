@@ -112,10 +112,21 @@ namespace Atis.LinqToSql.UnitTest
             {
                 return $"not {this.Translate(sqlNotExpression.Operand)}";
             }
+            else if (sqlExpression is SqlInValuesExpression sqlInValuesExpression)
+            {
+                return this.TranslateSqlInValuesExpression(sqlInValuesExpression);
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
             }
+        }
+
+        private string TranslateSqlInValuesExpression(SqlInValuesExpression sqlInValuesExpression)
+        {
+            var expressionTranslated = this.Translate(sqlInValuesExpression.Expression);
+            var valuesTranslated = string.Join(", ", sqlInValuesExpression.Values.Select(this.Translate));
+            return $"{expressionTranslated} in ({valuesTranslated})";
         }
 
         private string TranslateSqlUpdateExpression(SqlUpdateExpression sqlUpdateExpression)
@@ -462,17 +473,26 @@ namespace Atis.LinqToSql.UnitTest
         {
             if (sqlBinaryExpression.NodeType != SqlExpressionType.Coalesce)
             {
+                var left = this.Translate(sqlBinaryExpression.Left);
+                var right = this.Translate(sqlBinaryExpression.Right);
+                var op = GetOperator(sqlBinaryExpression.NodeType);
 
-                if (sqlBinaryExpression.NodeType == SqlExpressionType.Equal && IsNull(sqlBinaryExpression.Right))
-                    return $"{this.Translate(sqlBinaryExpression.Left)} is null";
-                else
-                    return $"({this.Translate(sqlBinaryExpression.Left)} {GetOperator(sqlBinaryExpression.NodeType)} {this.Translate(sqlBinaryExpression.Right)})";
+                if (IsNull(sqlBinaryExpression.Right))
+                {
+                    if (sqlBinaryExpression.NodeType == SqlExpressionType.Equal)
+                        return $"({left} is null)";
+                    else if (sqlBinaryExpression.NodeType == SqlExpressionType.NotEqual)
+                        return $"({left} is not null)";
+                }
+
+                return $"({left} {op} {right})";
             }
             else
             {
                 return $"isnull({this.Translate(sqlBinaryExpression.Left)}, {this.Translate(sqlBinaryExpression.Right)})";
             }
         }
+
 
         private string RemoveParenthesis(string expression)
         {
