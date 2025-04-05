@@ -29,7 +29,7 @@ with cte_1 as
 (	
 	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
 	from	Employee as a_2	
-	where	a_2.ManagerId is null	
+	where	(a_2.ManagerId is null)
 	union all	
 	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
 	from	Employee as a_3	
@@ -60,7 +60,7 @@ with cte_1 as
 (	
 	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
 	from	Employee as a_2	
-	where	a_2.ManagerId is null	
+	where	(a_2.ManagerId is null)
 	union all	
 	select	a_4.EmployeeId as EmployeeId, a_4.Name as Name, a_4.ManagerId as ManagerId	
 	from	cte_1 as a_3	
@@ -89,7 +89,7 @@ with cte_1 as
 (	
 	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
 	from	Employee as a_2	
-	where	a_2.ManagerId is null	
+	where	(a_2.ManagerId is null)
 	union all	
 	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
 	from	Employee as a_3	
@@ -139,7 +139,7 @@ with cte_1 as
 (	
 	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
 	from	Employee as a_2	
-	where	a_2.ManagerId is null	
+	where	(a_2.ManagerId is null)
 	union all	
 	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
 	from	Employee as a_3	
@@ -152,7 +152,7 @@ with cte_1 as
 (	
 	select	a_6.EmployeeId as EmployeeId, a_6.ManagerId as ManagerId	
 	from	Employee as a_6	
-	where	a_6.ManagerId is null	
+	where	(a_6.ManagerId is null)
 	union all	
 	select	a_7.EmployeeId as EmployeeId, a_7.ManagerId as ManagerId	
 	from	Employee as a_7	
@@ -186,7 +186,7 @@ with cte_1 as
 (	
 	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
 	from	Employee as a_2	
-	where	a_2.ManagerId is null	
+	where	(a_2.ManagerId is null)
 	union all	
 	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
 	from	Employee as a_3	
@@ -226,7 +226,7 @@ with cte_2 as
 (	
 	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
 	from	Employee as a_3	
-	where	a_3.ManagerId is null	
+	where	(a_3.ManagerId is null)
 	union all	
 	select	a_4.EmployeeId as EmployeeId, a_4.Name as Name, a_4.ManagerId as ManagerId	
 	from	Employee as a_4	
@@ -262,7 +262,7 @@ with cte_1 as
 (	
 	select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId	
 	from	Employee as a_2	
-	where	a_2.ManagerId is null	
+	where	(a_2.ManagerId is null)
 	union all	
 	select	NavSubOrdinates_4.RowId as RowId, NavSubOrdinates_4.EmployeeId as EmployeeId, NavSubOrdinates_4.Name as Name, NavSubOrdinates_4.Department as Department, NavSubOrdinates_4.ManagerId as ManagerId	
 	from	cte_1 as a_3	
@@ -438,7 +438,7 @@ with cte_1 as
 (	
 	select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId	
 	from	Employee as a_2	
-	where	a_2.ManagerId is null	
+	where	(a_2.ManagerId is null)
 	union all	
 	select	a_3.RowId as RowId, a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.Department as Department, a_3.ManagerId as ManagerId	
 	from	Employee as a_3	
