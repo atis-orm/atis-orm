@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Atis.LinqToSql.SqlExpressions
 {
@@ -21,9 +22,11 @@ namespace Atis.LinqToSql.SqlExpressions
         ///     </para>
         /// </summary>
         /// <param name="value">The value of the SQL parameter.</param>
-        public SqlParameterExpression(object value)
+        /// <param name="multipleValues">Flag indicating if the parameter can have multiple values.</param>
+        public SqlParameterExpression(object value, bool multipleValues)
         {
             this.Value = value;
+            this.MultipleValues = multipleValues;
         }
 
         /// <summary>
@@ -42,6 +45,12 @@ namespace Atis.LinqToSql.SqlExpressions
         ///     </para>
         /// </summary>
         public object Value { get; }
+        /// <summary>
+        ///     <para>
+        ///         Gets a value indicating whether the parameter can have multiple values.
+        ///     </para>
+        /// </summary>
+        public bool MultipleValues { get; }
 
         /// <summary>
         ///     <para>
@@ -83,6 +92,15 @@ namespace Atis.LinqToSql.SqlExpressions
             else if (value is DateTime dt)
             {
                 strValue = $"{dt:yyyy-MM-dd HH:mm:ss}";
+            }
+            else if (!(value is string) && value is System.Collections.IEnumerable values)
+            {
+                var valuesToString = new List<string>();
+                foreach (var val in values)
+                {
+                    valuesToString.Add(ConvertObjectToString(val));
+                }
+                return string.Join(",", valuesToString);
             }
             else
                 strValue = $"{value}";

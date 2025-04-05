@@ -123,9 +123,9 @@ namespace Atis.LinqToSql.Services
             return new SqlNotExpression(sqlExpression);
         }
 
-        public virtual SqlParameterExpression CreateParameter(object value)
+        public virtual SqlParameterExpression CreateParameter(object value, bool multipleValues)
         {
-            return new SqlParameterExpression(value);
+            return new SqlParameterExpression(value, multipleValues);
         }
 
         public virtual SqlQueryExpression CreateCteQuery(Guid cteAlias, SqlQueryExpression subQuery)
@@ -191,6 +191,11 @@ namespace Atis.LinqToSql.Services
         public virtual SqlColumnExpression CreateScalarColumn(SqlExpression columnExpression, string columnAlias, ModelPath modelPath)
         {
             return new SqlColumnExpression(columnExpression, columnAlias, modelPath, SqlExpressionType.ScalarColumn);
+        }
+
+        public virtual SqlInValuesExpression CreateInValuesExpression(SqlExpression expression, SqlExpression values)
+        {
+            return new SqlInValuesExpression(expression, new[] { values });
         }
     }
 }

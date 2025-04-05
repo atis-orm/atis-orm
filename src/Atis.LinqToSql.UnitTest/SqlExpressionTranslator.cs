@@ -112,10 +112,21 @@ namespace Atis.LinqToSql.UnitTest
             {
                 return $"not {this.Translate(sqlNotExpression.Operand)}";
             }
+            else if (sqlExpression is SqlInValuesExpression sqlInValuesExpression)
+            {
+                return this.TranslateSqlInValuesExpression(sqlInValuesExpression);
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
             }
+        }
+
+        private string TranslateSqlInValuesExpression(SqlInValuesExpression sqlInValuesExpression)
+        {
+            var expressionTranslated = this.Translate(sqlInValuesExpression.Expression);
+            var valuesTranslated = string.Join(", ", sqlInValuesExpression.Values.Select(this.Translate));
+            return $"{expressionTranslated} in ({valuesTranslated})";
         }
 
         private string TranslateSqlUpdateExpression(SqlUpdateExpression sqlUpdateExpression)

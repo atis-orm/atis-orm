@@ -89,7 +89,7 @@ namespace Atis.LinqToSql.Abstractions
         ///         Caution: this method might execute the expression and can have security implications.
         ///     </para>
         /// </remarks>
-        object Eval(Expression expression);
+        object Evalulate(Expression expression);
 
         /// <summary>
         ///     <para>
@@ -112,6 +112,13 @@ namespace Atis.LinqToSql.Abstractions
         bool IsQueryMethod(Expression node);
 
         bool IsQuerySource(Expression node);
+        
         bool IsChainedQueryMethod(Expression currentNode, Expression parentNode);
+
+        bool CanEvaluate(Expression expression);
+
+        bool IsVariable(MemberExpression expression);
+
+        bool IsEnumerable(object value);
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Atis.Expressions;
 using Atis.LinqToSql.Abstractions;
-using Atis.LinqToSql.Abstractions;
 using Atis.LinqToSql.SqlExpressions;
 using System.Linq.Expressions;
 
@@ -13,6 +12,8 @@ namespace Atis.LinqToSql.ExpressionConverters
     /// </summary>
     public class VariableMemberExpressionConverterFactory : LinqToSqlExpressionConverterFactoryBase<MemberExpression>
     {
+        private readonly IReflectionService reflectionService;
+
         /// <summary>
         ///     <para>
         ///         Initializes a new instance of the <see cref="VariableMemberExpressionConverterFactory"/> class.
@@ -21,6 +22,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <param name="context">The conversion context.</param>
         public VariableMemberExpressionConverterFactory(IConversionContext context) : base(context)
         {
+            this.reflectionService = context.GetExtensionRequired<IReflectionService>();
         }
 
         /// <inheritdoc />
@@ -44,15 +46,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <returns><c>true</c> if the specified member expression is a variable member expression; otherwise, <c>false</c>.</returns>
         protected virtual bool IsVariableMemberExpression(MemberExpression memberExpression)
         {
-            if (memberExpression.Expression is MemberExpression parentMemberExpr)
-            {
-                return IsVariableMemberExpression(parentMemberExpr);
-            }
-            else if (memberExpression.Expression is null || memberExpression.Expression is ConstantExpression)
-            {
-                return true;
-            }
-            return false;
+            return this.reflectionService.IsVariable(memberExpression);
         }
     }
 
@@ -82,6 +76,19 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <inheritdoc />
         public override bool TryOverrideChildConversion(Expression sourceExpression, out SqlExpression convertedExpression)
         {
+            // Since we are capturing the MemberExpression from the very start, so we don't want to traverse any further
+            // e.g. myParam.Prop1.Prop2.Prop3.FinalValue
+            // in-above case when visitor will be visiting FinalValue, the factory of this converter will indicate the
+            // normalization process that it can handle the MemberExpression and thus the normalization process will
+            // use the factory to create the converter for this expression and call will be passed to this converter.
+            // While this converter is in place, still the further traversal will happen for children parts of 
+            // MemberExpression, that's where below code comes into play. And this Converter effectively tells
+            // the visitor that do NOT further traverse the children of this expression by returning true.
+            // Which means that, Prop3, Prop2, Prop1 and myParam will not be visited and dummy literal
+            // expression will be given to the Convert method of this class.
+            // The Convert method will then simply use the IReflectionService to get the value of the expression
+            // which usually goes through all the MemberExpression and will reach up to the root object
+            // and then get the value of the final property.
             convertedExpression = this.SqlFactory.CreateLiteral("dummy");
             return true;
         }
@@ -95,14 +102,20 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <returns>Value from the specified member expression.</returns>
         protected virtual object GetVariableValue(MemberExpression memberExpression)
         {
-            return this.reflectionService.Eval(memberExpression);
+            return this.reflectionService.Evalulate(memberExpression);
         }
 
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             var value = this.GetVariableValue(this.Expression);
-            return this.SqlFactory.CreateParameter(value);
+            var isEnumerable = this.IsEnumerable(value);
+            return this.SqlFactory.CreateParameter(value, multipleValues: isEnumerable);
+        }
+
+        private bool IsEnumerable(object value)
+        {
+            return this.reflectionService.IsEnumerable(value);
         }
     }
 }

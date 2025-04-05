@@ -99,7 +99,8 @@ namespace Atis.LinqToSql.SqlExpressions
         Delete,
         Not,
         CteDataSource,
-        SubQueryColumn
+        SubQueryColumn,
+        In
     }
 
 

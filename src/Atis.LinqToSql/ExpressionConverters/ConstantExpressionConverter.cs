@@ -54,7 +54,7 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            return this.SqlFactory.CreateParameter(this.Expression.Value);
+            return this.SqlFactory.CreateLiteral(this.Expression.Value);
         }
     }
 }

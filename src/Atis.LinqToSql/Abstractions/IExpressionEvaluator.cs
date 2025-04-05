@@ -27,6 +27,7 @@ namespace Atis.LinqToSql.Abstractions
         ///         The result of the evaluated expression.
         ///     </para>
         /// </returns>
-        object Eval(Expression expression);
+        object Evaluate(Expression expression);
+        bool CanEvaluate(Expression expression);
     }
 }

@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Atis.LinqToSql.UnitTest
 {
@@ -23,29 +22,11 @@ namespace Atis.LinqToSql.UnitTest
             return sb.ToString();
         }
 
-        protected override Expression VisitLambda<T>(Expression<T> node)
-        {
-            if (node.Parameters.Count > 1)
-                this.Append("(");
-            for(var i = 0; i < node.Parameters.Count; i++)
-            {
-                this.Append(node.Parameters[i].Name ?? "{no name}");
-                if(i < node.Parameters.Count - 1)
-                    this.Append(", ");
-            }
-            if (node.Parameters.Count > 1)
-                this.Append(")");
-            this.Append(" => ");
-            this.Visit(node.Body);
-            return node;
-        }
-
         public static string PrintExpression(Expression expression)
         {
             var printer = new ExpressionPrinter();
             return printer.Print(expression);
         }
-
 
         [return: NotNullIfNotNull("node")]
         public override Expression? Visit(Expression? node)
@@ -95,7 +76,6 @@ namespace Atis.LinqToSql.UnitTest
                 this.AppendLine();
                 this.Unindent();
                 this.Append(")");
-
                 return node;
             }
             else if (node is ChildJoinExpression childJoin)
@@ -118,8 +98,47 @@ namespace Atis.LinqToSql.UnitTest
                 this.Append(")");
                 return node;
             }
+            else if (node is InValuesExpression inValues)
+            {
+                this.Append("In(");
+                this.Visit(inValues.Expression);
+                this.Append(", ");
+                this.Visit(inValues.Values);
+                this.Append(")");
+                return node;
+            }
 
             return base.VisitExtension(node);
+        }
+
+        protected override Expression VisitNewArray(NewArrayExpression node)
+        {
+            this.Append("{ ");
+            for (int i = 0; i < node.Expressions.Count; i++)
+            {
+                this.Visit(node.Expressions[i]);
+                if (i < node.Expressions.Count - 1)
+                    this.Append(", ");
+            }
+            this.Append(" }");
+            return node;
+        }
+
+        protected override Expression VisitLambda<T>(Expression<T> node)
+        {
+            if (node.Parameters.Count > 1)
+                this.Append("(");
+            for (var i = 0; i < node.Parameters.Count; i++)
+            {
+                this.Append(node.Parameters[i].Name ?? "{no name}");
+                if (i < node.Parameters.Count - 1)
+                    this.Append(", ");
+            }
+            if (node.Parameters.Count > 1)
+                this.Append(")");
+            this.Append(" => ");
+            this.Visit(node.Body);
+            return node;
         }
 
         protected override Expression VisitNew(NewExpression node)
@@ -150,33 +169,48 @@ namespace Atis.LinqToSql.UnitTest
             return node;
         }
 
+        protected override Expression VisitUnary(UnaryExpression node)
+        {
+            switch (node.NodeType)
+            {
+                case ExpressionType.Convert:
+                    this.Append("((");
+                    this.Append(node.Type.Name);
+                    this.Append(") ");
+                    this.Visit(node.Operand);
+                    this.Append(")");
+                    break;
+                case ExpressionType.Not:
+                    this.Append("!(");
+                    this.Visit(node.Operand);
+                    this.Append(")");
+                    break;
+                default:
+                    this.Append(node.NodeType.ToString());
+                    this.Append("(");
+                    this.Visit(node.Operand);
+                    this.Append(")");
+                    break;
+            }
+            return node;
+        }
+
         private static string GetBinaryOperator(ExpressionType nodeType)
         {
-            switch (nodeType)
+            return nodeType switch
             {
-                case ExpressionType.Add:
-                    return "+";
-                case ExpressionType.Subtract:
-                    return "-";
-                case ExpressionType.Multiply:
-                    return "*";
-                case ExpressionType.Divide:
-                    return "/";
-                case ExpressionType.Equal:
-                    return "==";
-                case ExpressionType.NotEqual:
-                    return "!=";
-                case ExpressionType.GreaterThan:
-                    return ">";
-                case ExpressionType.GreaterThanOrEqual:
-                    return ">=";
-                case ExpressionType.LessThan:
-                    return "<";
-                case ExpressionType.LessThanOrEqual:
-                    return "<=";
-                default:
-                    return nodeType.ToString();
-            }
+                ExpressionType.Add => "+",
+                ExpressionType.Subtract => "-",
+                ExpressionType.Multiply => "*",
+                ExpressionType.Divide => "/",
+                ExpressionType.Equal => "==",
+                ExpressionType.NotEqual => "!=",
+                ExpressionType.GreaterThan => ">",
+                ExpressionType.GreaterThanOrEqual => ">=",
+                ExpressionType.LessThan => "<",
+                ExpressionType.LessThanOrEqual => "<=",
+                _ => nodeType.ToString()
+            };
         }
 
         protected override Expression VisitInvocation(InvocationExpression node)
@@ -191,15 +225,15 @@ namespace Atis.LinqToSql.UnitTest
             var updatedNode = base.VisitConstant(node);
             if (node.Value is IQueryable)
             {
-                var type = node.Type.GetGenericArguments().First();
-                this.Append($"DataSet<{type.Name}>");
+                var type = node.Type.GetGenericArguments().FirstOrDefault();
+                this.Append($"DataSet<{type?.Name ?? "Unknown"}>");
             }
             else
             {
-                if (node.Value is string || node.Value is DateTime || node.Value is Guid)
+                if (node.Value is string or DateTime or Guid)
                     this.Append("\"");
                 this.Append(node.Value?.ToString() ?? "{null}");
-                if (node.Value is string || node.Value is DateTime || node.Value is Guid)
+                if (node.Value is string or DateTime or Guid)
                     this.Append("\"");
             }
             return updatedNode;
@@ -209,7 +243,15 @@ namespace Atis.LinqToSql.UnitTest
         {
             if (this.IsConstant(node))
             {
-                this.Append(node.Member.Name);
+                var members = new List<string>();
+                members.Add(node.Member.Name);
+                while (node.Expression is MemberExpression memberExpression)
+                {
+                    members.Add(memberExpression.Member.Name);
+                    node = memberExpression;
+                }
+                members.Reverse();
+                this.Append(string.Join(".", members));
                 return node;
             }
             else
@@ -221,17 +263,14 @@ namespace Atis.LinqToSql.UnitTest
             }
         }
 
-        private bool IsConstant(Expression expression)
+        private bool IsConstant(Expression? expression)
         {
-            if (expression is MemberExpression memberExpression)
+            return expression switch
             {
-                return this.IsConstant(memberExpression.Expression);
-            }
-            else if (expression is ConstantExpression)
-            {
-                return true;
-            }
-            return false;
+                MemberExpression memberExpression => this.IsConstant(memberExpression.Expression),
+                ConstantExpression => true,
+                _ => false
+            };
         }
 
         protected override Expression VisitParameter(ParameterExpression node)
@@ -258,7 +297,7 @@ namespace Atis.LinqToSql.UnitTest
             this.Append(node.Method.Name);
             this.Append("(");
             var isQueryMethod = node.Method.DeclaringType == typeof(System.Linq.Queryable) ||
-                                    node.Method.DeclaringType == typeof(QueryExtensions);
+                                node.Method.DeclaringType == typeof(QueryExtensions);
             if (isQueryMethod)
             {
                 this.AppendLine();
@@ -269,11 +308,11 @@ namespace Atis.LinqToSql.UnitTest
                 var arg = node.Arguments[i];
                 this.Visit(arg);
                 if (i < node.Arguments.Count - 1)
-                {
+            {
                     this.Append(", ");
                 }
                 if (isQueryMethod)
-                    this.AppendLine();
+                this.AppendLine();
             }
             if (isQueryMethod)
                 this.Unindent();
@@ -303,7 +342,7 @@ namespace Atis.LinqToSql.UnitTest
         {
             if (currentIndent > 0)
                 currentIndent--;
-            sb.Remove(sb.Length - tab.Length, tab.Length);
+            sb.Length = Math.Max(0, sb.Length - tab.Length);
         }
     }
 }

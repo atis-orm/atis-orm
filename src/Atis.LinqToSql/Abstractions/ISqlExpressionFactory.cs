@@ -30,7 +30,7 @@ namespace Atis.LinqToSql.Abstractions
         SqlDataSourceExpression CreateFromSource(SqlQuerySourceExpression dataSource, ModelPath modelPath);
         SqlJoinExpression CreateJoin(SqlJoinType sqlJoinType, SqlDataSourceExpression joinedDataSource, SqlExpression joinPredicate);
         SqlNotExpression CreateNot(SqlExpression sqlExpression);
-        SqlParameterExpression CreateParameter(object value);
+        SqlParameterExpression CreateParameter(object value, bool multipleValues);
         SqlQueryExpression CreateCteQuery(Guid cteAlias, SqlQueryExpression anchorQuery);
         SqlQueryExpression CreateQueryFromDataSources(IEnumerable<SqlDataSourceExpression> dataSourceList);
         SqlQueryExpression CreateQueryFromDataSource(SqlDataSourceExpression sqlDataSourceExpression);
@@ -44,5 +44,6 @@ namespace Atis.LinqToSql.Abstractions
         SqlUnionExpression CreateUnion(SqlQueryExpression sqlQuery);
         SqlDataSourceExpression CreateDataSourceForCteQuery(Guid cteAlias, SqlQueryExpression cteSource);
         SqlColumnExpression CreateScalarColumn(SqlExpression columnExpression, string columnAlias, ModelPath modelPath);
+        SqlInValuesExpression CreateInValuesExpression(SqlExpression expression, SqlExpression values);
     }
 }

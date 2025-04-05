@@ -1,4 +1,6 @@
-﻿using Atis.LinqToSql.Preprocessors;
+﻿using Atis.LinqToSql.ExpressionExtensions;
+using Atis.LinqToSql.Preprocessors;
+using Atis.LinqToSql.Services;
 using System.Linq.Expressions;
 
 namespace Atis.LinqToSql.UnitTest.Tests
@@ -6,6 +8,25 @@ namespace Atis.LinqToSql.UnitTest.Tests
     [TestClass]
     public class ExpressionPreprocessorTests : TestBase
     {
+        [TestMethod]
+        public void CanEvaluate_Should_Return_True_For_InlineArray()
+        {
+            // Arrange
+            Expression expr = Expression.NewArrayInit(
+                typeof(string),
+                Expression.Constant("HR"),
+                Expression.Constant("Finance")
+            );
+
+            var reflectionService = new ReflectionService(new ExpressionEvaluator()); // Or get via DI/test setup
+
+            // Act
+            bool result = reflectionService.CanEvaluate(expr);
+
+            // Assert
+            Assert.IsTrue(result, "Inline array should be evaluatable.");
+        }
+
         [TestMethod]
         public void All_Should_Be_Rewritten_To_Not_Any_With_Inverted_Predicate()
         {
@@ -51,6 +72,141 @@ namespace Atis.LinqToSql.UnitTest.Tests
             Assert.AreEqual(ExpressionType.Equal, innerCondition.NodeType);
         }
 
+        [TestMethod]
+        public void DirectArrayVariable_Contains_Should_Be_Rewritten_To_InValuesExpression()
+        {
+            var values = new[] { "HR", "Finance" };
+            var employees = new Queryable<Employee>(this.dbc);
+            var q = employees.Where(x => values.Contains(x.Department));
 
+            var result = this.PreprocessExpression(q.Expression);
+
+            AssertHasInValuesExpression(result);
+        }
+
+        [TestMethod]
+        public void InlineArray_Contains_Should_Be_Rewritten_To_InValuesExpression()
+        {
+            var employees = new Queryable<Employee>(this.dbc);
+            var q = employees.Where(x => new[] { "HR", "Finance" }.Contains(x.Department));
+
+            var result = this.PreprocessExpression(q.Expression);
+
+            AssertHasInValuesExpression(result);
+        }
+
+        [TestMethod]
+        public void NestedObjectMember_Contains_Should_Be_Rewritten_To_InValuesExpression()
+        {
+            var obj = new { Departments = new[] { "HR", "Finance" } };
+            var employees = new Queryable<Employee>(this.dbc);
+            var q = employees.Where(x => obj.Departments.Contains(x.Department));
+
+            var result = this.PreprocessExpression(q.Expression);
+
+            AssertHasInValuesExpression(result);
+        }
+
+        [TestMethod]
+        public void InlineArray_Any_Y_Equals_X_Should_Be_Rewritten_To_InValuesExpression()
+        {
+            var employees = new Queryable<Employee>(this.dbc);
+            var q = employees.Where(x => new[] { "HR", "Finance" }.Any(y => y == x.Department));
+
+            var result = this.PreprocessExpression(q.Expression);
+
+            Console.WriteLine(ExpressionPrinter.PrintExpression(result));
+
+            AssertHasInValuesExpression(result);
+        }
+
+        [TestMethod]
+        public void NestedObjectMember_Any_Y_Equals_X_Should_Be_Rewritten_To_InValuesExpression()
+        {
+            var obj = new { Departments = new[] { "HR", "Finance" } };
+            var employees = new Queryable<Employee>(this.dbc);
+            var q = employees.Where(x => obj.Departments.Any(y => y == x.Department));
+
+            var result = this.PreprocessExpression(q.Expression);
+
+            AssertHasInValuesExpression(result);
+        }
+
+        [TestMethod]
+        public void DirectArrayVariable_Any_Y_Equals_X_Should_Be_Rewritten_To_InValuesExpression()
+        {
+            var departments = new[] { "HR", "Finance" };
+            var employees = new Queryable<Employee>(this.dbc);
+            var q = employees.Where(x => departments.Any(y => y == x.Department));
+
+            var result = this.PreprocessExpression(q.Expression);
+
+            AssertHasInValuesExpression(result);
+        }
+
+        [TestMethod]
+        public void NestedObjectMember_Any_X_Equals_Y_Should_Be_Rewritten_To_InValuesExpression()
+        {
+            var obj = new { Departments = new[] { "HR", "Finance" } };
+            var employees = new Queryable<Employee>(this.dbc);
+            var q = employees.Where(x => obj.Departments.Any(y => x.Department == y));
+
+            var result = this.PreprocessExpression(q.Expression);
+
+            AssertHasInValuesExpression(result);
+        }
+
+        [TestMethod]
+        public void DirectArrayVariable_Any_X_Equals_Y_Should_Be_Rewritten_To_InValuesExpression()
+        {
+            var departments = new[] { "HR", "Finance" };
+            var employees = new Queryable<Employee>(this.dbc);
+            var q = employees.Where(x => departments.Any(y => x.Department == y));
+
+            var result = this.PreprocessExpression(q.Expression);
+
+            AssertHasInValuesExpression(result);
+        }
+
+
+        private static void AssertHasInValuesExpression(Expression expr)
+        {
+            var found = ExpressionTypeFinder.Find(expr, typeof(InValuesExpression));
+            Assert.IsTrue(found, "Expected InValuesExpression but none found.");
+        }
+
+        private class ExpressionTypeFinder : ExpressionVisitor
+        {
+            private readonly Type typeToFind;
+            public ExpressionTypeFinder(Type typeToFind)
+            {
+                this.typeToFind = typeToFind;
+            }
+
+            public bool ExpressionFound { get; private set; }
+
+            public static bool Find(Expression expression, Type typeToFind)
+            {
+                if (expression == null)
+                    throw new ArgumentNullException(nameof(expression));
+                var finder = new ExpressionTypeFinder(typeToFind);
+                finder.Visit(expression);
+                return finder.ExpressionFound;
+            }
+
+            public override Expression Visit(Expression node)
+            {
+                if (this.ExpressionFound)
+                    return node;
+
+                if (node != null && node.GetType() == typeToFind)
+                {
+                    this.ExpressionFound = true;
+                    return node;
+                }
+
+                return base.Visit(node);
+            }
+        }
     }
 }
