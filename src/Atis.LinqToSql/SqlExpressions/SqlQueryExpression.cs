@@ -995,9 +995,21 @@ namespace Atis.LinqToSql.SqlExpressions
         {
             if (this.Projection == null)
             {
-                List<SqlColumnExpression> autoProjection = this.GetAutoProjection(applyAll);
-                var projectionExpression = this.CreateSqlCollection(autoProjection);
-                this.ApplyProjectionInternal(projectionExpression);
+                if (this.GroupBy != null)
+                {
+                    var groupBy = this.GroupBy;
+                    if (!(this.GroupBy is SqlCollectionExpression || this.GroupBy is SqlColumnExpression))
+                    {
+                        groupBy = this.CreateSqlColumn(groupBy, "Col1", ModelPath.Empty);
+                    }
+                    this.ApplyProjectionInternal(groupBy);
+                }
+                else
+                {
+                    List<SqlColumnExpression> autoProjection = this.GetAutoProjection(applyAll);
+                    var projectionExpression = this.CreateSqlCollection(autoProjection);
+                    this.ApplyProjectionInternal(projectionExpression);
+                }
                 this.AutoProjectionApplied = true;
             }
         }

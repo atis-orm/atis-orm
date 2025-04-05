@@ -497,5 +497,43 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
             Test("Nested Constant Property Test", q.Expression, expectedResult);
         }
 
+        [TestMethod]
+        public void Where_Select_Then_Where_Test()
+        {
+            var students = new Queryable<Student>(dbc);
+            var q = students
+                .Where(p => p.Age > 18)
+                .Select(p => p.Name)
+                .Where(name => name.StartsWith("A"));
+
+            string? expectedResult = @"
+    select	a_2.Col1 as Col1
+	from	(
+		select	a_1.Name as Col1
+		from	Student as a_1
+		where	(a_1.Age > 18)
+	) as a_2
+	where	(a_2.Col1 like ('A' + '%'))
+";
+
+            Test("Where followed by Select then another Where should wrap correctly", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void All_method_call()
+        {
+            var employees = new Queryable<Employee>(this.dbc);
+            var q = employees.Where(x => x.NavDegrees.All(y => y.University == "MIT"));
+            string? expectedResult = @"
+select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
+	from	Employee as a_1
+	where	not exists(
+		select	1
+		from	EmployeeDegree as a_2
+		where	(a_1.EmployeeId = a_2.EmployeeId) and not (a_2.University = 'MIT')
+	)
+";
+            Test("All Method Call Test", q.Expression, expectedResult);
+        }
     }
 }

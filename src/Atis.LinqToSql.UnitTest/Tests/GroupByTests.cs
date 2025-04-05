@@ -186,5 +186,147 @@ having	(Max(a_1.Age) > 20)";
             Test("Having Test", q.Expression, expectedResult);
         }
 
+
+        [TestMethod]
+        public void SelectMany_GroupBy_on_single_column_without_Select_at_the_end()
+        {
+            var students = new Queryable<Employee>(dbc);
+            var q = students
+                .SelectMany(s => s.NavDegrees)
+                .GroupBy(c => c.University);
+
+            string? expectedResult = @"
+    select	NavDegrees_2.University as Col1
+	from	Employee as a_1
+		    inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
+	group by NavDegrees_2.University
+";
+
+            Test("SelectMany GroupBy on single column without Select at the end", q.Expression, expectedResult);
+        }
+
+
+        [TestMethod]
+        public void SelectMany_GroupBy_on_multiple_columns_without_Select_at_the_end()
+        {
+            var students = new Queryable<Employee>(dbc);
+            var q = students
+                .SelectMany(s => s.NavDegrees)
+                .GroupBy(c => new { g1 = c.University, g2 = c.Degree } );
+
+            string? expectedResult = @"
+    select	NavDegrees_2.University as g1, NavDegrees_2.Degree as g2
+	from	Employee as a_1
+		    inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
+	group by NavDegrees_2.University, NavDegrees_2.Degree
+";
+
+            Test("SelectMany GroupBy on multiple columns without Select at the end", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void GroupBy_Aggregate_Then_Filter_Test()
+        {
+            var employees = new Queryable<Employee>(dbc);
+
+            var q = employees
+                .GroupBy(s => s.Department)
+                .Select(g => new { Department = g.Key, Count = g.Count() })
+                .Where(x => x.Count > 2);
+
+            string? expectedResult = @"
+    select	a_2.Department as Department, a_2.Count as Count
+	from	(
+		select	a_1.Department as Department, Count(1) as Count
+		from	Employee as a_1
+        group by a_1.Department
+	) as a_2
+	where   (a_2.Count > 2)
+";
+
+            Test("GroupBy followed by aggregation and filtered on aggregate should wrap correctly", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Where_Select_GroupBy_Select_Test()
+        {
+            var employees = new Queryable<Employee>(dbc);
+
+            var q = employees
+                .Where(e => e.Department != null)
+                .Select(e => new { e.Name, e.Department })
+                .GroupBy(x => x.Department)
+                .Select(g => new { Department = g.Key, Count = g.Count() });
+
+            string? expectedResult = @"
+    select	a_2.Department as Department, Count(1) as Count
+	from	(
+		select	a_1.Name as Name, a_1.Department as Department
+		from	Employee as a_1
+		where	(a_1.Department is not null)
+	) as a_2
+	group by a_2.Department
+";
+
+            Test("Where before Select followed by GroupBy and aggregate Select should translate cleanly without wrapping", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void GroupBy_MultipleKeys_With_MultipleAggregates_Test()
+        {
+            var invoiceDetails = new Queryable<InvoiceDetail>(dbc);
+
+            var q = invoiceDetails
+                .GroupBy(i => new { i.InvoiceId, i.ItemId })
+                .Select(g => new
+                {
+                    g.Key.InvoiceId,
+                    g.Key.ItemId,
+                    TotalQty = g.Sum(x => x.Quantity),
+                    TotalAmount = g.Sum(x => x.UnitPrice * x.Quantity)
+                });
+
+            string? expectedResult = @"
+    select	a_1.InvoiceId as InvoiceId, a_1.ItemId as ItemId,
+            sum(a_1.Quantity) as TotalQty,
+            sum((a_1.UnitPrice * a_1.Quantity)) as TotalAmount
+	from	InvoiceDetail as a_1
+	group by a_1.InvoiceId, a_1.ItemId
+";
+
+            Test("GroupBy on multiple keys with multiple aggregates should translate correctly", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Select_Nested_GroupBy_In_SubQuery_Test()
+        {
+            var employees = new Queryable<Employee>(dbc);
+
+            // although we don't recommend IQueryable<> to be selected within projection,
+            // however, engine translates these sub-queries as outer apply
+
+            var q = employees
+                .Select(e => new
+                {
+                    e.Name,
+                    DegreeGroups = e.NavDegrees                                     // this sub-query will be translated to outer-apply
+                        .GroupBy(d => d.University)
+                        .Select(g => new { g.Key, Count = g.Count() })
+                });
+
+            string? expectedResult = @"
+select	a_1.Name as Name, a_3.Key as Key, a_3.Count as Count
+	from	Employee as a_1
+		outer apply (
+			select	a_2.University as Key, Count(1) as Count
+			from	EmployeeDegree as a_2
+			where	(a_1.EmployeeId = a_2.EmployeeId)
+			group by a_2.University
+		) as a_3
+";
+
+            Test("Select with nested GroupBy inside projection should produce correlated subquery", q.Expression, expectedResult);
+        }
+
     }
 }

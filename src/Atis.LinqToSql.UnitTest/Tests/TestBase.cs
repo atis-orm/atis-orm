@@ -68,10 +68,11 @@ namespace Atis.LinqToSql.UnitTest.Tests
             var calculatedPropertyReplacementPreprocessor = new CalculatedPropertyPreprocessor(reflectionService);
             var specificationPreprocessor = new SpecificationCallRewriterPreprocessor(reflectionService);
             var convertPreprocessor = new ConvertExpressionReplacementPreprocessor();
+            var allToAnyRewriterPreprocessor = new AllToAnyRewriterPreprocessor();
             //var nonPrimitivePropertyReplacementPreprocessor = new NonPrimitiveCalculatedPropertyPreprocessor(reflectionService);
             //var concreteParameterPreprocessor = new ConcreteParameterReplacementPreprocessor(new QueryPartsIdentifier(), reflectionService);
             var methodInterfaceTypeReplacementPreprocessor = new QueryMethodGenericTypeReplacementPreprocessor(reflectionService);
-            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, childJoinReplacementPreprocessor, calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor/*, concreteParameterPreprocessor*/]);
+            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, childJoinReplacementPreprocessor, calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor/*, concreteParameterPreprocessor*/]);
             expression = preprocessor.Preprocess(expression);
             return expression;
         }

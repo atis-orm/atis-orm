@@ -401,5 +401,46 @@ select	a_5.OrderID as OrderID, a_5.OrderDate as OrderDate, a_5.Quantity as Quant
 ";
             Test("GroupJoin sub-query selected in projection", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void Join_Select_Where_OrderBy_Test()
+        {
+            var employees = new Queryable<Employee>(dbc);
+            var employeeDegrees = new Queryable<EmployeeDegree>(dbc);
+
+            var q =
+                from e in employees
+                join d in employeeDegrees on e.EmployeeId equals d.EmployeeId
+                let result = new { EmpName = e.Name, DegreeName = d.Degree }
+                where result.DegreeName.StartsWith("H")
+                orderby result.EmpName
+                select result;
+
+            // the `let` keyword above will include `e` and `d` is transparent anonymous type along with `result`
+            // which will be rendered as Select in the final expression over Join, so the `let` part is basically
+            // going to be Select something like this
+            //      Select(
+            //          Join(...),
+            //          transparentType => new { transparentType, result = new { EmpName = transparentType.e.Name, DegreeName = transparentType.d.Degree } }
+            //      )                                /
+            //      ________________________________/
+            //     /
+            //  this `transparentType` selected in `new` is causing all the columns selected from Employee and EmployeeDegree
+
+            string? expectedResult = @"
+    select	a_3.EmpName as EmpName, a_3.DegreeName as DegreeName
+	from	(
+		select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId, a_2.RowId as RowId_1, 
+                a_2.EmployeeId as EmployeeId_1, a_2.Degree as Degree, a_2.University as University, a_1.Name as EmpName, a_2.Degree as DegreeName
+		from	Employee as a_1
+			    inner join EmployeeDegree as a_2 on (a_1.EmployeeId = a_2.EmployeeId)
+	) as a_3
+	where	(a_3.Degree like ('H' + '%'))
+	order by a_3.EmpName asc
+";
+
+            Test("Join followed by Select, Where, and OrderBy (query syntax) should wrap correctly", q.Expression, expectedResult);
+        }
+
     }
 }

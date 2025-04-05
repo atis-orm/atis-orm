@@ -57,5 +57,23 @@ order by (a_1.StudentId + '3') asc, Id desc";
             Test("Expression In OrderBy Test", q.Expression, expectedResult);
         }
 
+        [TestMethod]
+        public void ComputedColumn_Select_Then_OrderBy_Test()
+        {
+            var invoiceDetails = new Queryable<InvoiceDetail>(dbc);
+
+            var q = invoiceDetails
+                .Select(e => new { e.InvoiceId, LineTotal = e.UnitPrice * e.Quantity })
+                .OrderBy(x => x.LineTotal);
+
+            string? expectedResult = @"    
+	select	a_1.InvoiceId as InvoiceId, (a_1.UnitPrice * a_1.Quantity) as LineTotal
+	from	InvoiceDetail as a_1
+	order by LineTotal asc
+";
+
+            Test("Select with computed column followed by OrderBy should wrap correctly", q.Expression, expectedResult);
+        }
+
     }
 }
