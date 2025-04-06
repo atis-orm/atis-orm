@@ -34,6 +34,7 @@ namespace Atis.LinqToSql.Abstractions
         SqlQueryExpression CreateCteQuery(Guid cteAlias, SqlQueryExpression anchorQuery);
         SqlQueryExpression CreateQueryFromDataSources(IEnumerable<SqlDataSourceExpression> dataSourceList);
         SqlQueryExpression CreateQueryFromDataSource(SqlDataSourceExpression sqlDataSourceExpression);
+        SqlQueryExpression CreateQueryFromSelect(SqlExpression select);
         SqlSelectedCollectionExpression CreateSelectedCollection(SqlExpression collectionSource, SqlExpression[] collection);
         SqlTableExpression CreateTable(string tableName, TableColumn[] tableColumns);
         SqlUpdateExpression CreateUpdate(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource, string[] columnNames, SqlExpression[] values);
@@ -45,5 +46,8 @@ namespace Atis.LinqToSql.Abstractions
         SqlDataSourceExpression CreateDataSourceForCteQuery(Guid cteAlias, SqlQueryExpression cteSource);
         SqlColumnExpression CreateScalarColumn(SqlExpression columnExpression, string columnAlias, ModelPath modelPath);
         SqlInValuesExpression CreateInValuesExpression(SqlExpression expression, SqlExpression values);
+        SqlQueryExpression CreateEmptySqlQuery();
+        SqlQuerySourceExpression CreateSubQuery(SqlQueryExpression sqlQuery);
+        SqlKeywordExpression CreateKeyword(string keyword);
     }
 }

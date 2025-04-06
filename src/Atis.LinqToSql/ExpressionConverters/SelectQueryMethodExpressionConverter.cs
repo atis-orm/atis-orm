@@ -27,7 +27,10 @@ namespace Atis.LinqToSql.ExpressionConverters
         /// <inheritdoc />
         protected override bool IsQueryMethodCall(MethodCallExpression methodCallExpression)
         {
-            return methodCallExpression.Method.Name == nameof(Queryable.Select);
+            return methodCallExpression.Method.Name == nameof(Queryable.Select)
+                    &&
+                    (methodCallExpression.Method.DeclaringType == typeof(Queryable) ||
+                        methodCallExpression.Method.DeclaringType == typeof(Enumerable));
         }
 
         /// <inheritdoc />

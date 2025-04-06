@@ -143,6 +143,11 @@ namespace Atis.LinqToSql.Services
             return new SqlQueryExpression(dataSource, this);
         }
 
+        public virtual SqlQueryExpression CreateQueryFromSelect(SqlExpression select)
+        {
+            return new SqlQueryExpression((SqlExpression)select, this);
+        }
+
         public virtual SqlSelectedCollectionExpression CreateSelectedCollection(SqlExpression collectionSource, SqlExpression[] collection)
         {
             return new SqlSelectedCollectionExpression(collectionSource, collection);
@@ -196,6 +201,21 @@ namespace Atis.LinqToSql.Services
         public virtual SqlInValuesExpression CreateInValuesExpression(SqlExpression expression, SqlExpression values)
         {
             return new SqlInValuesExpression(expression, new[] { values });
+        }
+
+        public SqlQueryExpression CreateEmptySqlQuery()
+        {
+            return new SqlQueryExpression(this);
+        }
+
+        public SqlQuerySourceExpression CreateSubQuery(SqlQueryExpression sqlQuery)
+        {
+            return new SqlSubQueryExpression(sqlQuery);
+        }
+
+        public SqlKeywordExpression CreateKeyword(string keyword)
+        {
+            return new SqlKeywordExpression(keyword);
         }
     }
 }

@@ -525,5 +525,21 @@ namespace Atis.LinqToSql
                     query.Expression, Expression.Quote(tableSelection), Expression.Quote(predicate)));
             return query.Provider.Execute<int>(q.Expression);
         }
+
+        public static IQueryable<R> Select<R>(this IQueryProvider db, Expression<Func<R>> selector)
+        {
+            if (db is null)
+                throw new ArgumentNullException(nameof(db));
+            if (selector is null)
+                throw new ArgumentNullException(nameof(selector));
+
+            return db.CreateQuery<R>(
+                Expression.Call(
+                    typeof(QueryExtensions),
+                    nameof(Select),
+                    new Type[] { typeof(R) },
+                    Expression.Constant(db),
+                    selector));
+        }
     }
 }

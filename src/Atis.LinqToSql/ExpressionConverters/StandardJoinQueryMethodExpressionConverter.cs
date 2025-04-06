@@ -119,7 +119,10 @@ namespace Atis.LinqToSql.ExpressionConverters
                 }
                 else
                 {
-                    querySource = otherDataSqlQuery;
+                    if (this.UseSubQueryDataSource)
+                        querySource = this.SqlFactory.CreateSubQuery(otherDataSqlQuery);
+                    else
+                        querySource = otherDataSqlQuery;
                 }
 
                 if (this.UseSubQueryDataSource)
@@ -219,7 +222,7 @@ namespace Atis.LinqToSql.ExpressionConverters
             {
                 if (this.HasDefaultProjection())
                 {
-                    this.UpdateModelMaps(sqlQuery.AllDataSources);
+                    this.UpdateModelMaps(sqlQuery.AllQuerySources);
                 }
                 else
                 {

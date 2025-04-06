@@ -100,7 +100,8 @@ namespace Atis.LinqToSql.SqlExpressions
         Not,
         CteDataSource,
         SubQueryColumn,
-        In
+        In,
+        Keyword
     }
 
 

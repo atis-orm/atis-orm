@@ -86,19 +86,27 @@ namespace Atis.LinqToSql.ExpressionConverters
 
                 if (sqlQuery.Projection != null)        // if projection has been applied
                 {
-                    // we'll match with the projection
-                    // if the projection has been applied, then we'll match with full or partial
-                    // we cannot go anywhere else if the projection has been applied in the query
-                    var columnExpressions = this.MatchWithProjection(path.Last(), sqlQuery);
-                    if (!this.TryHandleSubQueryProjection(columnExpressions, out var newResult))
-                        result = columnExpressions;
+                    if (sqlQuery.InitialDataSource == null)
+                    {
+                        // we'll be here if query was created with direct Select
+                        result = new[] { this.CreateSqlColumn(this.SqlFactory.CreateAlias(this.Expression.Member.Name), this.Expression.Member.Name, new ModelPath(this.Expression.Member.Name)) };
+                    }
                     else
-                        result = newResult;
+                    {
+                        // we'll match with the projection
+                        // if the projection has been applied, then we'll match with full or partial
+                        // we cannot go anywhere else if the projection has been applied in the query
+                        var columnExpressions = this.MatchWithProjection(path.Last(), sqlQuery);
+                        if (!this.TryHandleSubQueryProjection(columnExpressions, out var newResult))
+                            result = columnExpressions;
+                        else
+                            result = newResult;
+                    }
                     resultSource = sqlQuery;
                 }
                 else
                 {
-                    var matchedDataSources = sqlQuery.AllDataSources.Where(x => x.ModelPath.StartsWith(path)).ToArray();
+                    var matchedDataSources = sqlQuery.AllQuerySources.Where(x => x.ModelPath.StartsWith(path)).ToArray();
                     var dataSourceReferences = matchedDataSources.Select(x => this.SqlFactory.CreateDataSourceReference(x)).ToArray();
                     result = dataSourceReferences;
                     resultSource = sqlQuery;

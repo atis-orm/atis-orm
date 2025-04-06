@@ -65,6 +65,8 @@ namespace Atis.LinqToSql
                 new DeleteQueryMethodExpressionConverterFactory(context),
                 new InValuesExpressionConverterFactory(context),
                 new NewArrayExpressionConverterFactory(context),
+                new StandaloneSelectQueryMethodExpressionConverterFactory(context),
+                new DateFunctionsConverterFactory(context), 
             };
             this.Factories.AddRange(defaultConverters);
         }
