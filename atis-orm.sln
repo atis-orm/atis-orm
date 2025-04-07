@@ -7,9 +7,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{EFD08378-6DB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Atis.Expressions", "src\Atis.Expressions\Atis.Expressions.csproj", "{FB3BDEAE-CD7B-4F97-8206-3668321D3F2D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Atis.LinqToSql", "src\Atis.LinqToSql\Atis.LinqToSql.csproj", "{0F1F2BA8-62E7-4E0F-BE98-FF1445558B47}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Atis.SqlExpressionEngine", "src\Atis.SqlExpressionEngine\Atis.SqlExpressionEngine.csproj", "{50E3A3D0-10A0-6638-55EA-DC743D9FBF6E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Atis.LinqToSql.UnitTest", "src\Atis.LinqToSql.UnitTest\Atis.LinqToSql.UnitTest.csproj", "{893E0821-1BD3-4E7A-A77A-833C4EBE7F10}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Atis.SqlExpressionEngine.UnitTest", "src\Atis.SqlExpressionEngine.UnitTest\Atis.SqlExpressionEngine.UnitTest.csproj", "{5A37F418-7AEB-FC9A-7BB5-5B5E4056072E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,22 +21,22 @@ Global
 		{FB3BDEAE-CD7B-4F97-8206-3668321D3F2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FB3BDEAE-CD7B-4F97-8206-3668321D3F2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FB3BDEAE-CD7B-4F97-8206-3668321D3F2D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0F1F2BA8-62E7-4E0F-BE98-FF1445558B47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0F1F2BA8-62E7-4E0F-BE98-FF1445558B47}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0F1F2BA8-62E7-4E0F-BE98-FF1445558B47}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0F1F2BA8-62E7-4E0F-BE98-FF1445558B47}.Release|Any CPU.Build.0 = Release|Any CPU
-		{893E0821-1BD3-4E7A-A77A-833C4EBE7F10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{893E0821-1BD3-4E7A-A77A-833C4EBE7F10}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{893E0821-1BD3-4E7A-A77A-833C4EBE7F10}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{893E0821-1BD3-4E7A-A77A-833C4EBE7F10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50E3A3D0-10A0-6638-55EA-DC743D9FBF6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50E3A3D0-10A0-6638-55EA-DC743D9FBF6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50E3A3D0-10A0-6638-55EA-DC743D9FBF6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50E3A3D0-10A0-6638-55EA-DC743D9FBF6E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A37F418-7AEB-FC9A-7BB5-5B5E4056072E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A37F418-7AEB-FC9A-7BB5-5B5E4056072E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A37F418-7AEB-FC9A-7BB5-5B5E4056072E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A37F418-7AEB-FC9A-7BB5-5B5E4056072E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{FB3BDEAE-CD7B-4F97-8206-3668321D3F2D} = {EFD08378-6DBC-46F0-9E26-A85582815544}
-		{0F1F2BA8-62E7-4E0F-BE98-FF1445558B47} = {EFD08378-6DBC-46F0-9E26-A85582815544}
-		{893E0821-1BD3-4E7A-A77A-833C4EBE7F10} = {EFD08378-6DBC-46F0-9E26-A85582815544}
+		{50E3A3D0-10A0-6638-55EA-DC743D9FBF6E} = {EFD08378-6DBC-46F0-9E26-A85582815544}
+		{5A37F418-7AEB-FC9A-7BB5-5B5E4056072E} = {EFD08378-6DBC-46F0-9E26-A85582815544}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {420A767B-CC45-416A-B480-36F1A9569BBE}

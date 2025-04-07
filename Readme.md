@@ -10,27 +10,77 @@
 
 ## Overview
 
-**Atis ORM** is an extremely lightweight and extensible **LINQ-to-SQL Expression Normalization and Conversion Library**, designed with simplicity and flexibility in mind.
+**Atis ORM** is a lightweight and extensible library focused on **transforming LINQ expression trees into structured SQL expression representations (ASTs)**.  
+
+It is designed to serve as the core query engine of a future ORM system, with a strong emphasis on **customization, plugin-based normalization, and minimalism**.
+
+The current version focuses purely on the **transformation and modeling layer**, enabling advanced SQL query generation and inspection.   Query execution and materialization will be introduced in future phases.
 
 ---
 
 ## Objectives
 
-- **LINQ to SQL conversion only** — No extra features like model tracking, migrations, or change detection.
-- **Support for complex Select queries**, including:
-  - Recursive queries
-  - Calculated properties
-  - Specifications
+- **Enable Complex SQL via LINQ** — The primary goal of Atis ORM is to empower developers to write **nearly any type of complex SQL** `SELECT` query using LINQ syntax, including deeply nested queries, recursive CTEs, outer applies, and dynamic projections — all translated into a structured SQL AST.
+- **Expression-Centric Design** — Focused on transforming LINQ expression trees into structured, strongly-typed SQL expression models (ASTs), rather than generating SQL strings directly.
+- **Plugin-Based Normalization** — Provides a modular and plugin-friendly architecture, where expression normalization, conversion, and post-processing can be extended or replaced without modifying the core.
+- **Support for Complex Query Scenarios**, including:
+  - Recursive CTEs
+  - Navigation chains with smart join inference
   - Complex navigations (Outer Apply, etc.)
+  - Calculated properties
+  - Specification pattern integration
+  - Bulk update/delete feature
   - etc.
-- **Minimalistic design** — No built-in model discovery or conventions; **everything is injectable**.
-- **Easily understandable architecture**, facilitating customization and extension.
-- **Focused on extensibility** — Developers can plug into the normalization and conversion processes.
-- **Targeting Complex Business Applications** — Designed to target complex business applications where centralizing business logic is challenging.
+- **Minimalism & Explicit Control** — No built-in model discovery, conventions, or tracking. The system avoids magic — every behavior is explicitly controlled and injectable.
+- ** Ideal for Complex Business Applications** — Targets enterprise scenarios where centralizing business rules and dynamic query shaping are essential.
 
 ---
 
 ## Examples
+
+### Direct Select without From
+
+**LINQ**
+
+```csharp
+var q = dbc.Select(() => new { n = 1 })
+                .Where(x => x.n > 5);
+```
+
+**SQL**
+
+```sql
+select	a_1.n as n
+from	(
+    select	1 as n
+) as a_1
+where	(n > 5)
+```
+
+---
+
+### Explicit Joins
+
+**LINQ**
+```csharp
+var q = employees
+        .OuterApply(e => employeeDegrees.Where(d => d.EmployeeId == e.EmployeeId).Take(1), (e, ed) => new { e, ed })
+        .Select(x => new { x.e.EmployeeId, x.e.Name, x.ed.Degree });
+```
+
+**SQL**
+```sql
+select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree
+from	Employee as a_1
+	outer apply (
+		select	top (1)	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, 
+                a_2.Degree as Degree, a_2.University as University
+		from	EmployeeDegree as a_2
+		where	(a_2.EmployeeId = a_1.EmployeeId)
+	) as a_3
+```
+
+---
 
 ### Recursive Query
 
