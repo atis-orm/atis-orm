@@ -73,7 +73,7 @@ namespace Atis.LinqToSql.SqlExpressions
         /// <inheritdoc />
         public override SqlExpressionType NodeType => SqlExpressionType.Query;
 
-        protected virtual ISqlExpressionFactory SqlFactory { get; }
+        public virtual ISqlExpressionFactory SqlFactory { get; }
 
         /// <summary>
         ///     <para>
@@ -137,7 +137,8 @@ namespace Atis.LinqToSql.SqlExpressions
             get
             {
                 // return initialDataSources + joins.DataSource
-                return new[] { this.InitialDataSource }.Concat(this.joins.Select(x => x.JoinedSource)).ToArray();
+                return (this.InitialDataSource != null ? new[] { this.InitialDataSource } : Array.Empty<SqlDataSourceExpression>())
+                                .Concat(this.joins.Select(x => x.JoinedSource)).ToArray();
             }
         }
         /// <summary>
@@ -159,7 +160,9 @@ namespace Atis.LinqToSql.SqlExpressions
         ///         Gets both normal data sources and CTE data sources combined.
         ///     </para>
         /// </summary>
-        public IReadOnlyCollection<SqlDataSourceExpression> AllDataSources => CombinedDataSources.Where(x => !(x.QuerySource is SqlCteReferenceExpression)).Concat(this.cteDataSources).Concat(this.subQueryDataSources).ToArray();
+        public IReadOnlyCollection<SqlDataSourceExpression> AllQuerySources => CombinedDataSources.Where(x => !(x.QuerySource is SqlCteReferenceExpression)).Concat(this.cteDataSources).Concat(this.subQueryDataSources).ToArray();
+
+        public IReadOnlyCollection<SqlDataSourceExpression> AllDataSources => CombinedDataSources.Concat(this.cteDataSources).Concat(this.subQueryDataSources).ToArray();
 
         private readonly List<SqlJoinExpression> joins = new List<SqlJoinExpression>();
         /// <summary>
@@ -267,6 +270,18 @@ namespace Atis.LinqToSql.SqlExpressions
         {
             this.SqlFactory = sqlFactory ?? throw new ArgumentNullException(nameof(sqlFactory));
             this.ConvertToCte(cteAlias, cteSource);
+        }
+
+        public SqlQueryExpression(SqlExpression select, ISqlExpressionFactory sqlFactory)
+        {
+            this.SqlFactory = sqlFactory ?? throw new ArgumentNullException(nameof(sqlFactory));
+            this.Projection = select ?? throw new ArgumentNullException(nameof(select));
+            this.LastSqlOperation = SqlQueryOperation.Select;
+        }
+
+        public SqlQueryExpression(ISqlExpressionFactory sqlFactory)
+        {
+            this.SqlFactory = sqlFactory ?? throw new ArgumentNullException(nameof(sqlFactory));
         }
 
         /// <summary>
@@ -841,9 +856,19 @@ namespace Atis.LinqToSql.SqlExpressions
             //var dataSourceCopies = dataSourceMapping.Values;
             // IMPORTANT: We cannot just copy the joins, because joins are using DataSources, and we are creating new data sources above
             //              so we need to create new joins with new data sources.
-            var initialDataSourceCopy = sqlFactory.CreateDataSourceCopy(source.InitialDataSource);
 
-            var copy = sqlFactory.CreateQueryFromDataSource(initialDataSourceCopy);   // initialDataSourceCopy.ParentSqlQuery will be set here
+            var destination = sqlFactory.CreateEmptySqlQuery();            
+            Copy(source, destination);
+
+            return destination;
+        }
+
+        protected static void Copy(SqlQueryExpression source, SqlQueryExpression copy)
+        {
+            var sqlFactory = source.SqlFactory;
+
+            if (source.InitialDataSource != null)
+                copy.InitialDataSource = sqlFactory.CreateDataSourceCopy(source.InitialDataSource);
             copy.Projection = source.Projection;
             copy.whereClause.AddRange(source.whereClause);
             copy.havingClauseList.AddRange(source.havingClauseList);
@@ -851,10 +876,11 @@ namespace Atis.LinqToSql.SqlExpressions
             // we want to reattach the joins' DataSource with this new copy
             var newJoinDataSources = source.joins.Select(x => new { OldDs = x.JoinedSource, NewDs = sqlFactory.CreateDataSourceCopy(x.JoinedSource) })
                                                     .ToDictionary(x => x.OldDs, x => x.NewDs);
-            var oldVsNewDataSource = new Dictionary<SqlDataSourceExpression, SqlDataSourceExpression>(newJoinDataSources)
+            var oldVsNewDataSource = new Dictionary<SqlDataSourceExpression, SqlDataSourceExpression>(newJoinDataSources);
+            if (source.InitialDataSource != null)
             {
-                { source.InitialDataSource, initialDataSourceCopy }
-            };
+                oldVsNewDataSource.Add(source.InitialDataSource, copy.InitialDataSource);
+            }
 
             var joinsCopy = source.joins.Select(x => sqlFactory.CreateJoin(x.JoinType, newJoinDataSources[x.JoinedSource], x.JoinCondition));
             foreach (var join in joinsCopy)
@@ -873,8 +899,6 @@ namespace Atis.LinqToSql.SqlExpressions
             copy.AutoProjectionApplied = source.AutoProjectionApplied;
 
             UpdateDataSourcesInChildDataSourceIdentifierMap(source, copy, oldVsNewDataSource);
-
-            return copy;
         }
 
         private static void UpdateDataSourcesInChildDataSourceIdentifierMap(SqlQueryExpression source, SqlQueryExpression copy, Dictionary<SqlDataSourceExpression, SqlDataSourceExpression> oldVsNewDataSource)
@@ -1102,7 +1126,7 @@ namespace Atis.LinqToSql.SqlExpressions
             }
             else
             {
-                var dataSourcesAliases = string.Join(", ", this.AllDataSources.Select(x => DebugAliasGenerator.GetAlias(x)));
+                var dataSourcesAliases = string.Join(", ", this.AllQuerySources.Select(x => DebugAliasGenerator.GetAlias(x)));
                 return $"{(this.IsCte ? "Cte-Query" : "Sql-Query")}: {dataSourcesAliases}";
             }
         }
@@ -1633,7 +1657,10 @@ namespace Atis.LinqToSql.SqlExpressions
             }
 
             var innerQueryDataSource = this.DataSources.FirstOrDefault();
-            if (expression != null && innerQueryDataSource != null && innerQueryDataSource.QuerySource is SqlQueryExpression innerQueryQuery)
+            if (expression != null && 
+                innerQueryDataSource != null && 
+                innerQueryDataSource.QuerySource is SqlQueryExpression innerQueryQuery &&
+                innerQueryQuery.InitialDataSource != null)
             {
                 var innerQueryProjection = innerQueryQuery.Projection;
                 expression = this.ReplaceInnerQueryColumnAccessWithOuterQueryColumnAccess(expression, innerQueryDataSource, innerQueryProjection);

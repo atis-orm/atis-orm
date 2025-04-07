@@ -88,6 +88,13 @@ namespace Atis.LinqToSql.ExpressionConverters
             // isLeafNode is true when the ParameterExpression is selected alone
             if (!(sqlExpression is SqlQueryExpression || sqlExpression is SqlDataSourceExpression))
                 throw new InvalidOperationException($"'{sqlExpression}' is neither SqlQueryExpression nor SqlDataSourceExpression");
+
+            if (sqlExpression is SqlSubQueryExpression subQuery)
+            {
+                sqlExpression = subQuery.CreateCopy();
+                return sqlExpression;
+            }
+
             SqlExpression result;
             if (isLeafNode)
             {

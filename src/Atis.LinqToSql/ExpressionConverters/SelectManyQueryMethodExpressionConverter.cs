@@ -282,7 +282,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 var lastDs = sqlQuery.DataSources.Last();
                 if (updatedMap.CurrentDataSourceMemberInfo != null)
                 {
-                    foreach (var ds in this.SourceQuery.AllDataSources)
+                    foreach (var ds in this.SourceQuery.AllQuerySources)
                     {
                         if (ds != lastDs)
                         {

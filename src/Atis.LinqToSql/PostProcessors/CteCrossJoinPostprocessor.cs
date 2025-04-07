@@ -80,7 +80,7 @@ namespace Atis.LinqToSql.Postprocessors
                 for (var i = 0; i < dataSourcesToAdd.Length; i++)
                 {
                     var cteUsage = dataSourcesToAdd[i];
-                    if (!(sqlQuery.AllDataSources.Any(x => x.DataSourceAlias == cteUsage.NewCteReferenceToAdd.DataSourceAlias)))
+                    if (!(sqlQuery.AllQuerySources.Any(x => x.DataSourceAlias == cteUsage.NewCteReferenceToAdd.DataSourceAlias)))
                     {
                         sqlQuery.AddDataSource(cteUsage.NewCteReferenceToAdd);
                     }

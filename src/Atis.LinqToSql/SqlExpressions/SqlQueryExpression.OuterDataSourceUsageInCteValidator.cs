@@ -48,7 +48,7 @@ public partial class SqlQueryExpression
             private void ValidateOuterDataSourceUsageInCte(Guid dataSourceAlias)
             {
                 if (this.cteDataSource.Count > 0)
-                    if (this.sourceQuery.AllDataSources.Any(x => x.DataSourceAlias == dataSourceAlias))
+                    if (this.sourceQuery.AllQuerySources.Any(x => x.DataSourceAlias == dataSourceAlias))
                         throw new InvalidOperationException($"Outer data source is being used in a CTE Query.");
             }
         }

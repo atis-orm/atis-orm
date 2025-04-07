@@ -116,10 +116,19 @@ namespace Atis.LinqToSql.UnitTest
             {
                 return this.TranslateSqlInValuesExpression(sqlInValuesExpression);
             }
+            else if (sqlExpression is SqlKeywordExpression sqlKeywordExpression)
+            {
+                return this.TranslateSqlKeywordExpression(sqlKeywordExpression);
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
             }
+        }
+
+        private string TranslateSqlKeywordExpression(SqlKeywordExpression sqlKeywordExpression)
+        {
+            return sqlKeywordExpression.Keyword;
         }
 
         private string TranslateSqlInValuesExpression(SqlInValuesExpression sqlInValuesExpression)
@@ -242,7 +251,7 @@ namespace Atis.LinqToSql.UnitTest
                     fromString = this.GetSimpleAlias(sqlQueryExpression.InitialDataSource.DataSourceAlias, sqlQueryExpression.InitialDataSource.Tag);
                 }
             }
-            else
+            else if (sqlQueryExpression.InitialDataSource != null)
             {
                 initialDataSource = this.Translate(sqlQueryExpression.InitialDataSource);
             }
@@ -338,7 +347,8 @@ namespace Atis.LinqToSql.UnitTest
                 string selectPart = string.Empty;
                 if (projectionPart != null)
                     selectPart = $"select{distinct}{topPart}\t{projectionPart}\r\n";
-                query = $"{this.GetExpressionId(sqlQueryExpression.Id)}{selectPart}from\t{initialDataSource}{joins}{wherePart}{groupByPart}{havingPart}{orderByPart}{pagingPart}{unions}";
+                string fromPart = initialDataSource != null ? $"from\t{initialDataSource}" : string.Empty;
+                query = $"{this.GetExpressionId(sqlQueryExpression.Id)}{selectPart}{fromPart}{joins}{wherePart}{groupByPart}{havingPart}{orderByPart}{pagingPart}{unions}";
                 if (projectionPart != null)
                     query = $"(\r\n\t{query.Replace("\r\n", "\r\n\t")}\r\n)";
             }

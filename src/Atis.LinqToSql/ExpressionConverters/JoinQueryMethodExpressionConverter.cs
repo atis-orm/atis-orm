@@ -162,7 +162,7 @@ namespace Atis.LinqToSql.ExpressionConverters
 
                 if (updatedMapping.CurrentDataSourceMemberInfo == null)
                 {
-                    var dataSourceWithModelPath = this.SourceQuery.AllDataSources
+                    var dataSourceWithModelPath = this.SourceQuery.AllQuerySources
                                                                     .Where(x => !x.ModelPath.IsEmpty)
                                                                     .Select(x => new { Ds = x, DsModelPath = x.ModelPath.GetLastElement() })
                                                                     .ToDictionary(x => x.DsModelPath, x => x.Ds);
@@ -176,7 +176,7 @@ namespace Atis.LinqToSql.ExpressionConverters
                 }
                 else
                 {
-                    foreach (var ds in this.SourceQuery.AllDataSources)
+                    foreach (var ds in this.SourceQuery.AllQuerySources)
                     {
                         if (ds != this.newJoinedDataSource)
                         {
