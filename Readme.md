@@ -32,7 +32,7 @@ The current version focuses purely on the **transformation and modeling layer**,
   - Bulk update/delete feature
   - etc.
 - **Minimalism & Explicit Control** — No built-in model discovery, conventions, or tracking. The system avoids magic — every behavior is explicitly controlled and injectable.
-- ** Ideal for Complex Business Applications** — Targets enterprise scenarios where centralizing business rules and dynamic query shaping are essential.
+- **Ideal for Complex Business Applications** — Targets enterprise scenarios where centralizing business rules and dynamic query shaping are essential.
 
 ---
 
