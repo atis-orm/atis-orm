@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.UnitTest.Tests
 {
@@ -14,7 +9,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void GroupBy_on_multiple_columns()
         {
             Expression<Func<object>> queryExpression = () =>
-            dbc.DataSet<Student>()
+            queryProvider.DataSet<Student>()
             .GroupBy(x => new { G1 = x.Address, G2 = x.Age })
             .Select(x => new
             {
@@ -22,7 +17,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
                 x.Key.G2,
                 MaxStudentId = x.Max(y => y.StudentId),
                 TotalLines = x.Count(),
-                CL = dbc.DataSet<StudentGrade>().Where(y => y.StudentId == x.Max(z => z.StudentId)).Select(y => y.Grade).FirstOrDefault()
+                CL = queryProvider.DataSet<StudentGrade>().Where(y => y.StudentId == x.Max(z => z.StudentId)).Select(y => y.Grade).FirstOrDefault()
             })
             ;
             string? expectedResult = @"
@@ -41,7 +36,7 @@ select	a_1.Address as G1, a_1.Age as G2, Max(a_1.StudentId) as MaxStudentId, Cou
         public void GroupBy_on_single_column()
         {
             Expression<Func<object>> queryExpression = () =>
-            dbc.DataSet<Student>()
+            queryProvider.DataSet<Student>()
             .GroupBy(x => x.Address)
             .Select(x => new { Add = x.Key, TotalLines = x.Count(), MaxLine = x.Max(y => y.StudentId) });
             string? expectedResult = @"
@@ -56,10 +51,10 @@ group by a_1.Address
         public void GroupBy_on_single_column_then_join_the_result_with_other_table()
         {
             Expression<Func<object>> queryExpression = () =>
-            dbc.DataSet<StudentGrade>()
+            queryProvider.DataSet<StudentGrade>()
             .GroupBy(x => x.StudentId)
             .Select(x => x.Key)
-            .LeftJoin(dbc.DataSet<Student>(), (g, s) => new { g, s }, j => j.g == j.s.StudentId);
+            .LeftJoin(queryProvider.DataSet<Student>(), (g, s) => new { g, s }, j => j.g == j.s.StudentId);
             string? expectedResult = @"
 select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
@@ -77,10 +72,10 @@ select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Addre
         public void GroupBy_on_single_column_then_join__the_result_with_other_table_and_perform_a_function_on_GroupBy_result_in_join_condition()
         {
             Expression<Func<object>> queryExpression = () =>
-            dbc.DataSet<StudentGrade>()
+            queryProvider.DataSet<StudentGrade>()
             .GroupBy(x => x.StudentId)
             .Select(x => x.Key)
-            .LeftJoin(dbc.DataSet<Student>(), (g, s) => new { g, s }, j => j.g.Substring(0, 5) == j.s.StudentId);
+            .LeftJoin(queryProvider.DataSet<Student>(), (g, s) => new { g, s }, j => j.g.Substring(0, 5) == j.s.StudentId);
             string? expectedResult = @"
 select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
@@ -97,9 +92,9 @@ select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Addre
         public void Use_GroupBy_sub_query_in_From_query_method_data_source()
         {
             var q =
-            dbc.From(() => new
+            queryProvider.From(() => new
             {
-                g = dbc.DataSet<StudentGrade>().GroupBy(x => x.StudentId).Select(x => x.Key).Schema(),
+                g = queryProvider.DataSet<StudentGrade>().GroupBy(x => x.StudentId).Select(x => x.Key).Schema(),
                 s = QueryExtensions.Table<Student>(),
             })
             .LeftJoin(x => x.s, x => x.g == x.s.StudentId);
@@ -190,7 +185,7 @@ having	(Max(a_1.Age) > 20)";
         [TestMethod]
         public void SelectMany_GroupBy_on_single_column_without_Select_at_the_end()
         {
-            var students = new Queryable<Employee>(dbc);
+            var students = new Queryable<Employee>(queryProvider);
             var q = students
                 .SelectMany(s => s.NavDegrees)
                 .GroupBy(c => c.University);
@@ -209,7 +204,7 @@ having	(Max(a_1.Age) > 20)";
         [TestMethod]
         public void SelectMany_GroupBy_on_multiple_columns_without_Select_at_the_end()
         {
-            var students = new Queryable<Employee>(dbc);
+            var students = new Queryable<Employee>(queryProvider);
             var q = students
                 .SelectMany(s => s.NavDegrees)
                 .GroupBy(c => new { g1 = c.University, g2 = c.Degree } );
@@ -227,7 +222,7 @@ having	(Max(a_1.Age) > 20)";
         [TestMethod]
         public void GroupBy_Aggregate_Then_Filter_Test()
         {
-            var employees = new Queryable<Employee>(dbc);
+            var employees = new Queryable<Employee>(queryProvider);
 
             var q = employees
                 .GroupBy(s => s.Department)
@@ -250,7 +245,7 @@ having	(Max(a_1.Age) > 20)";
         [TestMethod]
         public void Where_Select_GroupBy_Select_Test()
         {
-            var employees = new Queryable<Employee>(dbc);
+            var employees = new Queryable<Employee>(queryProvider);
 
             var q = employees
                 .Where(e => e.Department != null)
@@ -274,7 +269,7 @@ having	(Max(a_1.Age) > 20)";
         [TestMethod]
         public void GroupBy_MultipleKeys_With_MultipleAggregates_Test()
         {
-            var invoiceDetails = new Queryable<InvoiceDetail>(dbc);
+            var invoiceDetails = new Queryable<InvoiceDetail>(queryProvider);
 
             var q = invoiceDetails
                 .GroupBy(i => new { i.InvoiceId, i.ItemId })
@@ -300,7 +295,7 @@ having	(Max(a_1.Age) > 20)";
         [TestMethod]
         public void Select_Nested_GroupBy_In_SubQuery_Test()
         {
-            var employees = new Queryable<Employee>(dbc);
+            var employees = new Queryable<Employee>(queryProvider);
 
             // although we don't recommend IQueryable<> to be selected within projection,
             // however, engine translates these sub-queries as outer apply
@@ -328,5 +323,56 @@ select	a_1.Name as Name, a_3.Key as Key, a_3.Count as Count
             Test("Select with nested GroupBy inside projection should produce correlated subquery", q.Expression, expectedResult);
         }
 
+        [TestMethod]
+        public void GroupBy_with_Having()
+        {
+            var studentAttendance = new Queryable<StudentAttendance>(queryProvider);
+            var q = studentAttendance
+                        .GroupBy(x => new { x.AttendanceDate.Value.Year, x.AttendanceDate.Value.Day })
+                        .Having(a => a.Count() > 1)
+                        .Select(b => new { b.Key.Year, b.Key.Day, TotalLines = b.Count(), MaxDate = b.Max(y => y.AttendanceDate) })
+                        .Select(c => c.MaxDate)
+                        ;
+            string? expectedResult = @"
+select	a_2.MaxDate as Col1
+	from	(
+		select	datepart(year, a_1.AttendanceDate) as Year, datepart(day, a_1.AttendanceDate) as Day, Count(1) as TotalLines, Max(a_1.AttendanceDate) as MaxDate
+		from	StudentAttendance as a_1
+		group by datepart(year, a_1.AttendanceDate), datepart(day, a_1.AttendanceDate)
+		having	(Count(1) > 1)
+	) as a_2
+";
+            Test("Group By Having Test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void GroupBy_with_Having_then_Select_OrderBy_Where_Select()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var d = new DateTime(2020, 1, 1);
+            var q = students
+                        .Where(x => x.StudentId == "123")
+                        .Where(x => x.RecordCreateDate > d)
+                        .GroupBy(x => new { x.CountryID, x.StudentType })
+                        .Having(x => x.Count() > 1)
+                        .Select(x => new { x.Key.CountryID, SType = x.Key.StudentType, MaxAdmDate = x.Max(y => y.AdmissionDate) })
+                        .OrderBy(x => x.CountryID)
+                        .Where(x => x.SType == "345")
+                        .Select(x => x.CountryID)
+                        ;
+            string? expectedResult = @"
+select	a_2.CountryID as Col1
+	from	(
+		select	a_1.CountryID as CountryID, a_1.StudentType as SType, Max(a_1.AdmissionDate) as MaxAdmDate
+		from	Student as a_1
+		where	(a_1.StudentId = '123') and (a_1.RecordCreateDate > '2020-01-01 00:00:00')
+		group by a_1.CountryID, a_1.StudentType
+		having	(Count(1) > 1)
+		order by CountryID asc
+	) as a_2
+	where	(a_2.SType = '345')
+";
+            Test("GroupBy with Having then Select OrderBy Where Select", q.Expression, expectedResult);
+        }
     }
 }

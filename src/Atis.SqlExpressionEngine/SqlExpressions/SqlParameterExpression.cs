@@ -102,6 +102,10 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 }
                 return string.Join(",", valuesToString);
             }
+            else if (value is Boolean b)
+            {
+                return b ? "1" : "0";
+            }
             else
                 strValue = $"{value}";
 

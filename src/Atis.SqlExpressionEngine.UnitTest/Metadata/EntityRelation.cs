@@ -1,6 +1,6 @@
 ﻿using System.Linq.Expressions;
 
-namespace Atis.SqlExpressionEngine.UnitTest
+namespace Atis.SqlExpressionEngine.UnitTest.Metadata
 {
     public interface IEntityRelation
     {

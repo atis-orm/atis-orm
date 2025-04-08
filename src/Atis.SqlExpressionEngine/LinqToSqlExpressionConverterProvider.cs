@@ -28,6 +28,7 @@ namespace Atis.SqlExpressionEngine
                 new ConstantQueryableExpressionConverterFactory(context),
                 new ParameterExpressionConverterFactory(context),
                 new GroupByKeyExpressionConverterFactory(context),
+                new DatePropertyAccessConverterFactory(context),
                 new VariableMemberExpressionConverterFactory(context),
                 new MemberExpressionConverterFactory(context),
                 new QuoteExpressionConverterFactory(context),

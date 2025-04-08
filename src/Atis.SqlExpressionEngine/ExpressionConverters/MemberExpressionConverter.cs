@@ -89,19 +89,18 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     if (sqlQuery.InitialDataSource == null)
                     {
                         // we'll be here if query was created with direct Select
-                        result = new[] { this.CreateSqlColumn(this.SqlFactory.CreateAlias(this.Expression.Member.Name), this.Expression.Member.Name, new ModelPath(this.Expression.Member.Name)) };
+                        sqlQuery.WrapInSubQuery();
+                        sqlQuery.ApplyAutoProjection();
                     }
+
+                    // we'll match with the projection
+                    // if the projection has been applied, then we'll match with full or partial
+                    // we cannot go anywhere else if the projection has been applied in the query
+                    var columnExpressions = this.MatchWithProjection(path.Last(), sqlQuery);
+                    if (!this.TryHandleSubQueryProjection(columnExpressions, out var newResult))
+                        result = columnExpressions;
                     else
-                    {
-                        // we'll match with the projection
-                        // if the projection has been applied, then we'll match with full or partial
-                        // we cannot go anywhere else if the projection has been applied in the query
-                        var columnExpressions = this.MatchWithProjection(path.Last(), sqlQuery);
-                        if (!this.TryHandleSubQueryProjection(columnExpressions, out var newResult))
-                            result = columnExpressions;
-                        else
-                            result = newResult;
-                    }
+                        result = newResult;
                     resultSource = sqlQuery;
                 }
                 else

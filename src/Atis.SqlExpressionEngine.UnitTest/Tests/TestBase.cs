@@ -2,18 +2,23 @@
 using Atis.SqlExpressionEngine.Preprocessors;
 using Atis.SqlExpressionEngine.Services;
 using Atis.SqlExpressionEngine.SqlExpressions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Atis.SqlExpressionEngine.UnitTest.Converters;
+using Atis.SqlExpressionEngine.UnitTest.Preprocessors;
+using Atis.SqlExpressionEngine.UnitTest.Services;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+using Model = Atis.SqlExpressionEngine.UnitTest.Services.Model;
 
 namespace Atis.SqlExpressionEngine.UnitTest.Tests
 {
+    public class DataContext
+    {
+        public IQueryable<Invoice> Invoices { get; } = new Queryable<Invoice>(new QueryProvider());
+    }
+
     public abstract class TestBase
     {
-        protected readonly IQueryProvider dbc = new QueryProvider();
+        protected readonly IQueryProvider queryProvider = new QueryProvider();
+        protected readonly DataContext dataContext = new();
 
         #region base methods
         protected void Test(string testHeading, Expression queryExpression, string? expectedResult)
@@ -48,7 +53,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             //var propertyMapper = new PropertyToDataSourceMapper();
             var contextExtensions = new object[] { sqlFactory, /*componentIdentifier,*/ model, parameterMapper, /*navigationMapper,*/ reflectionService/*, propertyMapper*/ };
             var conversionContext = new ConversionContext(contextExtensions);
-            var expressionConverterProvider = new LinqToSqlExpressionConverterProvider(conversionContext, factories: null);
+            var expressionConverterProvider = new LinqToSqlExpressionConverterProvider(conversionContext, factories: [ new SqlFunctionConverterFactory(conversionContext) ]);
             var postProcessorProvider = new SqlExpressionPostprocessorProvider(sqlFactory, postprocessors: null);
             var linqToSqlConverter = new LinqToSqlConverter(reflectionService, expressionConverterProvider, postProcessorProvider);
             var result = linqToSqlConverter.Convert(updatedQueryExpression);
@@ -73,7 +78,11 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             //var nonPrimitivePropertyReplacementPreprocessor = new NonPrimitiveCalculatedPropertyPreprocessor(reflectionService);
             //var concreteParameterPreprocessor = new ConcreteParameterReplacementPreprocessor(new QueryPartsIdentifier(), reflectionService);
             var methodInterfaceTypeReplacementPreprocessor = new QueryMethodGenericTypeReplacementPreprocessor(reflectionService);
-            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, childJoinReplacementPreprocessor, calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor/*, concreteParameterPreprocessor*/]);
+            var customMethodReplacementPreprocessor = new CustomBusinessMethodPreprocessor();
+            var booleanEqualRewriterPreprocessor = new BooleanToEqualRewritePreprocessor(new SqlFunctionBooleanExpressionIdentifier());
+            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, childJoinReplacementPreprocessor, calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor, customMethodReplacementPreprocessor,
+                booleanEqualRewriterPreprocessor
+                /*, concreteParameterPreprocessor*/]);
             expression = preprocessor.Preprocess(expression);
             return expression;
         }

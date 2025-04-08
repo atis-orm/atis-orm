@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.UnitTest.Tests
 {
@@ -15,7 +10,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void Single_navigation_property_multiple_times_used()
         {
             Expression<Func<object>> temp = () =>
-            dbc.DataSet<Equipment>()
+            queryProvider.DataSet<Equipment>()
             .Where(x => x.NavItem().UnitPrice > 500)
             .Select(x => new { x.NavItem().ItemId, x.NavItem().UnitPrice, x.EquipId })
             //.Select(x => new { ItemId = LinqToSql.QueryExtensions.Nav<Equipment, ItemExtension, decimal?>(x, "NavItemId", dbc.DataSet<ItemExtension>(), param0 => param0.UnitPrice, SqlExpressions.SqlJoinType.Left, otherEntity => x.ItemId == otherEntity.ItemId) })
@@ -67,7 +62,7 @@ select	NavParentTransaction_2.TransactionId as TransactionId, NavParentTransacti
         public void Selecting_whole_entity_wrapping_under_sub_query_then_using_navigation_property_over_sub_query()
         {
             Expression<Func<object>> temp = () =>
-            dbc.DataSet<Equipment>()
+            queryProvider.DataSet<Equipment>()
             .Take(50)
             .Select(x => new { x.NavItem().ItemId })
             ;
@@ -87,7 +82,7 @@ select	NavItem_3.ItemId as ItemId
         public void Selecting_navigation_property_in_projection()
         {
             Expression<Func<object>> temp = () =>
-            dbc.DataSet<Equipment>()
+            queryProvider.DataSet<Equipment>()
             .Select(x => x.NavItem())
             ;
 
@@ -103,7 +98,7 @@ select	NavItem_2.ItemId as ItemId, NavItem_2.UnitPrice as UnitPrice
         public void Selecting_navigation_property_then_selecting_single_column_from_wrapped_sub_query()
         {
             Expression<Func<object>> temp = () =>
-            dbc.DataSet<Equipment>()
+            queryProvider.DataSet<Equipment>()
             .Select(x => x.NavItem())
             .Select(x => x.UnitPrice)
             ;
@@ -127,7 +122,7 @@ select	a_3.UnitPrice as Col1
             // 1 to 1 relation but parent NOT optional, which should create inner join but
             // since the first join is left, so later joins will be left join as well
 
-            var equipmentList = new Queryable<Equipment>(this.dbc);
+            var equipmentList = new Queryable<Equipment>(this.queryProvider);
             var q = equipmentList
                         .Where(x => x.NavItem().UnitPrice > 500)
                         .Where(x => x.NavItem().NavItemBase().NavItemMoreInfo().TrackingType == "SRN")
@@ -154,9 +149,9 @@ select	NavItemMoreInfo_4.TrackingType as TrackingType, NavItemMoreInfo_4.ItemId 
         public void Navigation_properties_used_along_with_join_extension_methods()
         {
             Expression<Func<object>> temp = () =>
-            dbc.DataSet<Component>()
-            .LeftJoin(dbc.DataSet<ItemBase>(), (c, i) => new { c, i }, j => j.c.ItemId == j.i.ItemId)
-            .LeftJoin(dbc.DataSet<Equipment>(), (ds, e) => new { ds, e }, j => j.ds.c.EquipId == j.e.EquipId)
+            queryProvider.DataSet<Component>()
+            .LeftJoin(queryProvider.DataSet<ItemBase>(), (c, i) => new { c, i }, j => j.c.ItemId == j.i.ItemId)
+            .LeftJoin(queryProvider.DataSet<Equipment>(), (ds, e) => new { ds, e }, j => j.ds.c.EquipId == j.e.EquipId)
             .Select(x => new { x.ds.c.CompId, CompItem = x.ds.c.ItemId, x.ds.c.NavItem.UnitPrice, x.ds.c.EquipId, x.e.Model, EquipItemDesc = x.e.NavItem().NavItemBase().ItemDescription })
             ;
 

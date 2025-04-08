@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Atis.SqlExpressionEngine.UnitTest.Tests
+﻿namespace Atis.SqlExpressionEngine.UnitTest.Tests
 {
     [TestClass]
     public class PagingTests : TestBase

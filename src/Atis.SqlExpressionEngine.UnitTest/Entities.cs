@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Atis.SqlExpressionEngine.UnitTest.Metadata;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Atis.SqlExpressionEngine.UnitTest
 {
@@ -22,6 +18,21 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         public bool? HasScholarship { get; set; }
     }
+
+    public class StudentExtension : Student
+    {
+        public bool IsDeleted { get; set; }
+    }
+
+    class StudentAttendance
+    {
+        public Guid RowID { get; set; }
+        public string? StudentId { get; set; }
+        public DateTime? AttendanceDate { get; set; }
+        public TimeSpan? TimeIn { get; set; }
+        public TimeSpan? TimeOut { get; set; }
+    }
+
 
     public class StudentGrade
     {
@@ -305,5 +316,90 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
     }
 
+    public class BenchStock_Requisition
+    {
+        public string DOC_NUM { get; set; }
+        public string Trans_DODAAC { get; set; }
+        public string Req_PID { get; set; }
+        public int Req_Julian { get; set; }
+        public int Req_Seq { get; set; }
+        public string DocNumDisplay { get; set; }
+        public string Status { get; set; }
+        public DateTime? SubmittedOn { get; set; }
+        public string SubmittedBy { get; set; }
+        public string SubmittedByPID { get; set; }
+        public DateTime? IssuedOn { get; set; }
+        public string IssuedBy { get; set; }
+        public string IssuedByPID { get; set; }
+        public string Remarks { get; set; }
+        public string CreatedByPID { get; set; }
+        public string UpdatedByPID { get; set; }
+    }
 
+    public class BenchStock_RequisitionLine
+    {
+        public Guid RowID { get; set; }
+        public string BenchStockDocNum { get; set; }
+        public string ITEMNMBR { get; set; }
+        public string PartNumber { get; set; }
+        public int? QtyRequested { get; set; }
+        public int? QtyIssued { get; set; }
+        public string BSTK_UI { get; set; }
+        public int? PD { get; set; }
+        public string DMD { get; set; }
+        public string JustCodeType { get; set; }
+        public string JustCode { get; set; }
+        public string Status { get; set; }
+        public string IssueDocNum { get; set; }
+        public int? IssueDocNumJulian { get; set; }
+        public string PBN { get; set; }
+        public string UIC { get; set; }
+        public string Nomenclature { get; set; }
+        public int? QtyAvailable { get; set; }
+        public string Bin { get; set; }
+        public string BenchStockDocNum_Display { get; set; }
+        public string BenchStockDoc_Status { get; set; }
+    }
+
+    public class SiteBase 
+    {
+        public System.String LOCNCODE { get; set; }
+        public System.String LOCNDSCR { get; set; }
+        public System.String ADDRESS1 { get; set; }
+        public System.String ADDRESS2 { get; set; }
+        public System.String ADDRESS3 { get; set; }
+        public System.String CITY { get; set; }
+        public System.String STATE { get; set; }
+        public System.String ZIPCODE { get; set; }
+        public System.String COUNTRY { get; set; }
+        public System.String PHONE1 { get; set; }
+        public System.String PHONE2 { get; set; }
+        public System.String PHONE3 { get; set; }
+        public System.String FAXNUMBR { get; set; }
+    }
+
+    public partial class PID_Master
+    {
+        public System.String PID { get; set; }
+        public System.String FNAME { get; set; }
+        public System.String MNAME { get; set; }
+        public System.String LNAME { get; set; }
+        public System.String IDNO { get; set; }
+        public System.String RANK { get; set; }
+        public System.String ORG { get; set; }
+        public System.String LOCN { get; set; }
+        public System.DateTime? DOMS { get; set; }
+        public System.DateTime? DOP { get; set; }
+        public System.String LOCNCODE { get; set; }
+        public System.DateTime? DOB { get; set; }
+    }
+
+    public class MasterLookup
+    {
+        public System.String LU_Key { get; set; }
+        public System.String LU_Group_Key { get; set; }
+        public System.String User_Key { get; set; }
+        public System.String LU_Description { get; set; }
+        public System.String LU_ShortDesc { get; set; }
+    }
 }
