@@ -275,6 +275,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         public SqlQueryExpression(SqlExpression select, ISqlExpressionFactory sqlFactory)
         {
             this.SqlFactory = sqlFactory ?? throw new ArgumentNullException(nameof(sqlFactory));
+            if(!(select is SqlColumnExpression || ((select as SqlCollectionExpression)?.SqlExpressions.All(x => x is SqlColumnExpression) ?? false)))
+                throw new ArgumentException("Projection must be of type SqlColumnExpression.", nameof(select));
             this.Projection = select ?? throw new ArgumentNullException(nameof(select));
             this.LastSqlOperation = SqlQueryOperation.Select;
         }
@@ -834,6 +836,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.DefaultDataSource = null;
             this.NavigationDataSourceMap.Clear();
             this.autoJoins.Clear();
+            this.LastSqlOperation = null;
         }
 
         /// <summary>

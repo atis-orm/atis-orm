@@ -54,6 +54,28 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public LambdaExpressionConverter(IConversionContext context, LambdaExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
+            
+        }
+
+        private bool bodyConverted;
+
+        /// <inheritdoc />
+        public override bool TryOverrideChildConversion(Expression sourceExpression, out SqlExpression convertedExpression)
+        {
+            // if we are here for the first time then it means body is being converted
+            // CAUTION: we are assuming that ExpressionVisitor will always visit the Body of LambdaExpression
+            // first, if this ever changes then we need to handle that case as well
+            if (!bodyConverted)
+            {
+                bodyConverted = true;
+                return base.TryOverrideChildConversion(sourceExpression, out convertedExpression);
+            }
+            else
+            {
+                // We don't want to convert parameters, just return a dummy expression
+                convertedExpression = this.SqlFactory.CreateLiteral("dummy");
+                return true;
+            }
         }
 
         /// <inheritdoc />

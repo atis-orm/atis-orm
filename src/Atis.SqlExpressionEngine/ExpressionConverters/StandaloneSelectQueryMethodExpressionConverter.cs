@@ -34,6 +34,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
         }
 
+        /// <inheritdoc />
         public override bool TryOverrideChildConversion(Expression sourceExpression, out SqlExpression convertedExpression)
         {
             if (sourceExpression == this.Expression.Arguments[0])
@@ -49,7 +50,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             // convertedChildren[0] is dummy (for IQueryProvider)
-            var sqlQuery = this.SqlFactory.CreateQueryFromSelect(convertedChildren[1]);
+            var projection = convertedChildren[1];
+            if (!(projection is SqlCollectionExpression || projection is SqlColumnExpression))
+                projection = this.SqlFactory.CreateScalarColumn(projection, "Col1", ModelPath.Empty);
+            var sqlQuery = this.SqlFactory.CreateQueryFromSelect(projection);
             return sqlQuery;
         }
     }
