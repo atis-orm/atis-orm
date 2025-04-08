@@ -168,6 +168,120 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             AssertHasInValuesExpression(result);
         }
 
+        private IQueryable<StudentExtension> GetQueryable()
+        {
+            return new Queryable<StudentExtension>(this.queryProvider);
+        }
+
+        [TestMethod]
+        public void Where_clause_rewrites_nullable_bool_to_equal_true()
+        {
+            var query = GetQueryable().Where(x => x.HasScholarship ?? false);
+            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+
+            var lambda = ExtractLambda(transformed);
+            var body = lambda?.Body as BinaryExpression;
+
+            Assert.IsNotNull(body);
+            Assert.AreEqual(ExpressionType.Equal, body.NodeType);
+            Assert.IsTrue(IsConstantTrue(body.Right));
+        }
+
+        [TestMethod]
+        public void OrElse_expression_rewrites_left_side()
+        {
+            var query = GetQueryable().Where(x => (x.HasScholarship ?? false) || x.IsDeleted == false);
+            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+
+            var lambda = ExtractLambda(transformed);
+            var body = lambda?.Body as BinaryExpression;
+
+            Assert.IsNotNull(body);
+            Assert.AreEqual(ExpressionType.OrElse, body.NodeType);
+
+            var left = body.Left as BinaryExpression;
+            Assert.IsNotNull(left);
+            Assert.AreEqual(ExpressionType.Equal, left.NodeType);
+            Assert.IsTrue(IsConstantTrue(left.Right));
+        }
+
+        [TestMethod]
+        public void Select_projection_does_not_rewrite()
+        {
+            var query = GetQueryable().Select(x => new { Flag = x.IsDeleted });
+            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+
+            var lambda = ExtractLambda(transformed);
+            var newExpr = lambda?.Body as NewExpression;
+
+            Assert.IsNotNull(newExpr);
+            var arg = newExpr.Arguments.First() as MemberExpression;
+            Assert.IsNotNull(arg);
+            Assert.AreEqual(nameof(StudentExtension.IsDeleted), arg.Member.Name);
+        }
+
+        [TestMethod]
+        public void OrderBy_does_not_rewrite()
+        {
+            var query = GetQueryable().OrderBy(x => x.IsDeleted);
+            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+
+            var lambda = ExtractLambda(transformed);
+            var body = lambda?.Body as MemberExpression;
+
+            Assert.IsNotNull(body);
+            Assert.AreEqual(nameof(StudentExtension.IsDeleted), body.Member.Name);
+        }
+
+        [TestMethod]
+        public void GroupBy_does_not_rewrite()
+        {
+            var query = GetQueryable().GroupBy(x => x.IsDeleted);
+            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+
+            var lambda = ExtractLambda(transformed);
+            var body = lambda?.Body as MemberExpression;
+
+            Assert.IsNotNull(body);
+            Assert.AreEqual(nameof(StudentExtension.IsDeleted), body.Member.Name);
+        }
+
+        [TestMethod]
+        public void ConditionalExpression_test_is_rewritten()
+        {
+            Expression<Func<StudentExtension, string>> expr = x => x.IsDeleted ? "Valid" : "Invalid";
+            var transformed = new BooleanToEqualRewritePreprocessor().Visit(expr);
+
+            var cond = ((LambdaExpression)transformed).Body as ConditionalExpression;
+            Assert.IsNotNull(cond);
+
+            var test = cond.Test as BinaryExpression;
+            Assert.IsNotNull(test);
+            Assert.AreEqual(ExpressionType.Equal, test.NodeType);
+            Assert.IsTrue(IsConstantTrue(test.Right));
+        }
+
+        private static LambdaExpression? ExtractLambda(Expression expression)
+        {
+            // Drill down to the lambda from method call
+            var methodCall = expression as MethodCallExpression;
+            if (methodCall == null) return null;
+
+            var quote = methodCall.Arguments[1] as UnaryExpression;
+            if (quote != null && quote.NodeType == ExpressionType.Quote)
+                return quote.Operand as LambdaExpression;
+
+            return null;
+        }
+
+        private static bool IsConstantTrue(Expression expr)
+        {
+            var constExpr = expr as ConstantExpression;
+            return constExpr != null &&
+                   constExpr.Type == typeof(bool) &&
+                   (bool)constExpr.Value == true;
+        }
+
 
         private static void AssertHasInValuesExpression(Expression expr)
         {

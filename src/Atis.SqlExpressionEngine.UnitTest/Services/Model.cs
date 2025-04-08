@@ -1,14 +1,11 @@
-﻿using Atis.SqlExpressionEngine.SqlExpressions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Atis.SqlExpressionEngine;
+using Atis.SqlExpressionEngine.SqlExpressions;
+using Atis.SqlExpressionEngine.UnitTest.Metadata;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Atis.SqlExpressionEngine.UnitTest
+namespace Atis.SqlExpressionEngine.UnitTest.Services
 {
-    internal class Model : Services.Model
+    internal class Model : Atis.SqlExpressionEngine.Services.Model
     {
         public override TableColumn[] GetTableColumns(Type type)
         {

@@ -1,14 +1,9 @@
 ﻿using Atis.Expressions;
 using Atis.SqlExpressionEngine.UnitTest.Tests;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Atis.SqlExpressionEngine.UnitTest
+namespace Atis.SqlExpressionEngine.UnitTest.Preprocessors
 {
     public class CustomBusinessMethodPreprocessor : ExpressionVisitor, IExpressionPreprocessor
     {

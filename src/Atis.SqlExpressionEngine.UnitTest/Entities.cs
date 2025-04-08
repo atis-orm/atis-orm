@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Atis.SqlExpressionEngine.UnitTest.Metadata;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Atis.SqlExpressionEngine.UnitTest
 {
@@ -21,6 +17,11 @@ namespace Atis.SqlExpressionEngine.UnitTest
         public string? CountryID { get; set; }
 
         public bool? HasScholarship { get; set; }
+    }
+
+    public class StudentExtension : Student
+    {
+        public bool IsDeleted { get; set; }
     }
 
     class StudentAttendance

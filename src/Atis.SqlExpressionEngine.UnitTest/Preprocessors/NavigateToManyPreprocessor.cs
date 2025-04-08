@@ -1,14 +1,10 @@
 ﻿using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.Preprocessors;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Atis.SqlExpressionEngine.UnitTest.Metadata;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Atis.SqlExpressionEngine.UnitTest
+namespace Atis.SqlExpressionEngine.UnitTest.Preprocessors
 {
     public class NavigateToManyPreprocessor : NavigateToManyPreprocessorBase
     {

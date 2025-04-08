@@ -359,7 +359,7 @@ where	(a_2.Address like ('%' + ('Town' + '%')))
             string? expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name
 	from	Student as a_1
-	where	isnull(a_1.HasScholarship, False)";
+	where	(isnull(a_1.HasScholarship, 0) = 1)";
             Test("Where Boolean Coalesce Condition Test", q.Expression, expectedResult);
         }
 
@@ -372,9 +372,14 @@ select	a_1.StudentId as StudentId, a_1.Name as Name
             q = q.WhereOr(x => x.CountryID == "1");
             q = q.WhereOr(x => x.CountryID == "2");
             q = q.Where(x => x.HasScholarship == true);
-            string? expectedResult = @"select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
-	from	Student as a_1
-	where	(a_1.Name like ('555' + '%')) and (False or (a_1.CountryID = '1') or (a_1.CountryID = '2')) and (a_1.HasScholarship = True)";
+            string? expectedResult = @"
+select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, 
+        a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, 
+        a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
+from	Student as a_1
+where	(a_1.Name like ('555' + '%')) and 
+        ((0 = 1) or (a_1.CountryID = '1') or (a_1.CountryID = '2')) and (a_1.HasScholarship = 1)
+";
             Test("Where OR Condition Test", q.Expression, expectedResult);
         }
 
@@ -604,7 +609,6 @@ where	(a_1.PID = '123')
 ";
             Test("Custom Business Method Test", q.Expression, expectedResult);
         }
-
 
         // SQL query compatible concatenation
         public static readonly Expression<Func<string, string, string>> FullNameExpression = (firstName, lastName) => firstName + " " + lastName;
