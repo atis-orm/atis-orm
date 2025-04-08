@@ -82,7 +82,7 @@ from	Employee as a_1
 
 ---
 
-### Recursive Query
+### Recursive CTE using LINQ
 
 **LINQ**
 ```csharp
