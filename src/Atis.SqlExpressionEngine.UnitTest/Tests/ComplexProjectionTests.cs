@@ -88,9 +88,9 @@ select	a_3.EmployeeId as EmployeeId, a_3.Name as Name
         [TestMethod]
         public void Multiple_data_sources_selected_in_1_property_and_then_that_1_property_selected_in_projection_in_anonymous_type_should_select_all_the_columns_of_all_the_data_sources_under_that_1_property()
         {
-            var q = dbc.DataSet<Employee>()
-                    .LeftJoin(dbc.DataSet<EmployeeDegree>(), (e, ed) => new { e, ed }, j => j.e.EmployeeId == j.ed.EmployeeId)
-                    .LeftJoin(dbc.DataSet<Employee>(), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
+            var q = queryProvider.DataSet<Employee>()
+                    .LeftJoin(queryProvider.DataSet<EmployeeDegree>(), (e, ed) => new { e, ed }, j => j.e.EmployeeId == j.ed.EmployeeId)
+                    .LeftJoin(queryProvider.DataSet<Employee>(), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
                     .Select(x => new { t = x.o })
                     ;
             string? expectedResult = @"
@@ -105,9 +105,9 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
         [TestMethod]
         public void Multiple_data_sources_selected_in_1_property_and_then_that_1_property_selected_in_projection_should_select_all_the_columns_of_all_the_data_sources_under_that_1_property()
         {
-            var q = dbc.DataSet<Employee>()
-                    .LeftJoin(dbc.DataSet<EmployeeDegree>(), (e, ed) => new { e, ed }, j => j.e.EmployeeId == j.ed.EmployeeId)
-                    .LeftJoin(dbc.DataSet<Employee>(), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
+            var q = queryProvider.DataSet<Employee>()
+                    .LeftJoin(queryProvider.DataSet<EmployeeDegree>(), (e, ed) => new { e, ed }, j => j.e.EmployeeId == j.ed.EmployeeId)
+                    .LeftJoin(queryProvider.DataSet<Employee>(), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
                     .Select(x => x.o)
                     ;
             string? expectedResult = @"

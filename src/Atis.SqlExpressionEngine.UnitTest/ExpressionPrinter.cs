@@ -213,13 +213,6 @@ namespace Atis.SqlExpressionEngine.UnitTest
             };
         }
 
-        protected override Expression VisitInvocation(InvocationExpression node)
-        {
-            var updatedNode = base.VisitInvocation(node);
-            this.Append("()");
-            return updatedNode;
-        }
-
         protected override Expression VisitConstant(ConstantExpression node)
         {
             var updatedNode = base.VisitConstant(node);
@@ -319,7 +312,20 @@ namespace Atis.SqlExpressionEngine.UnitTest
             this.Append(")");
             return node;
         }
-
+        
+        protected override Expression VisitInvocation(InvocationExpression node)
+        {
+            this.Visit(node.Expression);
+            this.Append("(");
+            for (int i = 0; i < node.Arguments.Count; i++)
+            {
+                this.Visit(node.Arguments[i]);
+                if (i < node.Arguments.Count - 1)
+                    this.Append(", ");
+            }
+            this.Append(")");
+            return node;
+        }
         private void Append(string text)
         {
             sb.Append(text);

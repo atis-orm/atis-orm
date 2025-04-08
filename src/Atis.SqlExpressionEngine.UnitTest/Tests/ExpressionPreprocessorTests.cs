@@ -31,7 +31,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void All_Should_Be_Rewritten_To_Not_Any_With_Inverted_Predicate()
         {
             // Arrange
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => x.NavDegrees.All(y => y.University == "MIT"));
 
             // Act
@@ -76,7 +76,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void DirectArrayVariable_Contains_Should_Be_Rewritten_To_InValuesExpression()
         {
             var values = new[] { "HR", "Finance" };
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => values.Contains(x.Department));
 
             var result = this.PreprocessExpression(q.Expression);
@@ -87,7 +87,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         [TestMethod]
         public void InlineArray_Contains_Should_Be_Rewritten_To_InValuesExpression()
         {
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => new[] { "HR", "Finance" }.Contains(x.Department));
 
             var result = this.PreprocessExpression(q.Expression);
@@ -99,7 +99,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void NestedObjectMember_Contains_Should_Be_Rewritten_To_InValuesExpression()
         {
             var obj = new { Departments = new[] { "HR", "Finance" } };
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => obj.Departments.Contains(x.Department));
 
             var result = this.PreprocessExpression(q.Expression);
@@ -110,7 +110,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         [TestMethod]
         public void InlineArray_Any_Y_Equals_X_Should_Be_Rewritten_To_InValuesExpression()
         {
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => new[] { "HR", "Finance" }.Any(y => y == x.Department));
 
             var result = this.PreprocessExpression(q.Expression);
@@ -124,7 +124,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void NestedObjectMember_Any_Y_Equals_X_Should_Be_Rewritten_To_InValuesExpression()
         {
             var obj = new { Departments = new[] { "HR", "Finance" } };
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => obj.Departments.Any(y => y == x.Department));
 
             var result = this.PreprocessExpression(q.Expression);
@@ -136,7 +136,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void DirectArrayVariable_Any_Y_Equals_X_Should_Be_Rewritten_To_InValuesExpression()
         {
             var departments = new[] { "HR", "Finance" };
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => departments.Any(y => y == x.Department));
 
             var result = this.PreprocessExpression(q.Expression);
@@ -148,7 +148,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void NestedObjectMember_Any_X_Equals_Y_Should_Be_Rewritten_To_InValuesExpression()
         {
             var obj = new { Departments = new[] { "HR", "Finance" } };
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => obj.Departments.Any(y => x.Department == y));
 
             var result = this.PreprocessExpression(q.Expression);
@@ -160,7 +160,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void DirectArrayVariable_Any_X_Equals_Y_Should_Be_Rewritten_To_InValuesExpression()
         {
             var departments = new[] { "HR", "Finance" };
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => departments.Any(y => x.Department == y));
 
             var result = this.PreprocessExpression(q.Expression);

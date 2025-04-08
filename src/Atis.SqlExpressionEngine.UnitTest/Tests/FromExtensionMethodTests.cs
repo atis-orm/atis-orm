@@ -13,7 +13,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         [TestMethod]
         public void From_multiple_data_sources()
         {
-            var q = dbc.From(() => new { e = QueryExtensions.Table<Employee>(), ed = QueryExtensions.Table<EmployeeDegree>() });
+            var q = queryProvider.From(() => new { e = QueryExtensions.Table<Employee>(), ed = QueryExtensions.Table<EmployeeDegree>() });
             string? expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId, a_2.RowId as RowId_1, a_2.EmployeeId as EmployeeId_1, a_2.Degree as Degree, a_2.University as University
 	from	Employee as a_1
@@ -25,10 +25,10 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
         [TestMethod]
         public void From_multiple_sub_queries()
         {
-            var q = dbc.From(() => new
+            var q = queryProvider.From(() => new
             {
-                s = dbc.DataSet<Student>().Where(x => x.Address.Contains("KHI")).Schema(),
-                sg = dbc.DataSet<StudentGrade>().Where(x => x.Grade == "5").Schema(),
+                s = queryProvider.DataSet<Student>().Where(x => x.Address.Contains("KHI")).Schema(),
+                sg = queryProvider.DataSet<StudentGrade>().Where(x => x.Grade == "5").Schema(),
             });
             var expectedResult = @$"
 select	a_2.StudentId as StudentId, a_2.Name as Name, a_2.Address as Address, a_2.Age as Age, a_2.AdmissionDate as AdmissionDate, a_2.RecordCreateDate as RecordCreateDate, a_2.RecordUpdateDate as RecordUpdateDate, a_2.StudentType as StudentType, a_2.CountryID as CountryID, a_2.HasScholarship as HasScholarship, a_4.RowId as RowId, a_4.StudentId as StudentId_1, a_4.Grade as Grade
@@ -49,9 +49,9 @@ select	a_2.StudentId as StudentId, a_2.Name as Name, a_2.Address as Address, a_2
         public void From_mixed_data_sources_with_different_query_methods()
         {
             var q =
-            dbc.From(() => new
+            queryProvider.From(() => new
             {
-                s = dbc.DataSet<Student>().Where(x => x.Address.Contains("KHI")).Schema(),
+                s = queryProvider.DataSet<Student>().Where(x => x.Address.Contains("KHI")).Schema(),
                 sg = QueryExtensions.Table<StudentGrade>(),
             })
             .Where(p1 => p1.s.StudentId == p1.sg.StudentId)

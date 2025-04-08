@@ -11,9 +11,15 @@ using System.Threading.Tasks;
 
 namespace Atis.SqlExpressionEngine.UnitTest.Tests
 {
+    public class DataContext
+    {
+        public IQueryable<Invoice> Invoices { get; } = new Queryable<Invoice>(new QueryProvider());
+    }
+
     public abstract class TestBase
     {
-        protected readonly IQueryProvider dbc = new QueryProvider();
+        protected readonly IQueryProvider queryProvider = new QueryProvider();
+        protected readonly DataContext dataContext = new();
 
         #region base methods
         protected void Test(string testHeading, Expression queryExpression, string? expectedResult)
@@ -73,7 +79,9 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             //var nonPrimitivePropertyReplacementPreprocessor = new NonPrimitiveCalculatedPropertyPreprocessor(reflectionService);
             //var concreteParameterPreprocessor = new ConcreteParameterReplacementPreprocessor(new QueryPartsIdentifier(), reflectionService);
             var methodInterfaceTypeReplacementPreprocessor = new QueryMethodGenericTypeReplacementPreprocessor(reflectionService);
-            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, childJoinReplacementPreprocessor, calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor/*, concreteParameterPreprocessor*/]);
+            var customMethodReplacementPreprocessor = new CustomBusinessMethodPreprocessor();
+            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, childJoinReplacementPreprocessor, calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor, customMethodReplacementPreprocessor
+                /*, concreteParameterPreprocessor*/]);
             expression = preprocessor.Preprocess(expression);
             return expression;
         }

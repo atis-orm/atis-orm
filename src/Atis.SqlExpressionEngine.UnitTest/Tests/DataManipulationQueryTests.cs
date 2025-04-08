@@ -13,7 +13,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         [TestMethod]
         public void Update_query_single_table()
         {
-            var assets = new Queryable<Asset>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
             Expression<Func<int>> expr = () => assets.Update(x => new Asset { SerialNumber = "ABC", Description = "Check" }, x => x.SerialNumber == "123");
             var queryExpression = expr.Body;
             string? expectedResult = @"
@@ -29,7 +29,7 @@ where	(a_1.SerialNumber = '123')
         [TestMethod]
         public void Update_query_navigation_selected_to_update()
         {
-            var assets = new Queryable<Asset>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
             Expression<Func<int>> expr = () => assets.Update(
                                                         asset => asset.NavItem(),
                                                         asset => new ItemBase { ItemDescription = asset.NavItem().ItemDescription + asset.SerialNumber },
@@ -49,8 +49,8 @@ where	(a_2.SerialNumber = '123')
         [TestMethod]
         public void Update_query_with_query_syntax_multiple_tables_joined_with_one_table_selected_to_update()
         {
-            var assets = new Queryable<Asset>(this.dbc);
-            var items = new Queryable<ItemBase>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
+            var items = new Queryable<ItemBase>(this.queryProvider);
 
             Expression<Func<int>> expr = () => (
                                                 from asset in assets
@@ -80,9 +80,9 @@ where	(a_2.SerialNumber = '123')
         [TestMethod]
         public void Update_query_using_From_query_extension_method_then_finally_navigation_property_selected_to_update()
         {
-            var assets = new Queryable<Asset>(this.dbc);
-            var items = new Queryable<ItemBase>(this.dbc);
-            Expression<Func<int>> expr = () => dbc.From(() => new { asset = QueryExtensions.Table<Asset>(), item = QueryExtensions.Table<ItemBase>() })
+            var assets = new Queryable<Asset>(this.queryProvider);
+            var items = new Queryable<ItemBase>(this.queryProvider);
+            Expression<Func<int>> expr = () => queryProvider.From(() => new { asset = QueryExtensions.Table<Asset>(), item = QueryExtensions.Table<ItemBase>() })
                                                     .InnerJoin(x => x.item, x => x.asset.ItemId == x.item.ItemId)
                                                     .Select(x => x.item)
                                                     .Update(ms => ms.NavItemMoreInfo(), ms => new ItemMoreInfo { TrackingType = "TT" }, ms => ms.ItemDescription.Contains("123"));
@@ -104,9 +104,9 @@ where	(a_4.ItemDescription like ('%' + ('123' + '%')))
         [TestMethod]
         public void Update_query_using_dynamic_joins_to_add_multiple_data_sources_with_multiple_data_source_selected_in_projection_then_updating_one_data_source_from_that_projection()
         {
-            var assets = new Queryable<Asset>(this.dbc);
-            var items = new Queryable<ItemBase>(this.dbc);
-            var moreInfo = new Queryable<ItemMoreInfo>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
+            var items = new Queryable<ItemBase>(this.queryProvider);
+            var moreInfo = new Queryable<ItemMoreInfo>(this.queryProvider);
             Expression<Func<int>> expr = () => assets
                                                     .InnerJoin(items, (assets, joinedTable) => new { a = assets, j1 = joinedTable }, newShape => newShape.a.ItemId == newShape.j1.ItemId)
                                                     .InnerJoin(moreInfo, (oldShape, joinedTable) => new { os1 = oldShape, j2 = joinedTable }, newShape => newShape.j2.ItemId == newShape.os1.j1.ItemId)
@@ -127,7 +127,7 @@ where	(a_1.ItemDescription like ('%' + ('123' + '%')))
         [TestMethod]
         public void Delete_query_single_table()
         {
-            var assets = new Queryable<Asset>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
             Expression<Func<int>> expr = () => assets.Delete(x => x.SerialNumber == "123");
             var queryExpression = expr.Body;
             string? expectedResult = @"
@@ -141,7 +141,7 @@ where	(a_1.SerialNumber = '123')
         [TestMethod]
         public void Delete_query_with_navigation_selected_to_delete()
         {
-            var assets = new Queryable<Asset>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
             Expression<Func<int>> expr = () => assets.Delete(asset => asset.NavItem(),
                                                                 asset => asset.SerialNumber == "123");
             var queryExpression = expr.Body;
@@ -153,7 +153,7 @@ where	(a_2.SerialNumber = '123')
 ";
 
 
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
 
             var q = employees
                     .Select(x => new

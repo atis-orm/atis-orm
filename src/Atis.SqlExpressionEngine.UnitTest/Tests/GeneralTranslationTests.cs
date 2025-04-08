@@ -83,9 +83,20 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         }
 
         [TestMethod]
+        public void DataContext_basic_test()
+        {
+            var q = this.dataContext.Invoices.Select(x => new { x.InvoiceId, x.InvoiceDate });
+            string? expectedResult = @"
+select	a_1.InvoiceId as InvoiceId, a_1.InvoiceDate as InvoiceDate
+	from	Invoice as a_1
+";
+            Test("DataContext basic test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
         public void Single_table_without_any_method()
         {
-            var q = new Queryable<Student>(dbc);
+            var q = new Queryable<Student>(queryProvider);
             var expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1";
@@ -95,7 +106,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
         [TestMethod]
         public void Where_method_call()
         {
-            var q = new Queryable<Student>(dbc).Where(x => x.StudentId == "123");
+            var q = new Queryable<Student>(queryProvider).Where(x => x.StudentId == "123");
             var expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
@@ -106,7 +117,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
         [TestMethod]
         public void Select_method_call()
         {
-            var q = new Queryable<Student>(dbc).Select(x => new { x.StudentId, x.Name });
+            var q = new Queryable<Student>(queryProvider).Select(x => new { x.StudentId, x.Name });
             var expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name
 from	Student as a_1";
@@ -116,7 +127,7 @@ from	Student as a_1";
         [TestMethod]
         public void Where_Select_OrderBy_Take_method_calls()
         {
-            var q = new Queryable<Student>(dbc)
+            var q = new Queryable<Student>(queryProvider)
                 .Where(x => x.StudentId == "55")
                 .Where(x => x.Name.Contains("Jhon"))
                 .Select(x => new
@@ -141,7 +152,7 @@ order by Id asc";
         [TestMethod]
         public void Where_after_Select_should_wrap_in_sub_query()
         {
-            var q = new Queryable<Student>(dbc)
+            var q = new Queryable<Student>(queryProvider)
                 .Select(x => new { Id = x.StudentId })
                 .Where(x => x.Id == "123");
             var expectedResult = @"
@@ -157,7 +168,7 @@ where	(a_2.Id = '123')";
         [TestMethod]
         public void Take_after_Where_then_Where_and_Take_should_wrap_in_sub_query()
         {
-            var q = new Queryable<Student>(dbc)
+            var q = new Queryable<Student>(queryProvider)
                 .Where(x => x.StudentId == "2")
                 .Take(5)
                 .Where(x => x.Address.ToLower().Contains("US"))
@@ -177,13 +188,13 @@ select	top (2)	a_2.StudentId as StudentId, a_2.Name as Name, a_2.Address as Addr
         [TestMethod]
         public void Sub_query_in_Select_and_in_Where()
         {
-            var q = new Queryable<Student>(dbc)
+            var q = new Queryable<Student>(queryProvider)
                 .Select(x => new
                 {
                     Id = x.StudentId,
-                    Grd = dbc.DataSet<StudentGrade>().Where(y => y.StudentId == x.StudentId).Select(y => y.Grade).FirstOrDefault()
+                    Grd = queryProvider.DataSet<StudentGrade>().Where(y => y.StudentId == x.StudentId).Select(y => y.Grade).FirstOrDefault()
                 })
-                .Where(x => dbc.DataSet<StudentGrade>().Where(y => y.StudentId == x.Id).Any());
+                .Where(x => queryProvider.DataSet<StudentGrade>().Where(y => y.StudentId == x.Id).Any());
             var expectedResult = @"
 select	a_3.Id as Id, a_3.Grd as Grd
 from	(
@@ -205,11 +216,11 @@ where	exists(
         [TestMethod]
         public void FirstOrDefault_with_predicate_having_a_sub_query_with_Select_and_then_again_FirstOrDefault_on_sub_query_with_predicate()
         {
-            Expression<Func<object>> queryExpression = () => dbc.DataSet<Student>()
+            Expression<Func<object>> queryExpression = () => queryProvider.DataSet<Student>()
                 .Select(x => new { Id = x.StudentId })
                 .FirstOrDefault(
                         x => x.Id == "123" &&
-                        dbc.DataSet<StudentGrade>()
+                        queryProvider.DataSet<StudentGrade>()
                         .Select(y => y.Grade)
                         .FirstOrDefault(y2 => y2 == "A") == "20"
                 );
@@ -242,12 +253,12 @@ where ((a_2.Id = '123')
         public void MemberInitExpression_in_Select()
         {
             Expression<Func<object>> queryExpression = () =>
-            dbc.DataSet<Student>()
+            queryProvider.DataSet<Student>()
             .Select(x => new StudentQueryResult
             {
                 StudentId = x.StudentId,
                 StudentName = x.Name,
-                Grade = dbc.DataSet<StudentGrade>().Where(y => y.StudentId == x.StudentId).Select(y => y.Grade).FirstOrDefault()
+                Grade = queryProvider.DataSet<StudentGrade>().Where(y => y.StudentId == x.StudentId).Select(y => y.Grade).FirstOrDefault()
             });
             string? expectedResult = @"
 select  a_1.StudentId as StudentId, a_1.Name as StudentName, (
@@ -316,6 +327,26 @@ union all
 select	a_2.Name as Name, a_2.StudentId as Id
 from	Student as a_2
 where	(a_2.Address like ('%' + ('Town' + '%')))";
+            Test("UnionAll Test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Union_method_call()
+        {
+            var students = new Queryable<Student>(new QueryProvider());
+            var q = students.Where(x => x.Address.Contains("City"))
+                        .Select(x => new { x.Name, Id = x.StudentId })
+                        .Union(students.Where(x => x.Address.Contains("Town")).Select(x => new { x.Name, Id = x.StudentId }))
+                        ;
+            string? expectedResult = @"
+select	a_1.Name as Name, a_1.StudentId as Id
+from	Student as a_1
+where	(a_1.Address like ('%' + ('City' + '%')))
+union
+select	a_2.Name as Name, a_2.StudentId as Id
+from	Student as a_2
+where	(a_2.Address like ('%' + ('Town' + '%')))
+";
             Test("Union Test", q.Expression, expectedResult);
         }
 
@@ -429,8 +460,8 @@ select	NavItem_4.ItemId as ItemId, NavItem_4.ItemDescription as ItemDescription
         [TestMethod]
         public void Join_extension_method_after_Where_should_do_the_join_on_sub_query()
         {
-            var assets = new Queryable<Asset>(this.dbc);
-            var items = new Queryable<ItemBase>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
+            var items = new Queryable<ItemBase>(this.queryProvider);
             var q = assets.Where(x => x.ItemId == "123")
                 .LeftJoin(items, (a, i) => new { a, i }, (j) => j.a.ItemId == j.i.ItemId)
                 .Select(x=> new { x.a.ItemId, x.a.SerialNumber, x.i.ItemDescription, i2 = x.i.ItemId });
@@ -450,8 +481,8 @@ select	a_2.ItemId as ItemId, a_2.SerialNumber as SerialNumber, a_3.ItemDescripti
         [TestMethod]
         public void Standard_join_after_where_should_do_the_join_on_sub_query()
         {
-            var assets = new Queryable<Asset>(this.dbc);
-            var items = new Queryable<ItemBase>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
+            var items = new Queryable<ItemBase>(this.queryProvider);
             var q = from asset in assets
                     where asset.ItemId == "123"
                     join item in items on asset.ItemId equals item.ItemId into itemGroup
@@ -473,7 +504,7 @@ select	a_2.ItemId as ItemId, a_2.SerialNumber as SerialNumber, a_3.ItemDescripti
         [TestMethod]
         public void Distinct_method_call()
         {
-            var assets = new Queryable<Asset>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
             var q = assets.Select(x => new { x.ItemId, x.SerialNumber }).Distinct();
             string? expectedResult = @"
 select  distinct a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
@@ -487,7 +518,7 @@ select  distinct a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
         public void Variable_nested_in_properties_should_translate_to_SqlParameterExpression()
         {
             var p = new { p1 = new { p2 = new { v = "555" } } };
-            var assets = new Queryable<Asset>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
             var q = assets.Where(x => x.ItemId == p.p1.p2.v);
             string? expectedResult = @"
 select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
@@ -500,7 +531,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
         [TestMethod]
         public void Where_Select_Then_Where_Test()
         {
-            var students = new Queryable<Student>(dbc);
+            var students = new Queryable<Student>(queryProvider);
             var q = students
                 .Where(p => p.Age > 18)
                 .Select(p => p.Name)
@@ -522,7 +553,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
         [TestMethod]
         public void All_method_call()
         {
-            var employees = new Queryable<Employee>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => x.NavDegrees.All(y => y.University == "MIT"));
             string? expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
@@ -541,8 +572,8 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
         [TestMethod]
         public void Explicit_outer_apply_test()
         {
-            var employees = new Queryable<Employee>(this.dbc);
-            var employeeDegrees = new Queryable<EmployeeDegree>(this.dbc);
+            var employees = new Queryable<Employee>(this.queryProvider);
+            var employeeDegrees = new Queryable<EmployeeDegree>(this.queryProvider);
             var q = employees
                         .OuterApply(e => employeeDegrees.Where(d => d.EmployeeId == e.EmployeeId).Take(1), (e, ed) => new { e, ed })
                         .Select(x => new { x.e.EmployeeId, x.e.Name, x.ed.Degree });
@@ -559,5 +590,26 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree
 
             Test("Explicit Outer Apply Test", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void Custom_business_method_in_query_test()
+        {
+            var pidMaster = new Queryable<PID_Master>(this.queryProvider);
+            var q = pidMaster.Where(x => x.PID == "123")
+                        .Select(x => new { x.PID, FullName = FullName(x.FNAME, x.LNAME) });
+            string? expectedResult = @"
+select	a_1.PID as PID, ((a_1.FNAME + ' ') + a_1.LNAME) as FullName
+from	PID_Master as a_1
+where	(a_1.PID = '123')
+";
+            Test("Custom Business Method Test", q.Expression, expectedResult);
+        }
+
+
+        // SQL query compatible concatenation
+        public static readonly Expression<Func<string, string, string>> FullNameExpression = (firstName, lastName) => firstName + " " + lastName;
+        
+        [PseudoMethod(nameof(FullNameExpression))]
+        public static readonly Func<string, string, string> FullName = FullNameExpression.Compile();
     }
 }

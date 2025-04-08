@@ -1,0 +1,50 @@
+﻿using Atis.Expressions;
+using Atis.SqlExpressionEngine.UnitTest.Tests;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Atis.SqlExpressionEngine.UnitTest
+{
+    public class CustomBusinessMethodPreprocessor : ExpressionVisitor, IExpressionPreprocessor
+    {
+        public void Initialize()
+        {
+            // do nothing
+        }
+
+        public Expression Preprocess(Expression expression)
+        {
+            return this.Visit(expression);
+        }
+
+        protected override Expression VisitInvocation(InvocationExpression node)
+        {
+            if (node.Expression is MemberExpression memberExpression)
+            {
+                var pseudoMethodAttribute = memberExpression.Member.GetCustomAttribute<PseudoMethodAttribute>();
+                if (pseudoMethodAttribute != null)
+                {
+                    var expressionProperty = pseudoMethodAttribute.ExpressionProperty;
+                    var propertyInfo = memberExpression.Member.DeclaringType?.GetField(expressionProperty, BindingFlags.Static | BindingFlags.Public);
+                    if (propertyInfo != null)
+                    {
+                        if (propertyInfo.GetValue(null) is LambdaExpression lambdaExpression)
+                        {
+                            if (lambdaExpression.Parameters.Count != node.Arguments.Count)
+                                throw new InvalidOperationException($"The number of arguments does not match the number of parameters in the lambda expression for {expressionProperty}.");
+                            var updatedBody = ExpressionReplacementVisitor.Replace(lambdaExpression.Parameters, node.Arguments, lambdaExpression.Body);
+                            return updatedBody;
+                        }
+                    }
+                }
+            }
+
+            return base.VisitInvocation(node);
+        }
+    }
+}

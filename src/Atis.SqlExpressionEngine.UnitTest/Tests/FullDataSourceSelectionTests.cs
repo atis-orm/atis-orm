@@ -15,7 +15,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void LambdaParameter_as_data_source_selected_in_projection_should_select_all_columns()
         {
             Expression<Func<object>> queryExpression = () =>
-            dbc.DataSet<Student>()
+            queryProvider.DataSet<Student>()
             .Where(x => x.StudentId == "123")
             .Select(f => f);
             string? expectedResult = @"
@@ -29,7 +29,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
         public void LambdaParameter_as_data_source_selected_as_an_object_in_anonymous_type_in_projection()
         {
             Expression<Func<object>> queryExpression = () =>
-            dbc.DataSet<Student>()
+            queryProvider.DataSet<Student>()
             .Where(x => x.StudentId == "123")
             .Select(x => new { Std = x, STD_ID = x.StudentId });
             string? expectedResult = @"
@@ -43,7 +43,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
         public void Multiple_data_sources_added_using_From_query_method_then_one_data_source_selected_in_projection_within_anonymous_type()
         {
             var q =
-            dbc.From(() => new
+            queryProvider.From(() => new
             {
                 s = QueryExtensions.Table<Student>(),
                 sg = QueryExtensions.Table<StudentGrade>()
@@ -63,7 +63,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
         public void Multiple_data_sources_added_using_From_query_method_then_one_data_source_selected_in_projection()
         {
             var q =
-            dbc.From(() => new
+            queryProvider.From(() => new
             {
                 s = QueryExtensions.Table<Student>(),
                 sg = QueryExtensions.Table<StudentGrade>()
@@ -83,7 +83,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
         public void Multiple_data_sources_added_using_From_query_method_then_LambdaParameter_selected_in_projection()
         {
             var q =
-            dbc.From(() => new
+            queryProvider.From(() => new
             {
                 s = QueryExtensions.Table<Student>(),
                 sg = QueryExtensions.Table<StudentGrade>()

@@ -12,7 +12,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         [TestMethod]
         public void Direct_Select_method_call()
         {
-            var q = dbc.Select(() => new { n = 1 })
+            var q = queryProvider.Select(() => new { n = 1 })
                             .Where(x => x.n > 5);
             string? expectedResult = @"
 select	a_1.n as n
@@ -27,7 +27,7 @@ where	(a_1.n > 5)
         [TestMethod]
         public void Direct_Select_method_call_with_scalar_value()
         {
-            var q = dbc.Select(() => 1)
+            var q = queryProvider.Select(() => 1)
                             .Where(x => x > 5);
             string? expectedResult = @"
 select	a_1.Col1 as Col1
@@ -42,8 +42,8 @@ select	a_1.Col1 as Col1
         [TestMethod]
         public void Direct_Select_method_call_with_sub_query_as_scalar_column()
         {
-            var invoices = new Queryable<Invoice>(this.dbc);
-            var q = dbc.Select(() => invoices.Count())
+            var invoices = new Queryable<Invoice>(this.queryProvider);
+            var q = queryProvider.Select(() => invoices.Count())
                             .Where(x => x > 5);
             string? expectedResult = @"
 select	a_2.Col1 as Col1
@@ -61,8 +61,8 @@ where	(a_2.Col1 > 5)
         [TestMethod]
         public void Direct_Select_method_call_with_sub_query_as_projection()
         {
-            var invoices = new Queryable<Invoice>(this.dbc);
-            var q = dbc.Select(() => new { InvoiceCount = invoices.Count() })
+            var invoices = new Queryable<Invoice>(this.queryProvider);
+            var q = queryProvider.Select(() => new { InvoiceCount = invoices.Count() })
                             .Where(x => x.InvoiceCount > 5);
             string? expectedResult = @"
 select	a_2.InvoiceCount as InvoiceCount
@@ -80,7 +80,7 @@ where	(a_2.InvoiceCount > 5)
         [TestMethod]
         public void Direct_Select_with_recursive_query_to_generate_sequence()
         {
-            var q = dbc.Select(() => new { n = 1 })
+            var q = queryProvider.Select(() => new { n = 1 })
                            .RecursiveUnion(
                                 anchor => anchor
                                             .Where(anchorMember => anchorMember.n < 10)
@@ -108,7 +108,7 @@ from	cte_1 as cte_1
             var end = new DateTime(2024, 1, 31);
             var days = (end - start).Days;
 
-            var dateSequence = dbc.Select(() => new { DayOffset = 0 })
+            var dateSequence = queryProvider.Select(() => new { DayOffset = 0 })
                                     .RecursiveUnion(anchor =>
                                         anchor
                                             .Where(x => x.DayOffset < days)
@@ -116,7 +116,7 @@ from	cte_1 as cte_1
                                     )
                                     .Select(x => new { Date = start.AddDays(x.DayOffset) });
 
-            var invoices = new Queryable<Invoice>(this.dbc);
+            var invoices = new Queryable<Invoice>(this.queryProvider);
             var q = from date in dateSequence
                     join invoice in invoices on date.Date equals invoice.InvoiceDate into invoiceGroup
                     select new { date.Date, InvoiceCount = invoiceGroup.Count(), TotalSales = invoiceGroup.SelectMany(x => x.NavLines).Sum(y => y.LineTotal) };

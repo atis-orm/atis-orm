@@ -189,8 +189,8 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
         [TestMethod]
         public void Query_syntax_with_sub_query_having_Where_applied_with_no_outer_query_LambdaParameter_used_should_translate_to_cross_join()
         {
-            var employees = dbc.DataSet<Employee>();
-            var employeeDegrees = dbc.DataSet<EmployeeDegree>();
+            var employees = queryProvider.DataSet<Employee>();
+            var employeeDegrees = queryProvider.DataSet<EmployeeDegree>();
             var q = from e in employees
                     from ed in employeeDegrees.Where(x => x.Degree == "123")
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
@@ -210,8 +210,8 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3
         [TestMethod]
         public void Query_syntax_with_sub_query_having_Where_and_Select_applied_but_outer_query_LambdaParameter_used_in_Select_should_translate_to_cross_apply()
         {
-            var employees = dbc.DataSet<Employee>();
-            var employeeDegrees = dbc.DataSet<EmployeeDegree>();
+            var employees = queryProvider.DataSet<Employee>();
+            var employeeDegrees = queryProvider.DataSet<EmployeeDegree>();
             var q = from e in employees
                     from ed in employeeDegrees.Where(x => x.Degree == "123").Select(x => new { x.Degree, x.University, e.Department })
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
@@ -231,8 +231,8 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3
         [TestMethod]
         public void Query_syntax_with_sub_query_having_Where_and_Select_applied_but_outer_query_LambdaParameter_used_in_Select_and_DefaultIfEmpty_applied_should_translate_to_outer_apply()
         {
-            var employees = dbc.DataSet<Employee>();
-            var employeeDegrees = dbc.DataSet<EmployeeDegree>();
+            var employees = queryProvider.DataSet<Employee>();
+            var employeeDegrees = queryProvider.DataSet<EmployeeDegree>();
             var q = from e in employees
                     from ed in employeeDegrees.Where(x => x.Degree == "123").Select(x => new { x.Degree, x.University, e.Department }).DefaultIfEmpty()
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
@@ -308,8 +308,8 @@ select	a_6.ManagerId as y
         [TestMethod]
         public void Query_syntax_multiple_data_sources_selected_in_projection()
         {
-            var assets = new Queryable<Asset>(this.dbc);
-            var items = new Queryable<ItemBase>(this.dbc);
+            var assets = new Queryable<Asset>(this.queryProvider);
+            var items = new Queryable<ItemBase>(this.queryProvider);
 
             var q = from asset in assets
                     join item in items on asset.ItemId equals item.ItemId
@@ -329,9 +329,9 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
         [TestMethod]
         public void GroupJoin_sub_query_should_translate_as_sub_query_on_every_instance()
         {
-            var orders = new Queryable<Order>(this.dbc);
-            var orderDetails = new Queryable<OrderDetail>(this.dbc);
-            var customers = new Queryable<Customer>(this.dbc);
+            var orders = new Queryable<Order>(this.queryProvider);
+            var orderDetails = new Queryable<OrderDetail>(this.queryProvider);
+            var customers = new Queryable<Customer>(this.queryProvider);
 
             // GroupJoin => (IQueryable<T>, IQueryable<O>, T.Key, O.Key, (T, IQueryable<O>, R) => new { p1 = T, p2 = IQueryable<O> })
             var q = from o in orders
@@ -360,9 +360,9 @@ select	a_1.OrderID as OrderID, a_1.OrderDate as OrderDate, a_2.Quantity as Quant
         [TestMethod]
         public void GroupJoin_sub_query_selected_in_projection()
         {
-            var orders = new Queryable<Order>(this.dbc);
-            var orderDetails = new Queryable<OrderDetail>(this.dbc);
-            var customers = new Queryable<Customer>(this.dbc);
+            var orders = new Queryable<Order>(this.queryProvider);
+            var orderDetails = new Queryable<OrderDetail>(this.queryProvider);
+            var customers = new Queryable<Customer>(this.queryProvider);
 
             // GroupJoin => (IQueryable<T>, IQueryable<O>, T.Key, O.Key, (T, IQueryable<O>, R) => new { p1 = T, p2 = IQueryable<O> })
             var q = from o in orders
@@ -405,8 +405,8 @@ select	a_5.OrderID as OrderID, a_5.OrderDate as OrderDate, a_5.Quantity as Quant
         [TestMethod]
         public void Join_Select_Where_OrderBy_Test()
         {
-            var employees = new Queryable<Employee>(dbc);
-            var employeeDegrees = new Queryable<EmployeeDegree>(dbc);
+            var employees = new Queryable<Employee>(queryProvider);
+            var employeeDegrees = new Queryable<EmployeeDegree>(queryProvider);
 
             var q =
                 from e in employees
