@@ -323,6 +323,16 @@ namespace Atis.SqlExpressionEngine.UnitTest
             this.Append(")");
             return node;
         }
+        protected override Expression VisitConditional(ConditionalExpression node)
+        {
+            this.Visit(node.Test);
+            this.Append(" ? ");
+            this.Visit(node.IfTrue);
+            this.Append(" : ");
+            this.Visit(node.IfFalse);
+            return node;
+        }
+
         private void Append(string text)
         {
             sb.Append(text);
