@@ -5,24 +5,22 @@ using System.Linq;
 using System.Text;
 using Atis.Expressions;
 using System.Reflection;
+using Atis.SqlExpressionEngine.Exceptions;
+using Atis.SqlExpressionEngine.Abstractions;
 
 namespace Atis.SqlExpressionEngine.Preprocessors
 {
-    public interface IBooleanExpressionIdentifier
+    public class BooleanInPredicatePreprocessor : ContextAwareExpressionVisitor, IExpressionPreprocessor
     {
-        bool IsBooleanExpression(Expression expression);
-    }
-
-    public class BooleanToEqualRewritePreprocessor : ExpressionVisitor, IExpressionPreprocessor
-    {
-        private readonly Stack<Expression> parentExpressionStack = new Stack<Expression>();
         private readonly IBooleanExpressionIdentifier expressionIdentifierPlugin;
+        private readonly IReflectionService reflectionService;
 
-        public BooleanToEqualRewritePreprocessor() : this(null) { }
+        public BooleanInPredicatePreprocessor(IReflectionService reflectionService) : this(null, reflectionService) { }
 
-        public BooleanToEqualRewritePreprocessor(IBooleanExpressionIdentifier expressionIdentifierPlugin)
+        public BooleanInPredicatePreprocessor(IBooleanExpressionIdentifier expressionIdentifierPlugin, IReflectionService reflectionService)
         {
             this.expressionIdentifierPlugin = expressionIdentifierPlugin;
+            this.reflectionService = reflectionService;
         }
 
         /// <inheritdoc />
@@ -38,29 +36,19 @@ namespace Atis.SqlExpressionEngine.Preprocessors
         }
 
         /// <inheritdoc />
-        public override Expression Visit(Expression node)
+        protected override bool TryVisit(Expression node, out Expression result)
         {
-            if (node == null) return null;
-
-            parentExpressionStack.Push(node);
-            try
+            if (this.expressionIdentifierPlugin != null)
             {
-                if (this.expressionIdentifierPlugin != null)
+                if (node.Type == typeof(bool) &&
+                    this.expressionIdentifierPlugin.IsMatch(this.GetExpressionStack()) &&
+                    IsBooleanPredicateContext())
                 {
-                    if (node.Type == typeof(bool) &&
-                        this.expressionIdentifierPlugin.IsBooleanExpression(node) &&
-                        IsBooleanPredicateContext())
-                    {
-                        return CreateEqualToTreeExpression(node);
-                    }
+                    result = CreateEqualToTrueExpression(node);
+                    return true;
                 }
-                var result = base.Visit(node);
-                return result;
             }
-            finally
-            {
-                parentExpressionStack.Pop();
-            }
+            return base.TryVisit(node, out result);
         }
 
         /// <inheritdoc />
@@ -68,7 +56,7 @@ namespace Atis.SqlExpressionEngine.Preprocessors
         {
             if (node.Type == typeof(bool) && IsBooleanPredicateContext())
             {
-                return CreateEqualToTreeExpression(node);
+                return CreateEqualToTrueExpression(node);
             }
 
             return base.VisitConstant(node);
@@ -79,7 +67,7 @@ namespace Atis.SqlExpressionEngine.Preprocessors
         {
             if (node.Type == typeof(bool) && IsBooleanPredicateContext())
             {
-                return CreateEqualToTreeExpression(node);
+                return CreateEqualToTrueExpression(node);
             }
 
             return base.VisitMember(node);
@@ -92,55 +80,35 @@ namespace Atis.SqlExpressionEngine.Preprocessors
                 node.Type == typeof(bool) &&
                 this.IsBooleanPredicateContext())
             {
-                return CreateEqualToTreeExpression(node);
+                return CreateEqualToTrueExpression(node);
             }
             return base.VisitBinary(node);
         }
 
-        private Expression CreateEqualToTreeExpression(Expression expression)
+        private Expression CreateEqualToTrueExpression(Expression expression)
         {
             if (expression.Type == typeof(bool?))
                 expression = Expression.Coalesce(expression, Expression.Constant(false));
             return Expression.Equal(expression, Expression.Constant(true, typeof(bool)));
         }
 
-        private class ExpressionStackDepletedException : Exception
-        {
-            public ExpressionStackDepletedException() : base("No more elements in the stack.") { }
-        }
-
-        private Expression PopValueFromStack(Expression[] stack, ref int index)
-        {
-            if (index < 0)
-                throw new ArgumentOutOfRangeException(nameof(index), "Index is out of range.");
-            if (index >= stack.Length)
-                throw new ExpressionStackDepletedException();
-            var value = stack[index];
-            index++;
-            return value;
-        }
-
         protected virtual bool IsProjectionMethod(MethodInfo method)
         {
-            var methodName = method.Name;
-            return methodName == nameof(Queryable.Select) || methodName == nameof(Queryable.OrderBy) ||
-                            methodName == nameof(Queryable.OrderByDescending) || methodName == nameof(Queryable.ThenBy) ||
-                            methodName == nameof(Queryable.ThenByDescending) || methodName == nameof(Queryable.GroupBy) ||
-                            methodName == nameof(QueryExtensions.OrderByDesc);
+            return this.reflectionService.IsProjectionContextMethod(method);
         }
 
         protected virtual bool IsBooleanPredicateContext()
         {
             try
             {
-                var copy = this.parentExpressionStack.ToArray();
+                var stack = this.GetExpressionStack();
 
-                if (copy.Length < 2) return false;
+                if (stack.RemainingItems < 2) return false;
 
-                var currentIndex = 0;
-
-                var current = this.PopValueFromStack(copy, ref currentIndex);
-                var parent = this.PopValueFromStack(copy, ref currentIndex);
+                // current will be either Constant, MemberExpression or Coalesce
+                // current.Type will be boolean
+                var current = stack.Pop();
+                var parent = stack.Pop();
 
                 // Rule 1: Inside OR/AND
                 if (parent is BinaryExpression binary &&
@@ -151,14 +119,17 @@ namespace Atis.SqlExpressionEngine.Preprocessors
                 if (parent is ConditionalExpression conditional && conditional.Test == current)
                     return true;
 
+                if (parent is UnaryExpression notUnary && notUnary.NodeType == ExpressionType.Not)
+                    return true;
+
                 // Rule 3: Lambda body but not inside Select/GroupBy/OrderBy
                 if (parent is LambdaExpression lambda && lambda.Body == current)
                 {
-                    var methodLevel = this.PopValueFromStack(copy, ref currentIndex);
+                    var methodLevel = stack.Pop();
 
                     if (methodLevel is UnaryExpression unary && unary.NodeType == ExpressionType.Quote)
                     {
-                        methodLevel = this.PopValueFromStack(copy, ref currentIndex); // go 1 level above Quote
+                        methodLevel = stack.Pop(); // go 1 level above Quote
                     }
 
                     if (methodLevel is MethodCallExpression methodCall)
@@ -174,7 +145,7 @@ namespace Atis.SqlExpressionEngine.Preprocessors
 
                 return false;
             }
-            catch (ExpressionStackDepletedException)
+            catch (StackDepletedException)      // this exception may occur during the Pop call
             {
                 return false;
             }

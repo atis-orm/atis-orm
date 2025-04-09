@@ -1,4 +1,5 @@
-﻿using Atis.SqlExpressionEngine.Preprocessors;
+﻿using Atis.Expressions;
+using Atis.SqlExpressionEngine.Preprocessors;
 using Atis.SqlExpressionEngine.UnitTest.Metadata;
 using System.Linq.Expressions;
 
@@ -6,11 +7,15 @@ namespace Atis.SqlExpressionEngine.UnitTest.Services
 {
     public class SqlFunctionBooleanExpressionIdentifier : IBooleanExpressionIdentifier
     {
-        public bool IsBooleanExpression(Expression expression)
+        public bool IsMatch(ArrayStack expressionStack)
         {
-            if (expression is MethodCallExpression methodCallExpression)
+            if (expressionStack.RemainingItems > 0)
             {
-                return Attribute.IsDefined(methodCallExpression.Method, typeof(SqlFunctionAttribute));
+                var current = expressionStack.Pop();
+                if (current is MethodCallExpression methodCallExpression)
+                {
+                    return Attribute.IsDefined(methodCallExpression.Method, typeof(SqlFunctionAttribute));
+                }
             }
             return false;
         }

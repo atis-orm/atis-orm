@@ -120,5 +120,6 @@ namespace Atis.SqlExpressionEngine.Abstractions
         bool IsVariable(MemberExpression expression);
 
         bool IsEnumerable(object value);
+        bool IsProjectionContextMethod(MethodInfo method);
     }
 }

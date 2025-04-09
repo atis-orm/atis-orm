@@ -5,6 +5,23 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
     [TestClass]
     public class BooleanValueUsageWithinPredicateTests : TestBase
     {
+        [TestMethod]
+        public void Not_operator_on_boolean_field_in_where()
+        {
+            var studentExtensions = new Queryable<StudentExtension>(queryProvider);
+            var q = studentExtensions
+                        .Where(x => !x.IsDeleted && !(x.HasScholarship ?? false))
+                        .Select(x => new { x.StudentId, x.Name });
+
+            string? expectedSql = @"
+select	a_1.StudentId as StudentId, a_1.Name as Name
+	from	StudentExtension as a_1
+	where	(not (a_1.IsDeleted = 1) and not (isnull(a_1.HasScholarship, 0) = 1))
+";
+
+            Test("Not operator on boolean field in where", q.Expression, expectedSql);
+        }
+
 
         [TestMethod]
         public void Direct_boolean_field_selected_in_Where_predicate()
@@ -24,18 +41,18 @@ select	a_1.StudentId as StudentId, a_1.Name as Name
         {
             var students = new Queryable<Student>(queryProvider);
             var q = students
-                        .Where(x => x.CountryID == "123" && IsAsianCountry(x.CountryID))
-                        .Select(x => new { x.StudentId, x.Name, IsAsianCountry = IsAsianCountry(x.CountryID) });
+                        .Where(x => x.CountryID == "123" && IsAsianCountry(x.CountryID, x.Age > 18))
+                        .Select(x => new { x.StudentId, x.Name, IsAsianCountry = IsAsianCountry(x.CountryID, !(x.Age > 18)) });
             string? expectedResult = @"
-select	a_1.StudentId as StudentId, a_1.Name as Name, dbo.FUNC_IS_ASIAN_COUNTRY(a_1.CountryID) as IsAsianCountry
+select	a_1.StudentId as StudentId, a_1.Name as Name, dbo.FUNC_IS_ASIAN_COUNTRY(a_1.CountryID, case when not (a_1.Age > 18) then 1 else 0 end) as IsAsianCountry
 	from	Student as a_1
-	where	((a_1.CountryID = '123') and (dbo.FUNC_IS_ASIAN_COUNTRY(a_1.CountryID) = 1))
+	where	((a_1.CountryID = '123') and (dbo.FUNC_IS_ASIAN_COUNTRY(a_1.CountryID, case when (a_1.Age > 18) then 1 else 0 end) = 1))
 ";
             Test("Sql function usage within linq expression", q.Expression, expectedResult);
         }
 
         [SqlFunction("dbo.FUNC_IS_ASIAN_COUNTRY")]
-        public static bool IsAsianCountry(string? countryId)
+        public static bool IsAsianCountry(string? countryId, bool useDefault)
         {
             throw new NotImplementedException();
         }

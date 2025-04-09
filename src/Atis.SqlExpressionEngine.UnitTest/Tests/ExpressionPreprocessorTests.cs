@@ -173,11 +173,16 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             return new Queryable<StudentExtension>(this.queryProvider);
         }
 
+        private BooleanInPredicatePreprocessor GetBooleanToEqualPreprocessor()
+        {
+            return new BooleanInPredicatePreprocessor(new ReflectionService(new ExpressionEvaluator()));
+        }
+
         [TestMethod]
         public void Where_clause_rewrites_nullable_bool_to_equal_true()
         {
             var query = GetQueryable().Where(x => x.HasScholarship ?? false);
-            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+            var transformed = this.GetBooleanToEqualPreprocessor().Visit(query.Expression);
 
             var lambda = ExtractLambda(transformed);
             var body = lambda?.Body as BinaryExpression;
@@ -191,7 +196,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void OrElse_expression_rewrites_left_side()
         {
             var query = GetQueryable().Where(x => (x.HasScholarship ?? false) || x.IsDeleted == false);
-            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+            var transformed = this.GetBooleanToEqualPreprocessor().Visit(query.Expression);
 
             var lambda = ExtractLambda(transformed);
             var body = lambda?.Body as BinaryExpression;
@@ -209,7 +214,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void Select_projection_does_not_rewrite()
         {
             var query = GetQueryable().Select(x => new { Flag = x.IsDeleted });
-            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+            var transformed = this.GetBooleanToEqualPreprocessor().Visit(query.Expression);
 
             var lambda = ExtractLambda(transformed);
             var newExpr = lambda?.Body as NewExpression;
@@ -224,7 +229,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void OrderBy_does_not_rewrite()
         {
             var query = GetQueryable().OrderBy(x => x.IsDeleted);
-            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+            var transformed = this.GetBooleanToEqualPreprocessor().Visit(query.Expression);
 
             var lambda = ExtractLambda(transformed);
             var body = lambda?.Body as MemberExpression;
@@ -237,7 +242,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void GroupBy_does_not_rewrite()
         {
             var query = GetQueryable().GroupBy(x => x.IsDeleted);
-            var transformed = new BooleanToEqualRewritePreprocessor().Visit(query.Expression);
+            var transformed = this.GetBooleanToEqualPreprocessor().Visit(query.Expression);
 
             var lambda = ExtractLambda(transformed);
             var body = lambda?.Body as MemberExpression;
@@ -250,7 +255,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void ConditionalExpression_test_is_rewritten()
         {
             Expression<Func<StudentExtension, string>> expr = x => x.IsDeleted ? "Valid" : "Invalid";
-            var transformed = new BooleanToEqualRewritePreprocessor().Visit(expr);
+            var transformed = this.GetBooleanToEqualPreprocessor().Visit(expr);
 
             var cond = ((LambdaExpression)transformed).Body as ConditionalExpression;
             Assert.IsNotNull(cond);
