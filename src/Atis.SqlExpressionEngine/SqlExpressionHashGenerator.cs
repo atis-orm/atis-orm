@@ -49,6 +49,7 @@ namespace Atis.SqlExpressionEngine
         protected internal override SqlExpression VisitCteReferenceExpression(SqlCteReferenceExpression sqlCteReferenceExpression)
         {
             this.hashCode.Add(sqlCteReferenceExpression.CteAlias);
+            this.hashCode.Add(sqlCteReferenceExpression.IsDefaultIfEmpty);
             return base.VisitCteReferenceExpression(sqlCteReferenceExpression);
         }
 
@@ -105,7 +106,30 @@ namespace Atis.SqlExpressionEngine
         {
             this.hashCode.Add(sqlTableExpression.TableName);
             this.hashCode.Add(sqlTableExpression.TableColumns);
+            this.hashCode.Add(sqlTableExpression.IsDefaultIfEmpty);
             return base.VisitSqlTableExpression(sqlTableExpression);
+        }
+
+        protected internal override SqlExpression VisitKeywordExpression(SqlKeywordExpression sqlKeywordExpression)
+        {
+            this.hashCode.Add(sqlKeywordExpression.Keyword);
+            return base.VisitKeywordExpression(sqlKeywordExpression);
+        }
+
+        protected internal override SqlExpression VisitSqlQueryExpression(SqlQueryExpression sqlQueryExpression)
+        {
+            this.hashCode.Add(sqlQueryExpression.IsCte);
+            this.hashCode.Add(sqlQueryExpression.RowOffset);
+            this.hashCode.Add(sqlQueryExpression.RowsPerPage);
+            this.hashCode.Add(sqlQueryExpression.IsDistinct);
+            this.hashCode.Add(sqlQueryExpression.IsDefaultIfEmpty);
+            return base.VisitSqlQueryExpression(sqlQueryExpression);
+        }
+
+        protected internal override SqlExpression VisitUpdateSqlExpression(SqlUpdateExpression updateSqlExpression)
+        {
+            this.hashCode.Add(updateSqlExpression.Columns);
+            return base.VisitUpdateSqlExpression(updateSqlExpression);
         }
     }
 }
