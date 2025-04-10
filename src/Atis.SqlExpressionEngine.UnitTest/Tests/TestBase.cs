@@ -79,10 +79,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             //var concreteParameterPreprocessor = new ConcreteParameterReplacementPreprocessor(new QueryPartsIdentifier(), reflectionService);
             var methodInterfaceTypeReplacementPreprocessor = new QueryMethodGenericTypeReplacementPreprocessor(reflectionService);
             var customMethodReplacementPreprocessor = new CustomBusinessMethodPreprocessor();
-            var booleanEqualRewriterPreprocessor = new BooleanInPredicatePreprocessor(new SqlFunctionBooleanExpressionIdentifier(), reflectionService);
-            var binaryToCaseWhenPreprocessor = new BinaryToTernaryInProjectionPreprocessor(new SqlFunctionArgumentBinaryExpressionIdentifier(), reflectionService);
-            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, childJoinReplacementPreprocessor, calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor, customMethodReplacementPreprocessor,
-                booleanEqualRewriterPreprocessor, binaryToCaseWhenPreprocessor
+            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, childJoinReplacementPreprocessor, calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor, customMethodReplacementPreprocessor
                 /*, concreteParameterPreprocessor*/]);
             expression = preprocessor.Preprocess(expression);
             return expression;

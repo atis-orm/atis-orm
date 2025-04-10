@@ -15,7 +15,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             string? expectedSql = @"
 select	a_1.StudentId as StudentId, 
             case when not (a_1.IsDeleted = 1) then 1 else 0 end as IsActive,
-            case when (isNull(a_1.HasScholarship, 0) = 1) then 0 else 1 end as NoScholarship
+            case when not (a_1.HasScholarship = 1) then 1 else 0 end as NoScholarship
 	from	StudentExtension as a_1
 ";
 
