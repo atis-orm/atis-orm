@@ -13,7 +13,7 @@
             string? expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
-	where	(a_1.Name like ('%' + ('Abc' + '%')))
+	where	(a_1.Name like '%' + 'Abc' + '%')
 ";
 
             Test("Calculated Property in Interface Test", q.Expression, expectedResult);

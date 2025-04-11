@@ -83,7 +83,7 @@ select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Addre
 		from	StudentGrade as a_1
 		group by a_1.StudentId
 	) as a_2
-		left join Student as a_3 on (substring(a_2.Col1, (0 + 1), 5) = a_3.StudentId)
+		left join Student as a_3 on (substring(a_2.Col1, 0, 5) = a_3.StudentId)
 ";
             Test("Group Join On Scalar Select Test", queryExpression.Body, expectedResult);
         }
@@ -175,7 +175,7 @@ select	a_2.CountryID as Col1
             string? expectedResult = @"
 select	a_1.Name as Name, Count(1) as TotalLines
 from	Student as a_1
-where	(a_1.Address like ('%' + ('City' + '%')))
+where	(a_1.Address like '%' + 'City' + '%')
 group by a_1.Name
 having	(Max(a_1.Age) > 20)";
             Test("Having Test", q.Expression, expectedResult);

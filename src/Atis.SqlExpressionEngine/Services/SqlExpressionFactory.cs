@@ -222,5 +222,40 @@ namespace Atis.SqlExpressionEngine.Services
         {
             return new SqlNegateExpression(operand);
         }
+
+        public virtual SqlCastExpression CreateCast(SqlExpression expression, ISqlDataType sqlDataType)
+        {
+            return new SqlCastExpression(expression, sqlDataType);
+        }
+
+        public virtual SqlDateAddExpression CreateDateAdd(SqlDatePart datePart, SqlExpression interval, SqlExpression dateExpression)
+        {
+            return new SqlDateAddExpression(datePart, interval, dateExpression);
+        }
+
+        public virtual SqlDatePartExpression CreateDatePart(SqlDatePart datePart, SqlExpression dateExpression)
+        {
+            return new SqlDatePartExpression(datePart, dateExpression);
+        }
+
+        public virtual SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, SqlExpression[] arguments)
+        {
+            return new SqlStringFunctionExpression(stringFunction, stringExpression, arguments);
+        }
+
+        public virtual SqlLikeExpression CreateLike(SqlExpression stringExpression, SqlExpression pattern)
+        {
+            return new SqlLikeExpression(stringExpression, pattern, SqlExpressionType.Like);
+        }
+
+        public virtual SqlLikeExpression CreateLikeStartsWith(SqlExpression stringExpression, SqlExpression pattern)
+        {
+            return new SqlLikeExpression(stringExpression, pattern, SqlExpressionType.LikeStartsWith);
+        }
+
+        public virtual SqlLikeExpression CreateLikeEndsWith(SqlExpression stringExpression, SqlExpression pattern)
+        {
+            return new SqlLikeExpression(stringExpression, pattern, SqlExpressionType.LikeEndsWith);
+        }
     }
 }

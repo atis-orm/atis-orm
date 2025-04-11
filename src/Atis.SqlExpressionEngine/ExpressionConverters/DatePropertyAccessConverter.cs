@@ -10,15 +10,18 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
     public class DatePropertyAccessConverterFactory : LinqToSqlExpressionConverterFactoryBase<MemberExpression>
     {
-        private static readonly string[] SupportedProperties = new []
+        private static readonly string[] SupportedProperties = new[]
         {
-            "Year",
-            "Month",
-            "Day",
-            "Hour",
-            "Minute",
-            "Second",
-            "Millisecond",
+            nameof(DateTime.Year),
+            nameof(DateTime.Month),
+            nameof(DateTime.DayOfWeek),
+            nameof(DateTime.Day),
+            nameof(DateTime.Hour),
+            nameof(DateTime.Minute),
+            nameof(DateTime.Second),
+            nameof(DateTime.Millisecond),
+            nameof(DateTime.Ticks),
+            nameof(DateTime.Date),
         };
 
         public DatePropertyAccessConverterFactory(IConversionContext context) : base(context) { }
@@ -45,16 +48,19 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     /// </summary>
     public class DatePropertyAccessConverter : LinqToSqlExpressionConverterBase<MemberExpression>
     {
-        private static readonly Dictionary<string, string> PropertyToDatePart = new Dictionary<string, string>()
+        private static readonly Dictionary<string, SqlDatePart> PropertyToDatePart = new Dictionary<string, SqlDatePart>()
         {
-            ["Year"] = "year",
-            ["Month"] = "month",
-            ["Day"] = "day",
-            ["Hour"] = "hour",
-            ["Minute"] = "minute",
-            ["Second"] = "second",
-            ["Millisecond"] = "millisecond"
+            ["Year"] = SqlDatePart.Year,
+            ["Month"] = SqlDatePart.Month,
+            ["Day"] =  SqlDatePart.Day,
+            ["Hour"] =  SqlDatePart.Hour,
+            ["Minute"] =  SqlDatePart.Minute,
+            ["Second"] =  SqlDatePart.Second,
+            ["Millisecond"] =  SqlDatePart.Millisecond,
+            ["Ticks"] = SqlDatePart.Tick,
+            ["DayOfWeek"] = SqlDatePart.WeekDay,
         };
+        private readonly ISqlDataTypeFactory sqlDataTypeFactory;
 
         public DatePropertyAccessConverter(
             IConversionContext context,
@@ -62,16 +68,25 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
+            this.sqlDataTypeFactory = this.Context.GetExtensionRequired<ISqlDataTypeFactory>();
         }
 
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var part = PropertyToDatePart[this.Expression.Member.Name];
             var dateExpr = convertedChildren[0]; // The object on which the property is accessed
 
-            return this.SqlFactory.CreateFunctionCall("datepart",
-                new[] { this.SqlFactory.CreateKeyword(part), dateExpr });
+            if (this.Expression.Member.Name == nameof(DateTime.Date))
+            {
+                return this.SqlFactory.CreateCast(dateExpr, this.sqlDataTypeFactory.CreateDate());
+            }
+            else
+            {
+                if (!PropertyToDatePart.TryGetValue(this.Expression.Member.Name, out var datePart))
+                    throw new NotSupportedException($"The property '{this.Expression.Member.Name}' is not supported.");
+                SqlExpression datePartExpression = this.SqlFactory.CreateDatePart(datePart, dateExpr);
+                return datePartExpression;
+            }
         }
     }
 }

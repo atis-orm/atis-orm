@@ -338,7 +338,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
 select	a_1.OrderID as OrderID, a_1.OrderDate as OrderDate, a_2.Quantity as Quantity, a_2.UnitPrice as UnitPrice, (
 		select	Count(1) as Col1
 		from	Customer as a_3
-		where	(a_1.CustomerId = a_3.CustomerId) and (a_3.CustomerName like ('TT' + '%'))
+		where	(a_1.CustomerId = a_3.CustomerId) and (a_3.CustomerName like 'TT' + '%')
 	) as Count
 	from	Order as a_1
 		inner join OrderDetail as a_2 on (a_1.OrderID = a_2.OrderID)
@@ -373,7 +373,7 @@ select	a_1.OrderID as OrderID, a_1.OrderDate as OrderDate, a_2.Quantity as Quant
 select	a_5.OrderID as OrderID, a_5.OrderDate as OrderDate, a_5.Quantity as Quantity, a_5.UnitPrice as UnitPrice, (
 		select	Count(1) as Col1
 		from	Customer as a_3
-		where	(a_5.CustomerId = a_3.CustomerId) and (a_3.CustomerId = '123') and (a_3.CustomerName like ('TT' + '%'))
+		where	(a_5.CustomerId = a_3.CustomerId) and (a_3.CustomerId = '123') and (a_3.CustomerName like 'TT' + '%')
 	) as Count
 	from	(
 		select	a_1.OrderID as OrderID, a_1.CustomerId as CustomerId, a_1.OrderDate as OrderDate, a_2.OrderID as OrderID_1, 
@@ -390,7 +390,7 @@ select	a_5.OrderID as OrderID, a_5.OrderDate as OrderDate, a_5.Quantity as Quant
 	where	((
 		select	Count(1) as Col1
 		from	Customer as a_3
-		where	(a_5.CustomerId = a_3.CustomerId) and (a_3.CustomerId = '123') and (a_3.CustomerName like ('%' + ('abc' + '%')))
+		where	(a_5.CustomerId = a_3.CustomerId) and (a_3.CustomerId = '123') and (a_3.CustomerName like '%' + 'abc' + '%')
 	) > 0)
 ";
             Test("GroupJoin sub-query selected in projection", q.Expression, expectedResult);
@@ -429,7 +429,7 @@ select	a_5.OrderID as OrderID, a_5.OrderDate as OrderDate, a_5.Quantity as Quant
 		from	Employee as a_1
 			    inner join EmployeeDegree as a_2 on (a_1.EmployeeId = a_2.EmployeeId)
 	) as a_3
-	where	(a_3.Degree like ('H' + '%'))
+	where	(a_3.Degree like 'H' + '%')
 	order by a_3.EmpName asc
 ";
 

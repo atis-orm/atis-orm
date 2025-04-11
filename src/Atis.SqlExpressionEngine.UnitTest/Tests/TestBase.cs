@@ -46,12 +46,13 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
 
             //var componentIdentifier = new QueryComponentIdentifier();
             var model = new Model();
+            var sqlDataTypeFactory = new SqlDataTypeFactory();
             var reflectionService = new ReflectionService(new ExpressionEvaluator());
             var parameterMapper = new LambdaParameterToDataSourceMapper();
             var sqlFactory = new SqlExpressionFactory();
             //var navigationMapper = new NavigationToDataSourceMapper();
             //var propertyMapper = new PropertyToDataSourceMapper();
-            var contextExtensions = new object[] { sqlFactory, /*componentIdentifier,*/ model, parameterMapper, /*navigationMapper,*/ reflectionService/*, propertyMapper*/ };
+            var contextExtensions = new object[] { sqlDataTypeFactory, sqlFactory, /*componentIdentifier,*/ model, parameterMapper, /*navigationMapper,*/ reflectionService/*, propertyMapper*/ };
             var conversionContext = new ConversionContext(contextExtensions);
             var expressionConverterProvider = new LinqToSqlExpressionConverterProvider(conversionContext, factories: [ new SqlFunctionConverterFactory(conversionContext) ]);
             var postProcessorProvider = new SqlExpressionPostprocessorProvider(sqlFactory, postprocessors: null);

@@ -69,5 +69,34 @@ order by (a_1.StudentId + '3') asc, Id desc";
             Test("Select with computed column followed by OrderBy should wrap correctly", q.Expression, expectedResult);
         }
 
+        [TestMethod]
+        public void OrderBy_Value_for_nullable_column()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students.Select(x => x.Age).OrderBy(x => x.Value + 5);
+
+            string? expectedResult = @"
+select	a_1.Age as Col1
+	from	Student as a_1
+	order by (a_1.Age + 5) asc
+";
+
+            Test("OrderBy Value for nullable column", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void OrderBy_Value_for_nullable_column_with_function()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students.Select(x => x.RecordUpdateDate).OrderBy(x => x.Value.AddDays(3));
+
+            string? expectedResult = @"
+select	a_1.RecordUpdateDate as Col1
+	from	Student as a_1
+	order by dateadd(day, 3, a_1.RecordUpdateDate) asc
+";
+
+            Test("OrderBy Value for nullable column with function", q.Expression, expectedResult);
+        }
     }
 }

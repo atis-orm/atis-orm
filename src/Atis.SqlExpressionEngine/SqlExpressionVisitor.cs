@@ -241,6 +241,43 @@ namespace Atis.SqlExpressionEngine
             return sqlNegateExpression.Update(operand);
         }
 
+        protected internal virtual SqlExpression VisitSqlCastExpression(SqlCastExpression sqlCastExpression)
+        {
+            var expression = this.Visit(sqlCastExpression.Expression);
+            return sqlCastExpression.Update(expression);
+        }
+
+        protected internal virtual SqlExpression VisitSqlDateAddExpression(SqlDateAddExpression sqlDateAddExpression)
+        {
+            var expression = this.Visit(sqlDateAddExpression.DateExpression);
+            var interval = this.Visit(sqlDateAddExpression.Interval);
+            return sqlDateAddExpression.Update(interval, expression);
+        }
+
+        protected internal virtual SqlExpression VisitSqlDatePartExpression(SqlDatePartExpression sqlDatePartExpression)
+        {
+            var dateExpression = this.Visit(sqlDatePartExpression.DateExpression);
+            return sqlDatePartExpression.Update(dateExpression);
+        }
+
+        protected internal virtual SqlExpression VisitSqlStringFunctionExpression(SqlStringFunctionExpression sqlStringFunctionExpression)
+        {
+            var stringExpression = this.Visit(sqlStringFunctionExpression.StringExpression);
+            var arguments = new List<SqlExpression>();
+            foreach (var argument in sqlStringFunctionExpression.Arguments)
+            {
+                arguments.Add(this.Visit(argument));
+            }
+            return sqlStringFunctionExpression.Update(stringExpression, arguments.ToArray());
+        }
+
+        protected internal virtual SqlExpression VisitSqlLikeExpression(SqlLikeExpression sqlLikeExpression)
+        {
+            var stringExpression = this.Visit(sqlLikeExpression.Expression);
+            var pattern = this.Visit(sqlLikeExpression.Pattern);
+            return sqlLikeExpression.Update(stringExpression, pattern);
+        }
+
         //protected internal SqlExpression VisitSqlSubQueryColumnExpression(SqlSubQueryColumnExpression sqlSubQueryColumnExpression)
         //{
         //    var columnExpression = this.VisitAndConvert(sqlSubQueryColumnExpression.ColumnExpression);

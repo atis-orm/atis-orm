@@ -131,5 +131,23 @@ namespace Atis.SqlExpressionEngine
             this.hashCode.Add(updateSqlExpression.Columns);
             return base.VisitUpdateSqlExpression(updateSqlExpression);
         }
+
+        protected internal override SqlExpression VisitSqlCastExpression(SqlCastExpression sqlCastExpression)
+        {
+            this.hashCode.Add(sqlCastExpression.SqlDataType);
+            return base.VisitSqlCastExpression(sqlCastExpression);
+        }
+
+        protected internal override SqlExpression VisitSqlDateAddExpression(SqlDateAddExpression sqlDateAddExpression)
+        {
+            this.hashCode.Add(sqlDateAddExpression.DatePart);
+            return base.VisitSqlDateAddExpression(sqlDateAddExpression);
+        }
+
+        protected internal override SqlExpression VisitSqlDatePartExpression(SqlDatePartExpression sqlDatePartExpression)
+        {
+            this.hashCode.Add(sqlDatePartExpression.DatePart);
+            return base.VisitSqlDatePartExpression(sqlDatePartExpression);
+        }
     }
 }

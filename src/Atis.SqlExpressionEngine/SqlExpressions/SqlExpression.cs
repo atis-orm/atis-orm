@@ -102,7 +102,13 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         SubQueryColumn,
         In,
         Keyword,
-        Negate
+        Negate,
+        Cast,
+        DateAdd,
+        DatePart,
+        StringFunction,
+        LikeStartsWith,
+        LikeEndsWith
     }
 
 

@@ -119,10 +119,73 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlNegateExpression(sqlNegateExpression);
             }
+            else if (sqlExpression is SqlCastExpression sqlCastExpression)
+            {
+                return this.TranslateSqlCastExpression(sqlCastExpression);
+            }
+            else if (sqlExpression is SqlDateAddExpression sqlDateAddExpression)
+            {
+                return this.TranslateSqlDateAddExpression(sqlDateAddExpression);
+            }
+            else if (sqlExpression is SqlDatePartExpression sqlDatePartExpression)
+            {
+                return this.TranslateSqlDatePartExpression(sqlDatePartExpression);
+            }
+            else if (sqlExpression is SqlStringFunctionExpression sqlStringFunction)
+            {
+                return this.TranslateSqlStringFunctionExpression(sqlStringFunction);
+            }
+            else if (sqlExpression is SqlLikeExpression sqlLikeExpression)
+            {
+                return this.TranslateSqlLikeExpression(sqlLikeExpression);
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
             }
+        }
+
+        private string TranslateSqlLikeExpression(SqlLikeExpression sqlLikeExpression)
+        {
+            switch (sqlLikeExpression.NodeType)
+            {
+                case SqlExpressionType.LikeStartsWith:
+                    return $"({this.Translate(sqlLikeExpression.Expression)} like {this.Translate(sqlLikeExpression.Pattern)} + '%')";
+                case SqlExpressionType.LikeEndsWith:
+                    return $"({this.Translate(sqlLikeExpression.Expression)} like '%' + {this.Translate(sqlLikeExpression.Pattern)})";
+                default:
+                    return $"({this.Translate(sqlLikeExpression.Expression)} like '%' + {this.Translate(sqlLikeExpression.Pattern)} + '%')";
+            }
+        }
+
+        private string TranslateSqlStringFunctionExpression(SqlStringFunctionExpression sqlStringFunctionExpression)
+        {
+            string arguments = string.Empty;
+            if (sqlStringFunctionExpression.Arguments?.Length > 0)
+                arguments = $", {string.Join(", ", sqlStringFunctionExpression.Arguments.Select(this.Translate))}";
+            return $"{sqlStringFunctionExpression.StringFunction}({this.Translate(sqlStringFunctionExpression.StringExpression)}{arguments})";
+        }
+
+        private string TranslateSqlDatePartExpression(SqlDatePartExpression sqlDatePartExpression)
+        {
+            return $"datePart({sqlDatePartExpression.DatePart}, {this.Translate(sqlDatePartExpression.DateExpression)})";
+        }
+
+        private string TranslateSqlDateAddExpression(SqlDateAddExpression sqlDateAddExpression)
+        {
+            return $"dateAdd({sqlDateAddExpression.DatePart}, {this.Translate(sqlDateAddExpression.Interval)}, {this.Translate(sqlDateAddExpression.DateExpression)})";
+        }
+
+        private string TranslateSqlCastExpression(SqlCastExpression sqlCastExpression)
+        {
+            return $"cast({this.Translate(sqlCastExpression.Expression)} as {this.TranslateSqlDataType(sqlCastExpression.SqlDataType)})";
+        }
+
+        private string TranslateSqlDataType(ISqlDataType sqlDataType)
+        {
+            string length = sqlDataType.Length != null ? $"({sqlDataType.Length})" : string.Empty;
+            string decimalParams = sqlDataType.Precision != null && sqlDataType.Scale != null ? $"({sqlDataType.Precision}, {sqlDataType.Scale})" : string.Empty;
+            return $"{sqlDataType.DbType}{length}{decimalParams}";
         }
 
         private string TranslateSqlNegateExpression(SqlNegateExpression sqlNegateExpression)
@@ -612,7 +675,8 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 nt == SqlExpressionType.GreaterThan || nt == SqlExpressionType.GreaterThanOrEqual ||
                 nt == SqlExpressionType.LessThan || nt == SqlExpressionType.LessThanOrEqual ||
                 nt == SqlExpressionType.Equal || nt == SqlExpressionType.NotEqual ||
-                nt == SqlExpressionType.Like || nt == SqlExpressionType.In ||
+                nt == SqlExpressionType.Like || nt == SqlExpressionType.LikeStartsWith || nt == SqlExpressionType.LikeEndsWith ||
+                nt == SqlExpressionType.In ||
                 nt == SqlExpressionType.Not || nt == SqlExpressionType.Exists)
                 return true;
             

@@ -27,7 +27,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 SqlExpressionType.GreaterThanOrEqual,
                 SqlExpressionType.Equal,
                 SqlExpressionType.NotEqual,
-                SqlExpressionType.Like,
                 SqlExpressionType.Coalesce
             };
         private static SqlExpressionType ValidateNodeType(SqlExpressionType nodeType)
