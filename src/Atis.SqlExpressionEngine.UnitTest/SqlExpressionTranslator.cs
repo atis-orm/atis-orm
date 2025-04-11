@@ -115,10 +115,19 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlKeywordExpression(sqlKeywordExpression);
             }
+            else if (sqlExpression is SqlNegateExpression sqlNegateExpression)
+            {
+                return this.TranslateSqlNegateExpression(sqlNegateExpression);
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
             }
+        }
+
+        private string TranslateSqlNegateExpression(SqlNegateExpression sqlNegateExpression)
+        {
+            return $"-{this.Translate(sqlNegateExpression.Operand)}";
         }
 
         private string TranslateSqlNotExpression(SqlNotExpression sqlNotExpression)

@@ -203,19 +203,24 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlInValuesExpression(expression, new[] { values });
         }
 
-        public SqlQueryExpression CreateEmptySqlQuery()
+        public virtual SqlQueryExpression CreateEmptySqlQuery()
         {
             return new SqlQueryExpression(this);
         }
 
-        public SqlQuerySourceExpression CreateSubQuery(SqlQueryExpression sqlQuery)
+        public virtual SqlQuerySourceExpression CreateSubQuery(SqlQueryExpression sqlQuery)
         {
             return new SqlSubQueryExpression(sqlQuery);
         }
 
-        public SqlKeywordExpression CreateKeyword(string keyword)
+        public virtual SqlKeywordExpression CreateKeyword(string keyword)
         {
             return new SqlKeywordExpression(keyword);
+        }
+
+        public virtual SqlNegateExpression CreateNegate(SqlExpression operand)
+        {
+            return new SqlNegateExpression(operand);
         }
     }
 }

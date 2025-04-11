@@ -94,5 +94,14 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             Test("Parameter Selection In Multi Data Source Query Test", q.Expression, expectedResult);
         }
 
+        [TestMethod]
+        public void Full_casting_of_parameter()
+        {
+            var studentExtensions = new Queryable<StudentExtension>(queryProvider);
+            var q = studentExtensions.Where(x => x.IsDeleted).Select(x => x as Student);
+            string? expectedResult = null;
+
+            Test("Full casting of parameter", q.Expression, expectedResult);
+        }
     }
 }

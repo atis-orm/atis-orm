@@ -101,7 +101,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         CteDataSource,
         SubQueryColumn,
         In,
-        Keyword
+        Keyword,
+        Negate
     }
 
 

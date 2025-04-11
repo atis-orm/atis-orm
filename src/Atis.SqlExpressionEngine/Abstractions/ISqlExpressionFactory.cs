@@ -49,5 +49,6 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlQueryExpression CreateEmptySqlQuery();
         SqlQuerySourceExpression CreateSubQuery(SqlQueryExpression sqlQuery);
         SqlKeywordExpression CreateKeyword(string keyword);
+        SqlNegateExpression CreateNegate(SqlExpression operand);
     }
 }

@@ -235,6 +235,12 @@ namespace Atis.SqlExpressionEngine
             return sqlKeywordExpression;
         }
 
+        protected internal virtual SqlExpression VisitNegateExpression(SqlNegateExpression sqlNegateExpression)
+        {
+            var operand = this.Visit(sqlNegateExpression.Operand);
+            return sqlNegateExpression.Update(operand);
+        }
+
         //protected internal SqlExpression VisitSqlSubQueryColumnExpression(SqlSubQueryColumnExpression sqlSubQueryColumnExpression)
         //{
         //    var columnExpression = this.VisitAndConvert(sqlSubQueryColumnExpression.ColumnExpression);

@@ -22,6 +22,7 @@ namespace Atis.SqlExpressionEngine
                 new SchemaExpressionConverterFactory(context),
                 new TableExpressionConverterFactory(context),
                 new NullableValueExpressionConverterFactory(context),
+                new NegateExpressionConverterFactory(context),  
                 new NotExpressionConverterFactory(context),
                 new CastExpressionConverterFactory(context),
                 new StringLengthExpressionConverterFactory(context),

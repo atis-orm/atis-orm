@@ -615,5 +615,19 @@ where	(a_1.PID = '123')
         
         [PseudoMethod(nameof(FullNameExpression))]
         public static readonly Func<string, string, string> FullName = FullNameExpression.Compile();
+
+        [TestMethod]
+        public void Negation_test()
+        {
+            var invoiceDetails = new Queryable<InvoiceDetail>(queryProvider);
+            var q = invoiceDetails.Where(x => x.LineTotal > -1).Select(x => new { C1 = -x.LineTotal * -1 });
+            string? expectedResult = @"
+select	(-a_1.LineTotal * -1) as C1
+	from	InvoiceDetail as a_1
+	where	(a_1.LineTotal > -1)
+";
+
+            Test("Negation Test", q.Expression, expectedResult);
+        }
     }
 }
