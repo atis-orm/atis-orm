@@ -141,7 +141,7 @@ from	Student as a_1";
                 .Take(5)
                 ;
             var expectedResult = @"
-select	top (5)	a_1.StudentId as Id, a_1.Address as Address, len(a_1.Address) as AddressLength, a_1.Age as Age
+select	top (5)	a_1.StudentId as Id, a_1.Address as Address, CharLength(a_1.Address) as AddressLength, a_1.Age as Age
 from	Student as a_1
 where	(a_1.StudentId = '55')
 	    and	(a_1.Name like '%' + 'Jhon' + '%')

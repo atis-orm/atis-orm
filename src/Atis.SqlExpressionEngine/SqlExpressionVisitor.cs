@@ -264,9 +264,12 @@ namespace Atis.SqlExpressionEngine
         {
             var stringExpression = this.Visit(sqlStringFunctionExpression.StringExpression);
             var arguments = new List<SqlExpression>();
-            foreach (var argument in sqlStringFunctionExpression.Arguments)
+            if (sqlStringFunctionExpression.Arguments != null)
             {
-                arguments.Add(this.Visit(argument));
+                foreach (var argument in sqlStringFunctionExpression.Arguments)
+                {
+                    arguments.Add(this.Visit(argument));
+                }
             }
             return sqlStringFunctionExpression.Update(stringExpression, arguments.ToArray());
         }

@@ -39,7 +39,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             if (expression is MethodCallExpression methodCallExpr &&
                     methodCallExpr.Method.DeclaringType == typeof(string) &&
-                    SupportedMethods.Contains(methodCallExpr.Method.Name))
+                    (
+                    SupportedMethods.Contains(methodCallExpr.Method.Name)
+                    ||
+                    (methodCallExpr.Method.Name == nameof(string.Concat) && IsConcatMethodCall(methodCallExpr))
+                    ))
             {
                 converter = new StringFunctionsConverter(this.Context, methodCallExpr, converterStack);
                 return true;
@@ -47,6 +51,40 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             converter = null;
             return false;
         }
+
+        private bool IsConcatMethodCall(MethodCallExpression methodCallExpression)
+        {
+            if (methodCallExpression.Method.DeclaringType != typeof(string))
+                return false;
+
+            if (methodCallExpression.Method.Name != nameof(string.Concat))
+                return false;
+
+            var parameters = methodCallExpression.Method.GetParameters();
+
+            if (parameters.Length == 1)
+            {
+                var paramType = parameters[0].ParameterType;
+
+                if (paramType == typeof(object[]))
+                    return true;
+
+                if (paramType == typeof(string[]))
+                    return true;
+            }
+
+            if (parameters.Length > 1)
+            {
+                if (parameters.All(p => p.ParameterType == typeof(string)))
+                    return true;
+
+                if (parameters.All(p => p.ParameterType == typeof(object)))
+                    return true;
+            }
+
+            return false;
+        }
+
     }
 
     /// <summary>
@@ -139,6 +177,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 case nameof(string.Replace):
                     {
                         stringFunction = SqlStringFunction.Replace;
+                        break;
+                    }
+                case nameof(string.Concat):
+                    {
+                        stringFunction = SqlStringFunction.Concat;
                         break;
                     }
                 default:
