@@ -25,5 +25,32 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             string? expectedResult = @"select	cast(123 as NonUnicodeString(max)) as C1, cast(123.456 as NonUnicodeString(max)) as C2";
             Test("ToString method test", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void String_compare()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students.Where(x => string.Compare(x.Name, "A") > 0);
+            string? expectedResult = @"
+select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
+	from	Student as a_1
+	where	(a_1.Name > 'A')
+";
+
+            Test("String compare", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void String_CompareTo()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students.Where(x => x.Name.CompareTo("A") >= 0);
+            string? expectedResult = @"
+select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
+	from	Student as a_1
+	where	(a_1.Name >= 'A')
+";
+            Test("String CompareTo", q.Expression, expectedResult);
+        }
     }
 }

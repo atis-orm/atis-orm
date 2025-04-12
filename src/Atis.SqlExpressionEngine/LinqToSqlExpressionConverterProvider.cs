@@ -34,6 +34,7 @@ namespace Atis.SqlExpressionEngine
                 new MemberExpressionConverterFactory(context),
                 new QuoteExpressionConverterFactory(context),
                 new LambdaExpressionConverterFactory(context),
+                new StringCompareToConverterFactory(context),
                 new BinaryExpressionConverterFactory(context),
                 new MemberInitExpressionConverterFactory(context),
                 new NewExpressionConverterFactory(context),

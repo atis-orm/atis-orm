@@ -679,5 +679,52 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
 
             Test("Exists with Literal Boolean Flag Test", q.Expression, expectedResult);
         }
+
+        [TestMethod()]
+        public void Sub_query_join_with_Lambda_Parameter_as_scalar_result()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var studentAttendances = new Queryable<StudentAttendance>(queryProvider);
+            var studentGrades = new Queryable<StudentGrade>(queryProvider);
+            var q = students
+                        .Select(x => x.StudentId)
+                        .InnerJoin(studentAttendances.GroupBy(y => y.StudentId).Select(y => y.Key), (s, sa) => new { s, sa }, x => x.s == x.sa)
+                        .Select(x => new { Student_StudentID = x.s, StudentAttendance_StudentID = x.sa })
+                        .Select(x => x.Student_StudentID)
+                        .Select(x => x)
+                        .Where(x => studentGrades.Select(y => y.StudentId).Where(y => y == x).Any())
+                        ;
+            string? expectedResult = @"
+select	a_7.Col1 as Col1
+from	(
+	select	a_6.Col1 as Col1
+	from	(
+		select	a_5.Student_StudentID as Col1
+		from	(
+			select	a_2.Col1 as Student_StudentID, a_4.Col1 as StudentAttendance_StudentID
+			from	(
+				select	a_1.StudentId as Col1
+				from	Student as a_1
+			) as a_2
+				inner join (
+					select	a_3.StudentId as Col1
+					from	StudentAttendance as a_3
+					group by a_3.StudentId
+				) as a_4 on (a_2.Col1 = a_4.Col1)
+		) as a_5
+	) as a_6
+) as a_7
+where	exists(
+	select	1
+	from	(
+		select	a_8.StudentId as Col1
+		from	StudentGrade as a_8
+	) as a_9
+	where	(a_9.Col1 = a_7.Col1)
+)
+";
+            
+            Test("Sub Query Join with Lambda Parameter as Scalar Result Test", q.Expression, expectedResult);
+        }
     }
 }

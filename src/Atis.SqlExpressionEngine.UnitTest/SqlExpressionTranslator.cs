@@ -628,8 +628,8 @@ namespace Atis.SqlExpressionEngine.UnitTest
                     // should be translated to
                     //          a_1.Field1 != a_2.Field2 or ((a_1.Field1 is null and a_2.Field2 is not null) or (a_1.Field1 is not null and a_2.Field2 is null))
 
-                    left = this.Translate(sqlBinaryExpression.Left);
-                    right = this.Translate(sqlBinaryExpression.Right);
+                    left = this.TranslateNonLogicalExpression(sqlBinaryExpression.Left);
+                    right = this.TranslateNonLogicalExpression(sqlBinaryExpression.Right);
                 }
 
                 var op = GetOperator(sqlBinaryExpression.NodeType);
