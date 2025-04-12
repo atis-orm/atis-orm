@@ -52,6 +52,7 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlNegateExpression CreateNegate(SqlExpression operand);
         SqlCastExpression CreateCast(SqlExpression expression, ISqlDataType sqlDataType);
         SqlDateAddExpression CreateDateAdd(SqlDatePart datePart, SqlExpression interval, SqlExpression dateExpression);
+        SqlDateSubtractExpression CreateDateSubtract(SqlDatePart datePart, SqlExpression startDate, SqlExpression endDate);
         SqlDatePartExpression CreateDatePart(SqlDatePart datePart, SqlExpression dateExpr);
         SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, SqlExpression[] arguments);
         SqlLikeExpression CreateLike(SqlExpression stringExpression, SqlExpression pattern);

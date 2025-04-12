@@ -670,11 +670,11 @@ select	a_1.Designation as Designation, a_1.RowId as RowId, a_1.EmployeeId as Emp
             string? expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
-	where	not exists(
+	where	(case when exists(
 		select	1
 		from	EmployeeDegree as a_2
 		where	(a_1.EmployeeId = a_2.EmployeeId)
-	)
+	) then 1 else 0 end = 0)
 ";
 
             Test("Exists with Literal Boolean Flag Test", q.Expression, expectedResult);

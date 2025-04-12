@@ -24,6 +24,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public GetValueOrDefaultConverterFactory(IConversionContext context) : base(context)
         {
         }
+
+        /// <inheritdoc/>
         public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
         {
             if (expression is MethodCallExpression methodCall &&
@@ -46,6 +48,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             : base(context, expression, converterStack)
         {
         }
+
+        /// <inheritdoc/>
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             SqlExpression defaultValue;

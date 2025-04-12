@@ -52,5 +52,30 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
 ";
             Test("String CompareTo", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void String_different_method_calls()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students.Select(x => new
+            {
+                C1 = x.Name.Trim(),
+                C2 = x.Name.TrimStart(),
+                C3 = x.Name.TrimEnd(),
+                C4 = x.Name.IndexOf("a"),
+                C5 = x.Name.Length,
+                C6 = x.Name.Replace("a", "b"),
+                C7 = x.Name.ToUpper(),
+                C8 = x.Name.ToLower(),
+                C9 = x.Name.Substring(4),
+                C10 = x.Name.Substring(6, 3),
+            });
+            string? expectedResult = @"
+select	Trim(a_1.Name) as C1, TrimStart(a_1.Name) as C2, TrimEnd(a_1.Name) as C3, CharIndex(a_1.Name, 'a') as C4, CharLength(a_1.Name) as C5, Replace(a_1.Name, 'a', 'b') as C6, ToUpper(a_1.Name) as C7, ToLower(a_1.Name) as C8, SubString(a_1.Name, 4) as C9, SubString(a_1.Name, 6, 3) as C10
+	from	Student as a_1
+";
+
+            Test("String Trim call", q.Expression, expectedResult);
+        }
     }
 }

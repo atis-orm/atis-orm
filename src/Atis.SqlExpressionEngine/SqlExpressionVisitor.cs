@@ -254,6 +254,13 @@ namespace Atis.SqlExpressionEngine
             return sqlDateAddExpression.Update(interval, expression);
         }
 
+        protected internal virtual SqlExpression VisitSqlDateSubtractExpression(SqlDateSubtractExpression sqlDateSubtractExpression)
+        {
+            var startDate = this.Visit(sqlDateSubtractExpression.StartDate);
+            var endDate = this.Visit(sqlDateSubtractExpression.EndDate);
+            return sqlDateSubtractExpression.Update(startDate, endDate);
+        }
+
         protected internal virtual SqlExpression VisitSqlDatePartExpression(SqlDatePartExpression sqlDatePartExpression)
         {
             var dateExpression = this.Visit(sqlDatePartExpression.DateExpression);

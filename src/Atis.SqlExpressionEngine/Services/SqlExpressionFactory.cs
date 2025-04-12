@@ -233,6 +233,11 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlDateAddExpression(datePart, interval, dateExpression);
         }
 
+        public virtual SqlDateSubtractExpression CreateDateSubtract(SqlDatePart datePart, SqlExpression dateStart, SqlExpression dateEnd)
+        {
+            return new SqlDateSubtractExpression(datePart, dateStart, dateEnd);
+        }
+
         public virtual SqlDatePartExpression CreateDatePart(SqlDatePart datePart, SqlExpression dateExpression)
         {
             return new SqlDatePartExpression(datePart, dateExpression);

@@ -144,6 +144,12 @@ namespace Atis.SqlExpressionEngine
             return base.VisitSqlDateAddExpression(sqlDateAddExpression);
         }
 
+        protected internal override SqlExpression VisitSqlDateSubtractExpression(SqlDateSubtractExpression sqlDateSubtractExpression)
+        {
+            this.hashCode.Add(sqlDateSubtractExpression.DatePart);
+            return base.VisitSqlDateSubtractExpression(sqlDateSubtractExpression);
+        }
+
         protected internal override SqlExpression VisitSqlDatePartExpression(SqlDatePartExpression sqlDatePartExpression)
         {
             this.hashCode.Add(sqlDatePartExpression.DatePart);

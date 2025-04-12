@@ -108,7 +108,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         DatePart,
         StringFunction,
         LikeStartsWith,
-        LikeEndsWith
+        LikeEndsWith,
+        DateSubtract
     }
 
 

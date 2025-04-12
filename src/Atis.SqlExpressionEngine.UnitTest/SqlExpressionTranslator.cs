@@ -139,10 +139,19 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlLikeExpression(sqlLikeExpression);
             }
+            else if (sqlExpression is SqlDateSubtractExpression sqlDateSubtractExpression)
+            {
+                return this.TranslateSqlSubtractExpression(sqlDateSubtractExpression);
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
             }
+        }
+
+        private string TranslateSqlSubtractExpression(SqlDateSubtractExpression sqlDateSubtractExpression)
+        {
+            return $"dateSubtract({sqlDateSubtractExpression.DatePart}, {this.Translate(sqlDateSubtractExpression.StartDate)}, {this.Translate(sqlDateSubtractExpression.EndDate)})";
         }
 
         private string TranslateSqlLikeExpression(SqlLikeExpression sqlLikeExpression)

@@ -145,7 +145,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 if (convertedChildren.Length < 2)
                     throw new InvalidOperationException("String.CompareTo / String.Compare requires at least 2 arguments.");
 
-                return new SqlCollectionExpression(convertedChildren.Take(2));
+                return this.SqlFactory.CreateCollection(convertedChildren.Take(2));
             }
         }
     }
