@@ -1,4 +1,6 @@
-﻿namespace Atis.SqlExpressionEngine.UnitTest.Tests
+﻿using Atis.SqlExpressionEngine.Exceptions;
+
+namespace Atis.SqlExpressionEngine.UnitTest.Tests
 {
     [TestClass]
     public class OrderByTests : TestBase
@@ -97,6 +99,49 @@ select	a_1.RecordUpdateDate as Col1
 ";
 
             Test("OrderBy Value for nullable column with function", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void OrderBy_nullable_scalar_column_selection_as_lambda_parameter()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students.Select(x => x.Age).OrderBy(x => x);
+
+            string? expectedResult = @"
+select	a_1.Age as Col1
+	from	Student as a_1
+	order by Col1 asc
+";
+
+            Test("OrderBy nullable scalar column selection as Lambda Parameter", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void OrderBy_nullable_with_GetValueOrDefault()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students.Select(x => x.Age).OrderBy(x => x.GetValueOrDefault());
+
+            string? expectedResult = @"
+    select	a_1.Age as Col1
+	from	Student as a_1
+	order by isnull(a_1.Age, 0) asc
+";
+
+            Test("OrderBy nullable scalar column selection as Lambda Parameter", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(UnresolvedMemberAccessException))]
+        public void OrderBy_member_not_selected_in_Select_should_throw_exception()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students.Select(x => new Student() { StudentId = x.StudentId, Name = x.Name })
+                                .OrderBy(x => x.Address)
+                                ;
+            string? expectedResult = null;
+            
+            Test("OrderBy member not selected in Select should throw exception", q.Expression, expectedResult);
         }
     }
 }

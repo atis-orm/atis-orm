@@ -70,6 +70,7 @@ namespace Atis.SqlExpressionEngine
                 new StandaloneSelectQueryMethodExpressionConverterFactory(context),
                 new DateFunctionsConverterFactory(context), 
                 new ToStringConverterFactory(context),
+                new GetValueOrDefaultConverterFactory(context),
             };
             this.Factories.AddRange(defaultConverters);
         }

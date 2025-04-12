@@ -660,5 +660,24 @@ select	a_1.Designation as Designation, a_1.RowId as RowId, a_1.EmployeeId as Emp
 
             Test("Custom Business Method with NOT IN Test", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void Exists_with_literal_boolean_flag_should_remove_boolean_literal()
+        {
+            // this test is specially designed to be used with Sql Server
+            var employees = new Queryable<Employee>(queryProvider);
+            var q = employees.Where(x => x.NavDegrees.Any() == false);
+            string? expectedResult = @"
+select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
+	from	Employee as a_1
+	where	not exists(
+		select	1
+		from	EmployeeDegree as a_2
+		where	(a_1.EmployeeId = a_2.EmployeeId)
+	)
+";
+
+            Test("Exists with Literal Boolean Flag Test", q.Expression, expectedResult);
+        }
     }
 }

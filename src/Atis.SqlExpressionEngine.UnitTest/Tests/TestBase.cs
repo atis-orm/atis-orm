@@ -3,6 +3,7 @@ using Atis.SqlExpressionEngine.Preprocessors;
 using Atis.SqlExpressionEngine.Services;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using Atis.SqlExpressionEngine.UnitTest.Converters;
+using Atis.SqlExpressionEngine.UnitTest.Postprocessor;
 using Atis.SqlExpressionEngine.UnitTest.Preprocessors;
 using Atis.SqlExpressionEngine.UnitTest.Services;
 using System.Linq.Expressions;
@@ -54,8 +55,8 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             //var propertyMapper = new PropertyToDataSourceMapper();
             var contextExtensions = new object[] { sqlDataTypeFactory, sqlFactory, /*componentIdentifier,*/ model, parameterMapper, /*navigationMapper,*/ reflectionService/*, propertyMapper*/ };
             var conversionContext = new ConversionContext(contextExtensions);
-            var expressionConverterProvider = new LinqToSqlExpressionConverterProvider(conversionContext, factories: [ new SqlFunctionConverterFactory(conversionContext) ]);
-            var postProcessorProvider = new SqlExpressionPostprocessorProvider(sqlFactory, postprocessors: null);
+            var expressionConverterProvider = new LinqToSqlExpressionConverterProvider(conversionContext, factories: [new SqlFunctionConverterFactory(conversionContext)]);
+            var postProcessorProvider = new SqlExpressionPostprocessorProvider(sqlFactory, postprocessors: [new ExistsBooleanComparisonPostprocessor()]);
             var linqToSqlConverter = new LinqToSqlConverter(reflectionService, expressionConverterProvider, postProcessorProvider);
             var result = linqToSqlConverter.Convert(updatedQueryExpression);
             return result;
