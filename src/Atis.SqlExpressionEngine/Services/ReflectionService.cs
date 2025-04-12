@@ -176,5 +176,14 @@ namespace Atis.SqlExpressionEngine.Services
         {
             return value is System.Collections.IEnumerable && !(value is string);
         }
+
+        public bool IsProjectionContextMethod(MethodInfo method)
+        {
+            var methodName = method?.Name;
+            return methodName == nameof(Queryable.Select) || methodName == nameof(Queryable.OrderBy) ||
+                            methodName == nameof(Queryable.OrderByDescending) || methodName == nameof(Queryable.ThenBy) ||
+                            methodName == nameof(Queryable.ThenByDescending) || methodName == nameof(Queryable.GroupBy) ||
+                            methodName == nameof(QueryExtensions.OrderByDesc);
+        }
     }
 }

@@ -142,6 +142,11 @@ namespace Atis.SqlExpressionEngine.UnitTest
         public static readonly Func<Employee, string> CalcFullNameCompiled = CalcFullNameExpression.Compile();
     }
 
+    public class EmployeeExtension : Employee
+    {
+        public string Designation { get; set; } = null!;
+    }
+
     public class EmployeeDegree
     {
         public Guid RowId { get; set; }

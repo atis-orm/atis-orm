@@ -13,9 +13,14 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     {
         private static readonly string[] SupportedMethods = new[]
         {
-            nameof(DateTime.AddDays),
+            nameof(DateTime.AddYears),
             nameof(DateTime.AddMonths),
-            nameof(DateTime.AddYears)
+            nameof(DateTime.AddDays),
+            nameof(DateTime.AddHours),
+            nameof(DateTime.AddMinutes),
+            nameof(DateTime.AddSeconds),
+            nameof(DateTime.AddMilliseconds),
+            nameof(DateTime.AddTicks),
         };
 
         public DateFunctionsConverterFactory(IConversionContext context) : base(context) { }
@@ -50,28 +55,45 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
         }
 
+        /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             var methodName = this.Expression.Method.Name;
             var dateExpr = convertedChildren[0];      // e.g., DateTime instance
             var argExpr = convertedChildren[1];       // e.g., number of days/months/years
+            SqlDatePart datePart;
 
-            if (methodName == nameof(DateTime.AddDays))
-                return CreateDateAdd("day", dateExpr, argExpr);
+            switch (methodName)
+            {
+                case nameof(DateTime.AddYears):
+                    datePart = SqlDatePart.Year;
+                    break;
+                case nameof(DateTime.AddMonths):
+                    datePart = SqlDatePart.Month;
+                    break;
+                case nameof(DateTime.AddDays):
+                    datePart = SqlDatePart.Day;
+                    break;
+                case nameof(DateTime.AddHours):
+                    datePart = SqlDatePart.Hour;
+                    break;
+                case nameof(DateTime.AddMinutes):
+                    datePart = SqlDatePart.Minute;
+                    break;
+                case nameof(DateTime.AddSeconds):
+                    datePart = SqlDatePart.Second;
+                    break;
+                case nameof(DateTime.AddMilliseconds):
+                    datePart = SqlDatePart.Millisecond;
+                    break;
+                case nameof(DateTime.AddTicks):
+                    datePart = SqlDatePart.Tick; // Ticks are not directly supported, but can be converted to nanoseconds
+                    break;
+                default:
+                    throw new NotSupportedException($"Unsupported DateTime method: {methodName}");
+            }
 
-            if (methodName == nameof(DateTime.AddMonths))
-                return CreateDateAdd("month", dateExpr, argExpr);
-
-            if (methodName == nameof(DateTime.AddYears))
-                return CreateDateAdd("year", dateExpr, argExpr);
-
-            throw new NotSupportedException("Unsupported DateTime method: " + methodName);
-        }
-
-        private SqlFunctionCallExpression CreateDateAdd(string part, SqlExpression dateExpr, SqlExpression amountExpr)
-        {
-            return this.SqlFactory.CreateFunctionCall("dateadd",
-                new[] { this.SqlFactory.CreateKeyword(part), amountExpr, dateExpr });
+            return this.SqlFactory.CreateDateAdd(datePart, argExpr, dateExpr);
         }
     }
 

@@ -105,7 +105,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
             }
             else if (sqlExpression is SqlNotExpression sqlNotExpression)
             {
-                return $"not {this.Translate(sqlNotExpression.Operand)}";
+                return this.TranslateSqlNotExpression(sqlNotExpression);
             }
             else if (sqlExpression is SqlInValuesExpression sqlInValuesExpression)
             {
@@ -115,10 +115,96 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlKeywordExpression(sqlKeywordExpression);
             }
+            else if (sqlExpression is SqlNegateExpression sqlNegateExpression)
+            {
+                return this.TranslateSqlNegateExpression(sqlNegateExpression);
+            }
+            else if (sqlExpression is SqlCastExpression sqlCastExpression)
+            {
+                return this.TranslateSqlCastExpression(sqlCastExpression);
+            }
+            else if (sqlExpression is SqlDateAddExpression sqlDateAddExpression)
+            {
+                return this.TranslateSqlDateAddExpression(sqlDateAddExpression);
+            }
+            else if (sqlExpression is SqlDatePartExpression sqlDatePartExpression)
+            {
+                return this.TranslateSqlDatePartExpression(sqlDatePartExpression);
+            }
+            else if (sqlExpression is SqlStringFunctionExpression sqlStringFunction)
+            {
+                return this.TranslateSqlStringFunctionExpression(sqlStringFunction);
+            }
+            else if (sqlExpression is SqlLikeExpression sqlLikeExpression)
+            {
+                return this.TranslateSqlLikeExpression(sqlLikeExpression);
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
             }
+        }
+
+        private string TranslateSqlLikeExpression(SqlLikeExpression sqlLikeExpression)
+        {
+            switch (sqlLikeExpression.NodeType)
+            {
+                case SqlExpressionType.LikeStartsWith:
+                    return $"({this.Translate(sqlLikeExpression.Expression)} like {this.Translate(sqlLikeExpression.Pattern)} + '%')";
+                case SqlExpressionType.LikeEndsWith:
+                    return $"({this.Translate(sqlLikeExpression.Expression)} like '%' + {this.Translate(sqlLikeExpression.Pattern)})";
+                default:
+                    return $"({this.Translate(sqlLikeExpression.Expression)} like '%' + {this.Translate(sqlLikeExpression.Pattern)} + '%')";
+            }
+        }
+
+        private string TranslateSqlStringFunctionExpression(SqlStringFunctionExpression sqlStringFunctionExpression)
+        {
+            string arguments = string.Empty;
+            if (sqlStringFunctionExpression.Arguments?.Length > 0)
+                arguments = $", {string.Join(", ", sqlStringFunctionExpression.Arguments.Select(this.Translate))}";
+            return $"{sqlStringFunctionExpression.StringFunction}({this.Translate(sqlStringFunctionExpression.StringExpression)}{arguments})";
+        }
+
+        private string TranslateSqlDatePartExpression(SqlDatePartExpression sqlDatePartExpression)
+        {
+            return $"datePart({sqlDatePartExpression.DatePart}, {this.Translate(sqlDatePartExpression.DateExpression)})";
+        }
+
+        private string TranslateSqlDateAddExpression(SqlDateAddExpression sqlDateAddExpression)
+        {
+            return $"dateAdd({sqlDateAddExpression.DatePart}, {this.Translate(sqlDateAddExpression.Interval)}, {this.Translate(sqlDateAddExpression.DateExpression)})";
+        }
+
+        private string TranslateSqlCastExpression(SqlCastExpression sqlCastExpression)
+        {
+            return $"cast({this.Translate(sqlCastExpression.Expression)} as {this.TranslateSqlDataType(sqlCastExpression.SqlDataType)})";
+        }
+
+        private string TranslateSqlDataType(ISqlDataType sqlDataType)
+        {
+            string length;
+            if (sqlDataType.UseMaxLength)
+            {
+                length = "(max)";
+            }
+            else
+            {
+                length = sqlDataType.Length != null ? $"({sqlDataType.Length})" : string.Empty;
+            }
+            string decimalParams = sqlDataType.Precision != null && sqlDataType.Scale != null ? $"({sqlDataType.Precision}, {sqlDataType.Scale})" : string.Empty;
+            return $"{sqlDataType.DbType}{length}{decimalParams}";
+        }
+
+        private string TranslateSqlNegateExpression(SqlNegateExpression sqlNegateExpression)
+        {
+            return $"-{this.Translate(sqlNegateExpression.Operand)}";
+        }
+
+        private string TranslateSqlNotExpression(SqlNotExpression sqlNotExpression)
+        {
+            var operand = this.TranslateLogicalExpression(sqlNotExpression.Operand);
+            return $"not {operand}";
         }
 
         private string TranslateSqlKeywordExpression(SqlKeywordExpression sqlKeywordExpression)
@@ -148,9 +234,9 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string TranslateSqlConditionalExpression(SqlConditionalExpression sqlConditionExpression)
         {
-            var test = this.Translate(sqlConditionExpression.Test);
-            var ifTrue = this.Translate(sqlConditionExpression.IfTrue);
-            var ifFalse = this.Translate(sqlConditionExpression.IfFalse);
+            var test = this.TranslateLogicalExpression(sqlConditionExpression.Test);
+            var ifTrue = this.TranslateNonLogicalExpression(sqlConditionExpression.IfTrue);
+            var ifFalse = this.TranslateNonLogicalExpression(sqlConditionExpression.IfFalse);
             return $"case when {test} then {ifTrue} else {ifFalse} end";
         }
 
@@ -201,7 +287,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
                         isOrGroupOpen = true;
                     }
                 }
-                var translatedPredicate = this.Translate(predicate.Predicate);
+                var translatedPredicate = this.TranslateLogicalExpression(predicate.Predicate);
                 result.Append(translatedPredicate);
                 if (isOrGroupOpen)
                 {
@@ -353,8 +439,26 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string TranslateCteJoin(SqlJoinExpression join)
         {
-            var condition = join.JoinCondition != null ? $" on {this.Translate(join.JoinCondition)}" : "";
+            var condition = join.JoinCondition != null ? $" on {this.TranslateLogicalExpression(join.JoinCondition)}" : "";
             return $"{JoinTypeToString(join.JoinType)} {this.GetSimpleAlias(join.JoinedSource.DataSourceAlias, join.JoinedSource.Tag)}{condition}";
+        }
+
+        private string TranslateLogicalExpression(SqlExpression sqlExpression)
+        {
+            if (!this.IsLogicalExpression(sqlExpression))
+            {
+                sqlExpression = new SqlBinaryExpression(sqlExpression, new SqlLiteralExpression(true), SqlExpressionType.Equal);
+            }
+            return this.Translate(sqlExpression);
+        }
+
+        private string TranslateNonLogicalExpression(SqlExpression sqlExpression)
+        {
+            if (this.IsLogicalExpression(sqlExpression))
+            {
+                sqlExpression = new SqlConditionalExpression(sqlExpression, new SqlLiteralExpression(true), new SqlLiteralExpression(false));
+            }
+            return this.Translate(sqlExpression);
         }
 
 
@@ -373,7 +477,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
         private string TranslateSqlJoinExpression(SqlJoinExpression sqlJoinExpression)
         {
             var dataSource = this.Translate(sqlJoinExpression.JoinedSource);
-            var condition = sqlJoinExpression.JoinCondition != null ? $" on {this.Translate(sqlJoinExpression.JoinCondition)}" : "";
+            var condition = sqlJoinExpression.JoinCondition != null ? $" on {this.TranslateLogicalExpression(sqlJoinExpression.JoinCondition)}" : "";
             string joinType = JoinTypeToString(sqlJoinExpression.JoinType);
             return $"{joinType} {dataSource}{condition}";
         }
@@ -414,12 +518,27 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string TranslateSqlFunctionCallExpression(SqlFunctionCallExpression sqlFunctionCallExpression)
         {
-            var arguments = sqlFunctionCallExpression.Arguments != null ? string.Join(", ", sqlFunctionCallExpression.Arguments.Select(this.Translate)) : string.Empty;
+            var arguments = sqlFunctionCallExpression.Arguments != null ? this.TranslateSqlFunctionArguments(sqlFunctionCallExpression) : string.Empty;
             if (sqlFunctionCallExpression.FunctionName == "Count")
             {
                 arguments = string.IsNullOrWhiteSpace(arguments) ? "1" : arguments;
             }
             return $"{sqlFunctionCallExpression.FunctionName}({arguments})";
+        }
+
+        private string TranslateSqlFunctionArguments(SqlFunctionCallExpression sqlFunctionCallExpression)
+        {
+            var translation = new StringBuilder();
+            foreach (var arg in sqlFunctionCallExpression.Arguments)
+            {
+                if (translation.Length > 0)
+                {
+                    translation.Append(", ");
+                }
+                var translated = this.TranslateNonLogicalExpression(arg);
+                translation.Append(translated);
+            }
+            return translation.ToString();
         }
 
         private string TranslateSqlDataSourceExpression(SqlDataSourceExpression sqlDataSourceExpression)
@@ -455,7 +574,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string TranslateSqlColumnExpression(SqlColumnExpression sqlColumnExpression)
         {
-            return $"{this.Translate(sqlColumnExpression.ColumnExpression)} as {sqlColumnExpression.ColumnAlias}";
+            return $"{this.TranslateNonLogicalExpression(sqlColumnExpression.ColumnExpression)} as {sqlColumnExpression.ColumnAlias}";
         }
 
         private bool IsNull(SqlExpression sqlExpression)
@@ -478,26 +597,99 @@ namespace Atis.SqlExpressionEngine.UnitTest
         {
             if (sqlBinaryExpression.NodeType != SqlExpressionType.Coalesce)
             {
-                var left = this.Translate(sqlBinaryExpression.Left);
-                var right = this.Translate(sqlBinaryExpression.Right);
-                var op = GetOperator(sqlBinaryExpression.NodeType);
-
                 if (IsNull(sqlBinaryExpression.Right))
                 {
                     if (sqlBinaryExpression.NodeType == SqlExpressionType.Equal)
-                        return $"({left} is null)";
+                        return $"({this.Translate(sqlBinaryExpression.Left)} is null)";
                     else if (sqlBinaryExpression.NodeType == SqlExpressionType.NotEqual)
-                        return $"({left} is not null)";
+                        return $"({this.Translate(sqlBinaryExpression.Left)} is not null)";
                 }
 
-                return $"({left} {op} {right})";
+                string left;
+                string right;
+
+                if (sqlBinaryExpression.NodeType == SqlExpressionType.AndAlso || sqlBinaryExpression.NodeType == SqlExpressionType.OrElse)
+                {
+                    left = this.TranslateLogicalExpression(sqlBinaryExpression.Left);
+                    right = this.TranslateLogicalExpression(sqlBinaryExpression.Right);
+                }
+                else
+                {
+                    // if we are here then it means binary expression =, !=, >, >=, <, <=, +, -, *, /, % or bitwise operator
+                    // if this is the case then this is a must that left and right cannot be further And / OR
+                    // e.g      left > right        (here left/right cannot be `5 > 4 and 5 < 6`, `1 && 6`)
+                    // left and right will be some type of non-binary operation
+                    // in-case of equal and not equal they should be handling the null case
+                    // e.g.     a_1.Field1 = a_2.Field2
+                    // should be translated to
+                    //          a_1.Field1 = a_2.Field2 or (a_1.Field1 is null and a_2.Field2 is null)
+                    // similarly
+                    //          a_1.Field1 != a_2.Field2
+                    // should be translated to
+                    //          a_1.Field1 != a_2.Field2 or ((a_1.Field1 is null and a_2.Field2 is not null) or (a_1.Field1 is not null and a_2.Field2 is null))
+
+                    left = this.TranslateNonLogicalExpression(sqlBinaryExpression.Left);
+                    right = this.TranslateNonLogicalExpression(sqlBinaryExpression.Right);
+                }
+
+                var op = GetOperator(sqlBinaryExpression.NodeType);
+
+                //if (this.CanBeNull(sqlBinaryExpression.Left) && this.CanBeNull(sqlBinaryExpression.Right)
+                //    &&
+                //    (sqlBinaryExpression.NodeType == SqlExpressionType.Equal
+                //    ||
+                //    sqlBinaryExpression.NodeType == SqlExpressionType.NotEqual)
+                //    )
+                //{
+                //    if (sqlBinaryExpression.NodeType == SqlExpressionType.Equal)
+                //    {
+                //        return $"(({left} {op} {right}) or ({left} is null and {right} is null))";
+                //    }
+                //    else
+                //    {
+                //        return $"(({left} {op} {right}) or ({left} is null and {right} is not null) or ({left} is not null and {right} is null))";
+                //    }
+                //}
+                //else
+                //{
+                    return $"({left} {op} {right})";
+                //}
             }
             else
             {
-                return $"isnull({this.Translate(sqlBinaryExpression.Left)}, {this.Translate(sqlBinaryExpression.Right)})";
+                var left = this.TranslateNonLogicalExpression(sqlBinaryExpression.Left);
+                var right = this.TranslateNonLogicalExpression(sqlBinaryExpression.Right);
+                return $"isnull({left}, {right})";
             }
         }
 
+        //private bool CanBeNull(SqlExpression sqlExpression) 
+        //{
+        //    if (sqlExpression is SqlDataSourceColumnExpression ||
+        //        (sqlExpression is SqlLiteralExpression sqlLiteral && sqlLiteral.LiteralValue == null) ||
+        //        (sqlExpression is SqlParameterExpression sqlParameter && 
+        //            (sqlParameter.Value == null || sqlParameter.Value is string || sqlParameter.Value is System.Collections.IEnumerable || 
+        //                Nullable.GetUnderlyingType(sqlParameter.Value.GetType()) != null)))
+        //    {
+        //        return true;
+        //    }
+        //    return false;
+        //}
+
+        private bool IsLogicalExpression(SqlExpression sqlExpression)
+        {
+            var nt = sqlExpression.NodeType;
+            if (nt == SqlExpressionType.AndAlso || nt == SqlExpressionType.OrElse ||
+                nt == SqlExpressionType.GreaterThan || nt == SqlExpressionType.GreaterThanOrEqual ||
+                nt == SqlExpressionType.LessThan || nt == SqlExpressionType.LessThanOrEqual ||
+                nt == SqlExpressionType.Equal || nt == SqlExpressionType.NotEqual ||
+                nt == SqlExpressionType.Like || nt == SqlExpressionType.LikeStartsWith || nt == SqlExpressionType.LikeEndsWith ||
+                nt == SqlExpressionType.In ||
+                nt == SqlExpressionType.Not || nt == SqlExpressionType.Exists)
+                return true;
+            
+            return false;
+        }
 
         private string RemoveParenthesis(string expression)
         {

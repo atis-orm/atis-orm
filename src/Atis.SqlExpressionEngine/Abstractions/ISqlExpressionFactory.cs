@@ -49,5 +49,13 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlQueryExpression CreateEmptySqlQuery();
         SqlQuerySourceExpression CreateSubQuery(SqlQueryExpression sqlQuery);
         SqlKeywordExpression CreateKeyword(string keyword);
+        SqlNegateExpression CreateNegate(SqlExpression operand);
+        SqlCastExpression CreateCast(SqlExpression expression, ISqlDataType sqlDataType);
+        SqlDateAddExpression CreateDateAdd(SqlDatePart datePart, SqlExpression interval, SqlExpression dateExpression);
+        SqlDatePartExpression CreateDatePart(SqlDatePart datePart, SqlExpression dateExpr);
+        SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, SqlExpression[] arguments);
+        SqlLikeExpression CreateLike(SqlExpression stringExpression, SqlExpression pattern);
+        SqlLikeExpression CreateLikeStartsWith(SqlExpression stringExpression, SqlExpression pattern);
+        SqlLikeExpression CreateLikeEndsWith(SqlExpression stringExpression, SqlExpression pattern);
     }
 }

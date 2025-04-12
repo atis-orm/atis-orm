@@ -15,6 +15,11 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         public override SqlExpressionType NodeType => SqlExpressionType.Keyword;
 
+        protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
+        {
+            return sqlExpressionVisitor.VisitKeywordExpression(this);
+        }
+
         public override string ToString()
         {
             return Keyword;

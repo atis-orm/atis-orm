@@ -29,7 +29,7 @@ select	a_2.StudentId as StudentId, a_2.Name as Name, a_2.Address as Address, a_2
 	from	(
 		select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 		from	Student as a_1
-		where	(a_1.Address like ('%' + ('KHI' + '%')))
+		where	(a_1.Address like '%' + 'KHI' + '%')
 	) as a_2
 		cross join (
 			select	a_3.RowId as RowId, a_3.StudentId as StudentId, a_3.Grade as Grade
@@ -60,7 +60,7 @@ select	a_4.StudentId as StudentId, a_4.Grade as Grade, a_4.StudentId_1 as SgStud
 		from	(
 			select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 			from	Student as a_1
-			where	(a_1.Address like ('%' + ('KHI' + '%')))
+			where	(a_1.Address like '%' + 'KHI' + '%')
 		) as a_2
 			cross join StudentGrade as a_3
 		where	(a_2.StudentId = a_3.StudentId)

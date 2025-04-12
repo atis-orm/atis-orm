@@ -315,7 +315,7 @@ with cte_1 as
 select	cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, (
 	select	top (1)	cte_4.ManagerId as Col1
 	from	cte_4 as cte_4
-	where	(cte_4.Name like ('A' + '%'))
+	where	(cte_4.Name like 'A' + '%')
 ) as FirstManagerStartsWithA
 from	cte_1 as cte_1
 ";

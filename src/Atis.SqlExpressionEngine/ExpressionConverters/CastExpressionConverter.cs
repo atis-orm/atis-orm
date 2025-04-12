@@ -28,7 +28,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
         {
-            if (expression is UnaryExpression unaryExpression && expression.NodeType == ExpressionType.Convert)
+            if (expression is UnaryExpression unaryExpression && 
+                    (expression.NodeType == ExpressionType.Convert || expression.NodeType == ExpressionType.TypeAs))
             {
                 converter = new CastExpressionConverter(this.Context, unaryExpression, converterStack);
                 return true;

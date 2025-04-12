@@ -192,7 +192,7 @@ namespace Atis.SqlExpressionEngine
             return sqlConditionalExpression.Update(test, ifTrue, ifFalse);
         }
 
-        protected internal SqlExpression VisitUpdateSqlExpression(SqlUpdateExpression updateSqlExpression)
+        protected internal virtual SqlExpression VisitUpdateSqlExpression(SqlUpdateExpression updateSqlExpression)
         {
             var sqlQuery = this.VisitAndConvert(updateSqlExpression.SqlQuery);
             var updatingDataSource = this.VisitAndConvert(updateSqlExpression.UpdatingDataSource);
@@ -200,34 +200,85 @@ namespace Atis.SqlExpressionEngine
             return updateSqlExpression.Update(sqlQuery, updatingDataSource, values);
         }
 
-        protected internal SqlExpression VisitDeleteSqlExpression(SqlDeleteExpression sqlDeleteExpression)
+        protected internal virtual SqlExpression VisitDeleteSqlExpression(SqlDeleteExpression sqlDeleteExpression)
         {
             var sqlQuery = this.VisitAndConvert(sqlDeleteExpression.SqlQuery);
             var deletingDataSource = this.VisitAndConvert(sqlDeleteExpression.DeletingDataSource);
             return sqlDeleteExpression.Update(sqlQuery, deletingDataSource);
         }
 
-        protected internal SqlExpression VisitSqlNotExpression(SqlNotExpression sqlNotExpression)
+        protected internal virtual SqlExpression VisitSqlNotExpression(SqlNotExpression sqlNotExpression)
         {
             var operand = this.Visit(sqlNotExpression.Operand);
             return sqlNotExpression.Update(operand);
         }
 
-        protected internal SqlExpression VisitDataSourceReferenceExpression(SqlDataSourceReferenceExpression sqlDataSourceReferenceExpression)
+        protected internal virtual SqlExpression VisitDataSourceReferenceExpression(SqlDataSourceReferenceExpression sqlDataSourceReferenceExpression)
         {
             return sqlDataSourceReferenceExpression;
         }
 
-        protected internal SqlExpression VisitSelectedCollectionExpression(SqlSelectedCollectionExpression sqlSelectedCollectionExpression)
+        protected internal virtual SqlExpression VisitSelectedCollectionExpression(SqlSelectedCollectionExpression sqlSelectedCollectionExpression)
         {
             return sqlSelectedCollectionExpression;
         }
 
-        protected internal SqlExpression VisitInValuesExpression(SqlInValuesExpression sqlInValuesExpression)
+        protected internal virtual SqlExpression VisitInValuesExpression(SqlInValuesExpression sqlInValuesExpression)
         {
             var expression = this.Visit(sqlInValuesExpression.Expression);
             var values = sqlInValuesExpression.Values.Select(this.Visit).ToArray();
             return sqlInValuesExpression.Update(expression, values);
+        }
+
+        protected internal virtual SqlExpression VisitKeywordExpression(SqlKeywordExpression sqlKeywordExpression)
+        {
+            return sqlKeywordExpression;
+        }
+
+        protected internal virtual SqlExpression VisitNegateExpression(SqlNegateExpression sqlNegateExpression)
+        {
+            var operand = this.Visit(sqlNegateExpression.Operand);
+            return sqlNegateExpression.Update(operand);
+        }
+
+        protected internal virtual SqlExpression VisitSqlCastExpression(SqlCastExpression sqlCastExpression)
+        {
+            var expression = this.Visit(sqlCastExpression.Expression);
+            return sqlCastExpression.Update(expression);
+        }
+
+        protected internal virtual SqlExpression VisitSqlDateAddExpression(SqlDateAddExpression sqlDateAddExpression)
+        {
+            var expression = this.Visit(sqlDateAddExpression.DateExpression);
+            var interval = this.Visit(sqlDateAddExpression.Interval);
+            return sqlDateAddExpression.Update(interval, expression);
+        }
+
+        protected internal virtual SqlExpression VisitSqlDatePartExpression(SqlDatePartExpression sqlDatePartExpression)
+        {
+            var dateExpression = this.Visit(sqlDatePartExpression.DateExpression);
+            return sqlDatePartExpression.Update(dateExpression);
+        }
+
+        protected internal virtual SqlExpression VisitSqlStringFunctionExpression(SqlStringFunctionExpression sqlStringFunctionExpression)
+        {
+            var stringExpression = this.Visit(sqlStringFunctionExpression.StringExpression);
+            var arguments = new List<SqlExpression>();
+            if (sqlStringFunctionExpression.Arguments != null)
+            {
+                foreach (var argument in sqlStringFunctionExpression.Arguments)
+                {
+                    arguments.Add(this.Visit(argument));
+                }
+            }
+            return sqlStringFunctionExpression.Update(stringExpression, arguments.ToArray());
+        }
+
+        protected internal virtual SqlExpression VisitSqlLikeExpression(SqlLikeExpression sqlLikeExpression)
+        {
+            var stringExpression = this.Visit(sqlLikeExpression.Expression);
+            var pattern = this.Visit(sqlLikeExpression.Pattern);
+            return sqlLikeExpression.Update(stringExpression, pattern);
         }
 
         //protected internal SqlExpression VisitSqlSubQueryColumnExpression(SqlSubQueryColumnExpression sqlSubQueryColumnExpression)

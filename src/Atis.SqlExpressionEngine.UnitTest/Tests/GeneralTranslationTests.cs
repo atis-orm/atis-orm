@@ -141,10 +141,10 @@ from	Student as a_1";
                 .Take(5)
                 ;
             var expectedResult = @"
-select	top (5)	a_1.StudentId as Id, a_1.Address as Address, len(a_1.Address) as AddressLength, a_1.Age as Age
+select	top (5)	a_1.StudentId as Id, a_1.Address as Address, CharLength(a_1.Address) as AddressLength, a_1.Age as Age
 from	Student as a_1
 where	(a_1.StudentId = '55')
-	    and	(a_1.Name like ('%' + ('Jhon' + '%')))
+	    and	(a_1.Name like '%' + 'Jhon' + '%')
 order by Id asc";
             Test("Full Simple Query Test", q.Expression, expectedResult);
         }
@@ -181,7 +181,7 @@ select	top (2)	a_2.StudentId as StudentId, a_2.Name as Name, a_2.Address as Addr
 		from	Student as a_1
 		where	(a_1.StudentId = '2')
 	) as a_2
-	where	(lower(a_2.Address) like ('%' + ('US' + '%')))";
+	where	(ToLower(a_2.Address) like '%' + 'US' + '%')";
             Test("Complex Sub Query Test", q.Expression, expectedResult);
         }
 
@@ -282,7 +282,7 @@ from    Student as a_1
             string? expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
-	where	(a_1.Name like ('%' + ('Abc' + '%'))) and exists(
+	where	(a_1.Name like '%' + 'Abc' + '%') and exists(
 		select	1
 		from	StudentGrade as a_2
 		where	(a_2.Grade = '5') and (a_2.StudentId = a_1.StudentId)
@@ -322,11 +322,11 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             string? expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
-where	(a_1.Address like ('%' + ('City' + '%')))
+where	(a_1.Address like '%' + 'City' + '%')
 union all
 select	a_2.Name as Name, a_2.StudentId as Id
 from	Student as a_2
-where	(a_2.Address like ('%' + ('Town' + '%')))";
+where	(a_2.Address like '%' + 'Town' + '%')";
             Test("UnionAll Test", q.Expression, expectedResult);
         }
 
@@ -341,11 +341,11 @@ where	(a_2.Address like ('%' + ('Town' + '%')))";
             string? expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
-where	(a_1.Address like ('%' + ('City' + '%')))
+where	(a_1.Address like '%' + 'City' + '%')
 union
 select	a_2.Name as Name, a_2.StudentId as Id
 from	Student as a_2
-where	(a_2.Address like ('%' + ('Town' + '%')))
+where	(a_2.Address like '%' + 'Town' + '%')
 ";
             Test("Union Test", q.Expression, expectedResult);
         }
@@ -377,7 +377,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
         a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, 
         a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 from	Student as a_1
-where	(a_1.Name like ('555' + '%')) and 
+where	(a_1.Name like '555' + '%') and 
         ((0 = 1) or (a_1.CountryID = '1') or (a_1.CountryID = '2')) and (a_1.HasScholarship = 1)
 ";
             Test("Where OR Condition Test", q.Expression, expectedResult);
@@ -404,7 +404,7 @@ where	(a_1.Name like ('555' + '%')) and
 select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
 	from	Asset as a_1
 		inner join ItemBase as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)
-	where	(NavItem_2.ItemDescription like ('%' + ('Abc' + '%')))
+	where	(NavItem_2.ItemDescription like '%' + 'Abc' + '%')
 ";
                     Test("Casting Within Query Test-01", q.Expression, expectedResult);
                 }
@@ -423,7 +423,7 @@ select	a_1.EquipId as EquipId, a_1.Model as Model, a_1.ItemId as ItemId
 		select	1
 		from	Asset as a_2
 			inner join ItemBase as NavItem_3 on (NavItem_3.ItemId = a_2.ItemId)
-		where	(a_1.ItemId = NavItem_3.ItemId) and (NavItem_3.ItemDescription like ('%' + ('Abc' + '%')))
+		where	(a_1.ItemId = NavItem_3.ItemId) and (NavItem_3.ItemDescription like '%' + 'Abc' + '%')
 	)
 ";
                     Test("Casting Within Query Test-02", q.Expression, expectedResult);
@@ -437,7 +437,7 @@ select	a_1.EquipId as EquipId, a_1.Model as Model, a_1.ItemId as ItemId
 select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
 	from	Asset as a_1
 		inner join ItemBase as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)
-	where	(NavItem_2.ItemDescription like ('%' + ('Abc' + '%')))
+	where	(NavItem_2.ItemDescription like '%' + 'Abc' + '%')
 ";
                 Test("Casting Within Query Test-03", q.Expression, expectedResult);
             }
@@ -549,7 +549,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
 		from	Student as a_1
 		where	(a_1.Age > 18)
 	) as a_2
-	where	(a_2.Col1 like ('A' + '%'))
+	where	(a_2.Col1 like 'A' + '%')
 ";
 
             Test("Where followed by Select then another Where should wrap correctly", q.Expression, expectedResult);
@@ -615,5 +615,116 @@ where	(a_1.PID = '123')
         
         [PseudoMethod(nameof(FullNameExpression))]
         public static readonly Func<string, string, string> FullName = FullNameExpression.Compile();
+
+        [TestMethod]
+        public void Negation_test()
+        {
+            var invoiceDetails = new Queryable<InvoiceDetail>(queryProvider);
+            var q = invoiceDetails.Where(x => x.LineTotal > -1).Select(x => new { C1 = -x.LineTotal * -1 });
+            string? expectedResult = @"
+select	(-a_1.LineTotal * -1) as C1
+	from	InvoiceDetail as a_1
+	where	(a_1.LineTotal > -1)
+";
+
+            Test("Negation Test", q.Expression, expectedResult);
+        }
+
+        [PseudoMethod(nameof(IsValidDesignationForSoftwareEngineeringExpression))]
+        public static bool IsValidDesignationForSoftwareEngineering(string designation)
+        {
+            return IsValidDesignationForSoftwareEngineeringDelegate(designation);
+        }
+        static string[] DesignationsForSoftwareEngineering
+        {
+            get
+            {
+                return new string[] { "Developer", "Architect", "Programmer" };
+            }
+        }
+
+        public static readonly Expression<Func<string, bool>> IsValidDesignationForSoftwareEngineeringExpression = (designation) => DesignationsForSoftwareEngineering.Contains(designation);
+        private static readonly Func<string, bool> IsValidDesignationForSoftwareEngineeringDelegate = IsValidDesignationForSoftwareEngineeringExpression.Compile();
+
+        [TestMethod]
+        public void Custom_business_method_with_not_in_test()
+        {
+            var employees = new Queryable<EmployeeExtension>(queryProvider);
+            var q = employees.Where(x => !IsValidDesignationForSoftwareEngineering(x.Designation) || x.ManagerId != null);
+
+            string? expectedResult = @"
+select	a_1.Designation as Designation, a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
+	from	EmployeeExtension as a_1
+	where	(not a_1.Designation in ('Developer','Architect','Programmer') or (a_1.ManagerId is not null))
+";
+
+            Test("Custom Business Method with NOT IN Test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Exists_with_literal_boolean_flag_should_remove_boolean_literal()
+        {
+            // this test is specially designed to be used with Sql Server
+            var employees = new Queryable<Employee>(queryProvider);
+            var q = employees.Where(x => x.NavDegrees.Any() == false);
+            string? expectedResult = @"
+select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
+	from	Employee as a_1
+	where	not exists(
+		select	1
+		from	EmployeeDegree as a_2
+		where	(a_1.EmployeeId = a_2.EmployeeId)
+	)
+";
+
+            Test("Exists with Literal Boolean Flag Test", q.Expression, expectedResult);
+        }
+
+        [TestMethod()]
+        public void Sub_query_join_with_Lambda_Parameter_as_scalar_result()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var studentAttendances = new Queryable<StudentAttendance>(queryProvider);
+            var studentGrades = new Queryable<StudentGrade>(queryProvider);
+            var q = students
+                        .Select(x => x.StudentId)
+                        .InnerJoin(studentAttendances.GroupBy(y => y.StudentId).Select(y => y.Key), (s, sa) => new { s, sa }, x => x.s == x.sa)
+                        .Select(x => new { Student_StudentID = x.s, StudentAttendance_StudentID = x.sa })
+                        .Select(x => x.Student_StudentID)
+                        .Select(x => x)
+                        .Where(x => studentGrades.Select(y => y.StudentId).Where(y => y == x).Any())
+                        ;
+            string? expectedResult = @"
+select	a_7.Col1 as Col1
+from	(
+	select	a_6.Col1 as Col1
+	from	(
+		select	a_5.Student_StudentID as Col1
+		from	(
+			select	a_2.Col1 as Student_StudentID, a_4.Col1 as StudentAttendance_StudentID
+			from	(
+				select	a_1.StudentId as Col1
+				from	Student as a_1
+			) as a_2
+				inner join (
+					select	a_3.StudentId as Col1
+					from	StudentAttendance as a_3
+					group by a_3.StudentId
+				) as a_4 on (a_2.Col1 = a_4.Col1)
+		) as a_5
+	) as a_6
+) as a_7
+where	exists(
+	select	1
+	from	(
+		select	a_8.StudentId as Col1
+		from	StudentGrade as a_8
+	) as a_9
+	where	(a_9.Col1 = a_7.Col1)
+)
+";
+            
+            Test("Sub Query Join with Lambda Parameter as Scalar Result Test", q.Expression, expectedResult);
+        }
     }
 }

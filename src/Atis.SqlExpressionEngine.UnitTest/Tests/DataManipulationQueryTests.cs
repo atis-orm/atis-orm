@@ -91,7 +91,7 @@ from	(
 		inner join ItemBase as a_3 on (a_2.ItemId = a_3.ItemId)
 ) as a_4
 	left join ItemMoreInfo as NavItemMoreInfo_1 on (a_4.ItemId = NavItemMoreInfo_1.ItemId)
-where	(a_4.ItemDescription like ('%' + ('123' + '%')))
+where	(a_4.ItemDescription like '%' + '123' + '%')
 ";
             Test($"Update Query Multiple Table From Test", queryExpression, expectedResult);
         }
@@ -114,7 +114,7 @@ where	(a_4.ItemDescription like ('%' + ('123' + '%')))
 from	Asset as a_2
 	inner join ItemBase as a_1 on (a_2.ItemId = a_1.ItemId)
 	inner join ItemMoreInfo as a_3 on (a_3.ItemId = a_1.ItemId)
-where	(a_1.ItemDescription like ('%' + ('123' + '%')))
+where	(a_1.ItemDescription like '%' + '123' + '%')
 ";
             Test($"Update Query Multiple Table Complex Object For ModelPath Test", queryExpression, expectedResult);
         }

@@ -17,7 +17,7 @@
             string? expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
-where	(a_1.Address like ('%' + ('City' + '%')))
+where	(a_1.Address like '%' + 'City' + '%')
 order by a_1.Name asc
 offset 10 rows fetch next 10 rows only";
             Test("Paging Test", q.Expression, expectedResult);
@@ -38,7 +38,7 @@ offset 10 rows fetch next 10 rows only";
             string? expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
-where	(a_1.Address like ('%' + ('City' + '%')))
+where	(a_1.Address like '%' + 'City' + '%')
 order by a_1.Name asc
 offset 40 rows fetch next 10 rows only";
             Test("Paging With Skip And Take Test", q.Expression, expectedResult);
@@ -55,7 +55,7 @@ offset 40 rows fetch next 10 rows only";
             string? expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
-where	(a_1.Address like ('%' + ('City' + '%')))
+where	(a_1.Address like '%' + 'City' + '%')
 order by 1 asc
 offset 10 rows fetch next 10 rows only";
             Test("Paging Without OrderBy Test", q.Expression, expectedResult);

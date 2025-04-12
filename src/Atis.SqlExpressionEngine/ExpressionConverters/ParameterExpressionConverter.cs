@@ -78,13 +78,20 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return this.parameterMapper.GetDataSourceByParameterExpression(this.Expression);
         }
 
+        protected virtual bool IsLefNode => !(this.ParentConverter is MemberExpressionConverter);
+
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             var sqlExpression = this.GetDataSourceByParameterExpression()
                             ??
                             throw new InvalidOperationException($"No SqlExpression found for ParameterExpression '{this.Expression}'. This error usually indicates that the Query Method converter is not converting the first parameter to SqlQueryExpression, e.g. Select(customExpression, x => x.Field1), assume that 'customExpression' is not converting correctly to SqlQueryExpression, therefore, parameter 'x' will not be linked to any SqlQueryExpression instance and will cause this error when translating 'x' part of 'x.Field1' expression. Another reason could be that a custom query method's LambdaExpression parameter is not being mapped to any Data Source. E.g. CustomMethod(query, x => x.Field1, (p1, p2) => new {{ p1, p2 }}), so 'p1' and 'p2' parameters might be presenting data sources but not mapped to any. This is the responsibility of CustomMethod converter class to map those using {nameof(ILambdaParameterToDataSourceMapper)}.");
-            var isLeafNode = !(this.ParentExpression is MemberExpression);
+            // previously we were testing of the parent expression is MemberExpression
+            // to know if this is the leaf node, that's actually a problem, because
+            //  entity.Select(x => x.NullableDate).OrderBy(x => x.Value)
+            // in above statement x will be a child of MemberExpression but it should be
+            // considered as Leaf Node because .Value will be resolved by other converter
+            var isLeafNode = this.IsLefNode;
             // isLeafNode is true when the ParameterExpression is selected alone
             if (!(sqlExpression is SqlQueryExpression || sqlExpression is SqlDataSourceExpression))
                 throw new InvalidOperationException($"'{sqlExpression}' is neither SqlQueryExpression nor SqlDataSourceExpression");
