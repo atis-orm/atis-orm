@@ -374,5 +374,49 @@ select	a_2.CountryID as Col1
 ";
             Test("GroupBy with Having then Select OrderBy Where Select", q.Expression, expectedResult);
         }
+
+        [TestMethod()]
+        public void GroupBy_on_year_month()
+        {
+            var studentAttendances = new Queryable<StudentAttendance>(queryProvider);
+            var q = studentAttendances
+                        .GroupBy(x => new { x.AttendanceDate.Value.Year, x.AttendanceDate.Value.Month })
+                        .Select(x => new { x.Key.Year, x.Key.Month, TotalLines = x.Count() })
+                        ;
+
+            string? expectedResult = @"
+select	datePart(Year, a_1.AttendanceDate) as Year, datePart(Month, a_1.AttendanceDate) as Month, Count(1) as TotalLines
+	from	StudentAttendance as a_1
+	group by datePart(Year, a_1.AttendanceDate), datePart(Month, a_1.AttendanceDate)
+";
+
+            Test("GroupBy on year month", q.Expression, expectedResult);
+        }
+
+        [TestMethod()]
+        public void GroupBy_on_fields_select_all_fields_then_again_group_by_on_1_field_then_having_and_select()
+        {
+            var studentAttendances = new Queryable<StudentAttendance>(queryProvider);
+            var q = studentAttendances
+                        .GroupBy(x => new { x.StudentId, x.AttendanceDate.Value.Year, x.AttendanceDate.Value.Month })
+                        .Select(x => new { x.Key.StudentId, x.Key.Year, x.Key.Month })
+                        .GroupBy(x => new { x.StudentId })
+                        .Where(x => x.Min(y => y.Year) == 2002)
+                        .Select(x => new { ID = x.Key.StudentId, TotalLines = x.Count() })
+                        ;
+
+            string? expectedResult = @"
+select	a_2.StudentId as ID, Count(1) as TotalLines
+	from	(
+		select	a_1.StudentId as StudentId, datePart(Year, a_1.AttendanceDate) as Year, datePart(Month, a_1.AttendanceDate) as Month
+		from	StudentAttendance as a_1
+		group by a_1.StudentId, datePart(Year, a_1.AttendanceDate), datePart(Month, a_1.AttendanceDate)
+	) as a_2
+	group by a_2.StudentId
+	having	(Min(a_2.Year) = 2002)
+";
+
+            Test("GroupBy on fields select all fields then again group by on 1 field then having and select", q.Expression, expectedResult);
+        }
     }
 }

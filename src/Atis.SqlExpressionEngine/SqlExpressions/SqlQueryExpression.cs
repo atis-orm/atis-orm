@@ -1143,9 +1143,9 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <exception cref="InvalidOperationException">Throws when Group By is already set.</exception>
         public void ApplyGroupBy(SqlExpression groupByExpression)
         {
+            groupByExpression = this.WrapIfRequired(groupByExpression, SqlQueryOperation.GroupBy);
             if (this.GroupBy != null)
                 throw new InvalidOperationException("GroupBy already set.");
-            groupByExpression = this.WrapIfRequired(groupByExpression, SqlQueryOperation.GroupBy);
             this.GroupBy = groupByExpression;
         }
 

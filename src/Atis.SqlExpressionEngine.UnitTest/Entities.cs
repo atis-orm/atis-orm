@@ -131,7 +131,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         [NavigationProperty(NavigationType.ToChildren, typeof(EmployeeWithEmployeeOnManagerIdRelation))]
         public IQueryable<Employee> NavSubOrdinates { get; set; }
-        [NavigationLink(NavigationType.ToParent, nameof(Employee.RowId), nameof(Employee.ManagerId))]
+        [NavigationLink(NavigationType.ToParent, nameof(Employee.EmployeeId), nameof(Employee.ManagerId))]
         public Func<Employee> NavManager { get; set; }
         [NavigationProperty(NavigationType.ToChildren, typeof(EmployeeWithEmployeeOnChildrenGrandchildRecursiveRelation))]
         public IQueryable<EmployeeWithTopManagerDto> NavNestedChildren { get; set; }
