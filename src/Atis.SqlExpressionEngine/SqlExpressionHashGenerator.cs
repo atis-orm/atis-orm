@@ -149,5 +149,11 @@ namespace Atis.SqlExpressionEngine
             this.hashCode.Add(sqlDatePartExpression.DatePart);
             return base.VisitSqlDatePartExpression(sqlDatePartExpression);
         }
+
+        protected internal override SqlExpression VisitSqlStringFunctionExpression(SqlStringFunctionExpression sqlStringFunctionExpression)
+        {
+            this.hashCode.Add(sqlStringFunctionExpression.StringFunction);
+            return base.VisitSqlStringFunctionExpression(sqlStringFunctionExpression);
+        }
     }
 }
