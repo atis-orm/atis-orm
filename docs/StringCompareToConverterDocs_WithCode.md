@@ -14,49 +14,12 @@ A factory class (e.g., `StringCompareToConverterFactory`) is responsible for:
 - Determining whether the expression **matches a specific pattern**
 - Creating and returning an instance of a specialized **converter class** for that expression
 
-```csharp
-public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
-{
-    if (expression is BinaryExpression binaryExpression &&
-        (binaryExpression.NodeType == ExpressionType.GreaterThan ||
-         binaryExpression.NodeType == ExpressionType.GreaterThanOrEqual ||
-         binaryExpression.NodeType == ExpressionType.LessThan ||
-         binaryExpression.NodeType == ExpressionType.LessThanOrEqual ||
-         binaryExpression.NodeType == ExpressionType.Equal ||
-         binaryExpression.NodeType == ExpressionType.NotEqual) &&
-        binaryExpression.Left is MethodCallExpression methodCallExpression &&
-        (methodCallExpression.Method.Name == nameof(string.CompareTo) ||
-         methodCallExpression.Method.Name == nameof(string.Compare)) &&
-        methodCallExpression.Method.DeclaringType == typeof(string) &&
-        binaryExpression.Right is ConstantExpression constantExpression &&
-        (constantExpression.Value?.Equals(0) == true || constantExpression.Value?.Equals(1) == true))
-    {
-        converter = new StringCompareToConverter(Context, binaryExpression, converterStack);
-        return true;
-    }
-
-    converter = null;
-    return false;
-}
-```
-
 ### 2. **Converter Class**
 The converter class (e.g., `StringCompareToConverter`) is responsible for:
 - Performing the **actual conversion** to a `SqlExpression`
 - Maintaining **state** during the recursive conversion of sub-expressions
 - Providing child converters if needed (by overriding `TryCreateChildConverter`)
 
-```csharp
-public override bool TryCreateChildConverter(Expression childNode, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> childConverter)
-{
-    if (childNode == this.Expression.Left && childNode is MethodCallExpression stringCompareMethodCall)
-    {
-        childConverter = new StringCompareMethodConverter(Context, stringCompareMethodCall, converterStack);
-        return true;
-    }
-    return base.TryCreateChildConverter(childNode, converterStack, out childConverter);
-}
-```
 
 > 📌 This separation allows each converter to manage its own lifecycle and internal state, enabling complex expression rewriting or context-sensitive logic.
 
@@ -90,12 +53,46 @@ a < b
      - The left side is a method call: `string.Compare(...)` or `.CompareTo(...)`
      - The right side is a constant `0` or `1`
 
-(See factory code above.)
+```csharp
+public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
+{
+    if (expression is BinaryExpression binaryExpression &&
+        (binaryExpression.NodeType == ExpressionType.GreaterThan ||
+         binaryExpression.NodeType == ExpressionType.GreaterThanOrEqual ||
+         binaryExpression.NodeType == ExpressionType.LessThan ||
+         binaryExpression.NodeType == ExpressionType.LessThanOrEqual ||
+         binaryExpression.NodeType == ExpressionType.Equal ||
+         binaryExpression.NodeType == ExpressionType.NotEqual) &&
+        binaryExpression.Left is MethodCallExpression methodCallExpression &&
+        (methodCallExpression.Method.Name == nameof(string.CompareTo) ||
+         methodCallExpression.Method.Name == nameof(string.Compare)) &&
+        methodCallExpression.Method.DeclaringType == typeof(string) &&
+        binaryExpression.Right is ConstantExpression constantExpression &&
+        (constantExpression.Value?.Equals(0) == true || constantExpression.Value?.Equals(1) == true))
+    {
+        converter = new StringCompareToConverter(Context, binaryExpression, converterStack);
+        return true;
+    }
+
+    converter = null;
+    return false;
+}
+```
 
 2. **Custom Converter Creation**
    - The `StringCompareToConverter` intercepts the left-side method call by overriding `TryCreateChildConverter`.
 
-(See `TryCreateChildConverter` code above.)
+```csharp
+public override bool TryCreateChildConverter(Expression childNode, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> childConverter)
+{
+    if (childNode == this.Expression.Left && childNode is MethodCallExpression stringCompareMethodCall)
+    {
+        childConverter = new StringCompareMethodConverter(Context, stringCompareMethodCall, converterStack);
+        return true;
+    }
+    return base.TryCreateChildConverter(childNode, converterStack, out childConverter);
+}
+```
 
 3. **Child Converter Output**
    - `StringCompareMethodConverter` simply returns a `SqlCollectionExpression` with two values: the left and right string expressions.
@@ -144,7 +141,7 @@ switch (this.Expression.NodeType)
 
 ## ✅ Why Not Use the General `MethodCallConverter`?
 
-- The general converter would wrap the method call in a `SqlFunctionCallExpression`, which is not useful here.
+- The general converter would wrap the `string.Compare` method call in a `SqlFunctionCallExpression`, which is not useful here.
 - The parent converter would need to inspect and unpack that function call, introducing tight coupling and unpredictability.
 - By using a dedicated child converter, the parent retains **full control**, ensures a **predictable structure**, and avoids unnecessary complexity.
 
