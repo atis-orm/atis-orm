@@ -149,7 +149,7 @@ switch (this.Expression.NodeType)
 
 ## ✅ Summary
 
-[View `StringCompareToConverter.cs`](https://github.com/sallushan/atis-orm/blob/main/src/Atis.SqlExpressionEngine/ExpressionConverters/StringCompareToConverter.cs)
+[View `StringCompareToConverter.cs`](../src/Atis.SqlExpressionEngine/ExpressionConverters/StringCompareToConverter.cs)
 
 
 | Component               | Responsibility                               |
