@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
-    public class DatePropertyAccessConverterFactory : LinqToSqlExpressionConverterFactoryBase<MemberExpression>
+    public class DateTimeMemberAccessConverterFactory : LinqToSqlExpressionConverterFactoryBase<MemberExpression>
     {
         private static readonly string[] SupportedProperties = new[]
         {
@@ -24,7 +24,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             nameof(DateTime.Date),
         };
 
-        public DatePropertyAccessConverterFactory(IConversionContext context) : base(context) { }
+        public DateTimeMemberAccessConverterFactory(IConversionContext context) : base(context) { }
 
         public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
         {
@@ -32,7 +32,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 member.Member.DeclaringType == typeof(DateTime) &&
                 SupportedProperties.Contains(member.Member.Name))
             {
-                converter = new DatePropertyAccessConverter(this.Context, member, converterStack);
+                converter = new DateTimeMemberAccessConverter(this.Context, member, converterStack);
                 return true;
             }
 
@@ -46,7 +46,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converts DateTime properties like Year, Month, Day, Hour, etc., into SQL DATEPART function calls.
     ///     </para>
     /// </summary>
-    public class DatePropertyAccessConverter : LinqToSqlExpressionConverterBase<MemberExpression>
+    public class DateTimeMemberAccessConverter : LinqToSqlExpressionConverterBase<MemberExpression>
     {
         private static readonly Dictionary<string, SqlDatePart> PropertyToDatePart = new Dictionary<string, SqlDatePart>()
         {
@@ -62,7 +62,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         };
         private readonly ISqlDataTypeFactory sqlDataTypeFactory;
 
-        public DatePropertyAccessConverter(
+        public DateTimeMemberAccessConverter(
             IConversionContext context,
             MemberExpression expression,
             ExpressionConverterBase<Expression, SqlExpression>[] converterStack)

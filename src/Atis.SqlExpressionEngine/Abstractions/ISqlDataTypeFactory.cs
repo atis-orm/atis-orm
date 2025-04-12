@@ -8,5 +8,6 @@ namespace Atis.SqlExpressionEngine.Abstractions
     public interface ISqlDataTypeFactory
     {
         ISqlDataType CreateDate();
+        ISqlDataType CreateNonUnicodeString(int length);
     }
 }

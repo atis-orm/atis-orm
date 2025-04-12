@@ -17,5 +17,13 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
 
             Test("String concat method test", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void ToString_method_should_translate_to_cast_test()
+        {
+            var q = queryProvider.Select(() => new { C1 = 123.ToString(), C2 = 123.456.ToString() });
+            string? expectedResult = @"select	cast(123 as NonUnicodeString(max)) as C1, cast(123.456 as NonUnicodeString(max)) as C2";
+            Test("ToString method test", q.Expression, expectedResult);
+        }
     }
 }

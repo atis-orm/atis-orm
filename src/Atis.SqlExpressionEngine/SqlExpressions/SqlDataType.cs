@@ -13,11 +13,12 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         int? Precision { get; }
         int? Scale { get; }
         bool IsUnicode { get; }
+        bool UseMaxLength { get; }
     }
 
     public class SqlDataType : ISqlDataType
     {
-        public SqlDataType(Type clrType, string dbType, int? length, bool isNullable, bool isUnicode, int? precision, int? scale)
+        public SqlDataType(Type clrType, string dbType, int? length, bool isNullable, bool isUnicode, int? precision, int? scale, bool useMaxLength)
         {
             this.ClrType = clrType;
             this.DbType = dbType;
@@ -26,6 +27,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.IsUnicode = isUnicode;
             this.Precision = precision;
             this.Scale = scale;
+            this.UseMaxLength = useMaxLength;
         }
 
         public Type ClrType { get; }
@@ -42,6 +44,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         public bool IsUnicode { get; }
 
+        public bool UseMaxLength { get; }
+
         public override bool Equals(object obj)
         {
             if (obj is SqlDataType other)
@@ -52,14 +56,15 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                        this.IsNullable == other.IsNullable &&
                        this.IsUnicode == other.IsUnicode &&
                        this.Precision == other.Precision &&
-                       this.Scale == other.Scale;
+                       this.Scale == other.Scale && 
+                       this.UseMaxLength == other.UseMaxLength;
             }
             return false;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(this.ClrType, this.DbType, this.Length, this.IsNullable, this.IsUnicode, this.Precision, this.Scale);
+            return HashCode.Combine(this.ClrType, this.DbType, this.Length, this.IsNullable, this.IsUnicode, this.Precision, this.Scale, this.UseMaxLength);
         }
     }
 }

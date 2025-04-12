@@ -29,7 +29,7 @@ namespace Atis.SqlExpressionEngine
                 new ConstantQueryableExpressionConverterFactory(context),
                 new ParameterExpressionConverterFactory(context),
                 new GroupByKeyExpressionConverterFactory(context),
-                new DatePropertyAccessConverterFactory(context),
+                new DateTimeMemberAccessConverterFactory(context),
                 new VariableMemberExpressionConverterFactory(context),
                 new MemberExpressionConverterFactory(context),
                 new QuoteExpressionConverterFactory(context),
@@ -69,6 +69,7 @@ namespace Atis.SqlExpressionEngine
                 new NewArrayExpressionConverterFactory(context),
                 new StandaloneSelectQueryMethodExpressionConverterFactory(context),
                 new DateFunctionsConverterFactory(context), 
+                new ToStringConverterFactory(context),
             };
             this.Factories.AddRange(defaultConverters);
         }

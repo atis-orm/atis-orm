@@ -183,7 +183,15 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string TranslateSqlDataType(ISqlDataType sqlDataType)
         {
-            string length = sqlDataType.Length != null ? $"({sqlDataType.Length})" : string.Empty;
+            string length;
+            if (sqlDataType.UseMaxLength)
+            {
+                length = "(max)";
+            }
+            else
+            {
+                length = sqlDataType.Length != null ? $"({sqlDataType.Length})" : string.Empty;
+            }
             string decimalParams = sqlDataType.Precision != null && sqlDataType.Scale != null ? $"({sqlDataType.Precision}, {sqlDataType.Scale})" : string.Empty;
             return $"{sqlDataType.DbType}{length}{decimalParams}";
         }

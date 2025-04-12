@@ -29,7 +29,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                         memberExpression.Member.Name == nameof(string.Length) &&
                         memberExpression.Member.DeclaringType == typeof(string))
             {
-                converter = new StringLengthExpressionConverter(this.Context, memberExpression, converterStack);
+                converter = new StringLengthConverter(this.Context, memberExpression, converterStack);
                 return true;
             }
             converter = null;
@@ -42,17 +42,17 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for handling string length expressions.
     ///     </para>
     /// </summary>
-    public class StringLengthExpressionConverter : LinqToSqlExpressionConverterBase<MemberExpression>
+    public class StringLengthConverter : LinqToSqlExpressionConverterBase<MemberExpression>
     {
         /// <summary>
         ///     <para>
-        ///         Initializes a new instance of the <see cref="StringLengthExpressionConverter"/> class.
+        ///         Initializes a new instance of the <see cref="StringLengthConverter"/> class.
         ///     </para>
         /// </summary>
         /// <param name="context">The conversion context.</param>
         /// <param name="expression">The source expression to be converted.</param>
         /// <param name="converterStack">The stack of converters representing the parent chain for context-aware conversion.</param>
-        public StringLengthExpressionConverter(IConversionContext context, MemberExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
+        public StringLengthConverter(IConversionContext context, MemberExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
         }
