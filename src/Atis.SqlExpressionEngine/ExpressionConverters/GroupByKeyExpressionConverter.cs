@@ -106,7 +106,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 {
                     return sqlQuery.GetGroupByScalarExpression()
                             ??
-                            throw new InvalidOperationException($"Expression '{this.Expression}' is a GroupBy Expression which should return the scalar value, but no scalar value was returned.");
+                            sqlQuery.GroupBy;
                 }
                 else
                     return sqlQuery;

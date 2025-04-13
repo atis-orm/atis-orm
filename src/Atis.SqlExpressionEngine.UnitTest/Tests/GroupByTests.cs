@@ -375,7 +375,7 @@ select	a_2.CountryID as Col1
             Test("GroupBy with Having then Select OrderBy Where Select", q.Expression, expectedResult);
         }
 
-        [TestMethod()]
+        [TestMethod]
         public void GroupBy_on_year_month()
         {
             var studentAttendances = new Queryable<StudentAttendance>(queryProvider);
@@ -393,7 +393,7 @@ select	datePart(Year, a_1.AttendanceDate) as Year, datePart(Month, a_1.Attendanc
             Test("GroupBy on year month", q.Expression, expectedResult);
         }
 
-        [TestMethod()]
+        [TestMethod]
         public void GroupBy_on_fields_select_all_fields_then_again_group_by_on_1_field_then_having_and_select()
         {
             var studentAttendances = new Queryable<StudentAttendance>(queryProvider);
@@ -417,6 +417,18 @@ select	a_2.StudentId as ID, Count(1) as TotalLines
 ";
 
             Test("GroupBy on fields select all fields then again group by on 1 field then having and select", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Full_Key_anonymous_object_selection()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students.GroupBy(x => new { x.StudentType, x.CountryID })
+                        .Select(x => x.Key)
+                        .OrderBy(x => x.CountryID);
+
+            string? expectedResult = null;
+            Test("Full Key anonymous object selection", q.Expression, expectedResult);
         }
     }
 }
