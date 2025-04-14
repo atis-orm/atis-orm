@@ -77,5 +77,60 @@ select	a_1.DOC_NUM as DOC_NUM, a_1.Trans_DODAAC as Trans_DODAAC, a_1.Req_PID as 
 ";
             Test("Bench stock complex query test", finalQuery.Expression, expectedResult);
         }
+
+
+        [TestMethod()]
+        public void Plan_table_complex_query()
+        {
+            var planTable = new Queryable<PlanTable>(this.queryProvider);
+            var q = planTable
+                        .Select(
+                            x => new
+                            {
+                                x.ID,
+                                x.Date_Time,
+                                x.ID_Plan,
+                                ID_Plan_Adv_Start = x.ID_Plan ?? planTable.Where(y => y.ID < x.ID && y.ID_Plan != null).Max(y => y.ID).ToString()
+                            }
+                        )
+                        .GroupBy(x => x.ID_Plan_Adv_Start)
+                        .Select(x => new
+                        {
+                            Start_Date = x.Min(y => y.Date_Time),
+                            End_Date = x.Max(y => y.Date_Time),
+                            Plan_ID = x.Min(y => y.ID_Plan),
+                            Count_PlanID = x.Count()
+                        }
+                        )
+                        .OrderBy(x => x.Start_Date)
+                        ;
+
+            string? expectedResult = @"
+select	Min(a_3.Date_Time) as Start_Date, 
+        Max(a_3.Date_Time) as End_Date, 
+        Min(a_3.ID_Plan) as Plan_ID, 
+        Count(1) as Count_PlanID
+from	(
+	select	a_1.ID as ID, 
+            a_1.Date_Time as Date_Time, 
+            a_1.ID_Plan as ID_Plan, 
+            isnull(
+                a_1.ID_Plan, 
+                cast(
+                        (
+		                    select	Max(a_2.ID) as Col1
+		                    from	PlanTable as a_2
+		                    where	((a_2.ID < a_1.ID) and (a_2.ID_Plan is not null))
+	                    ) as NonUnicodeString(max)
+                )
+            ) as ID_Plan_Adv_Start
+	from	PlanTable as a_1
+) as a_3
+group by a_3.ID_Plan_Adv_Start
+order by Start_Date asc
+";
+            Test("Plan complex query", q.Expression, expectedResult);
+        }
+
     }
 }

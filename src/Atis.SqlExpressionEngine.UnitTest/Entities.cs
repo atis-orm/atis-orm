@@ -407,4 +407,13 @@ namespace Atis.SqlExpressionEngine.UnitTest
         public System.String LU_Description { get; set; }
         public System.String LU_ShortDesc { get; set; }
     }
+
+
+    class PlanTable
+    {
+        public int ID { get; set; }
+        public DateTime Date_Time { get; set; }
+        public string ID_Plan { get; set; }
+    }
+
 }

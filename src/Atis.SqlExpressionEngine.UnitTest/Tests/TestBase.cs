@@ -106,11 +106,11 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             if (query.StartsWith("("))
                 query = query.Substring(1, query.Length - 2);
             query = query.Trim();
-            query = query.Replace("\r", " ").Replace("\n", " ").Replace("\t", " ");
-            while (query.Contains("  "))
-            {
-                query = query.Replace("  ", " ");
-            }
+            query = query.Replace("\r\n", "").Replace("\r", "").Replace("\n", " ").Replace("\t", "").Replace(" ", "").ToLower();
+            //while (query.Contains("  "))
+            //{
+            //    query = query.Replace("  ", " ");
+            //}
             return query;
         }
         #endregion
