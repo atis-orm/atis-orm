@@ -29,8 +29,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         protected override bool IsQueryMethodCall(MethodCallExpression methodCallExpression)
         {
-            return methodCallExpression.Method.Name == nameof(Queryable.Join) ||
-                    methodCallExpression.Method.Name == nameof(Queryable.GroupJoin);
+            return (methodCallExpression.Method.Name == nameof(Queryable.Join) ||
+                    methodCallExpression.Method.Name == nameof(Queryable.GroupJoin)) &&
+                    (methodCallExpression.Method.DeclaringType == typeof(Queryable) ||
+                    methodCallExpression.Method.DeclaringType == typeof(Enumerable))
+                    ;
         }
 
         /// <inheritdoc />

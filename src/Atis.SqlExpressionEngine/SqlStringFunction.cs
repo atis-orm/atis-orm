@@ -16,5 +16,8 @@ namespace Atis.SqlExpressionEngine
         ToUpper,
         TrimEnd,
         TrimStart,
+        Join,
+        ConcatAggregate,
+        JoinAggregate,
     }
 }

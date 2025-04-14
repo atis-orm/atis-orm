@@ -30,16 +30,55 @@ namespace Atis.SqlExpressionEngine.UnitTest.Converters
 
     public class SqlFunctionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
     {
+        private readonly ILambdaParameterToDataSourceMapper parameterMapper;
+
         public SqlFunctionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
         {
+            this.parameterMapper = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
+        }
+
+        private SqlQueryExpression sqlQuerySource;
+
+        public override void OnConversionCompletedByChild(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression childNode, SqlExpression convertedExpression)
+        {
+            if (childNode == this.Expression.Arguments.FirstOrDefault())
+            {
+                if (convertedExpression is SqlDataSourceReferenceExpression ds &&
+                    ds.DataSource is SqlQueryExpression sqlQuery)
+                {
+                    // first argument might be the query argument
+                    // if that's the case, we might need to the lambda parameter with
+                    // this query
+                    for (var i = 1; i < this.Expression.Arguments.Count; i++)
+                    {
+                        var argument = this.Expression.Arguments[i];
+                        if (argument is UnaryExpression unaryExpression)
+                            argument = unaryExpression.Operand;
+                        if (argument is LambdaExpression lambda)
+                        {
+                            var parameter = lambda.Parameters.FirstOrDefault();
+                            if (parameter != null)
+                            {
+                                sqlQuerySource = sqlQuery;
+                                this.parameterMapper.TrySetParameterMap(parameter, sqlQuery);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
+            IEnumerable<SqlExpression> functionArguments;
+            if (this.sqlQuerySource != null)
+                functionArguments = convertedChildren.Skip(1);
+            else
+                functionArguments = convertedChildren;
             var functionName = this.Expression.Method.GetCustomAttribute<SqlFunctionAttribute>()?.SqlFunctionName
                                 ??
                                 throw new InvalidOperationException($"The method {this.Expression.Method.Name} does not have a SqlFunctionAttribute.");
-            var sqlFunction= new SqlFunctionCallExpression(functionName, convertedChildren);
+            var sqlFunction = new SqlFunctionCallExpression(functionName, functionArguments.ToArray());
             return sqlFunction;
         }
     }

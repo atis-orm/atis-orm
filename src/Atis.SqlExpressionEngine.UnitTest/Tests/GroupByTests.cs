@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using Atis.SqlExpressionEngine.UnitTest.Metadata;
+using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.UnitTest.Tests
 {
@@ -427,8 +428,59 @@ select	a_2.StudentId as ID, Count(1) as TotalLines
                         .Select(x => x.Key)
                         .OrderBy(x => x.CountryID);
 
-            string? expectedResult = null;
+            string? expectedResult = @"
+select	a_1.StudentType as StudentType, a_1.CountryID as CountryID
+	from	Student as a_1
+	group by a_1.StudentType, a_1.CountryID
+	order by CountryID asc
+";
             Test("Full Key anonymous object selection", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void GroupBy_select_non_grouped_field_using_String_Join()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students
+                        .GroupBy(x => x.CountryID)
+                        .Select(g => new { CountryId = g.Key, StudentTypes = string.Join(", ", g.Select(y => y.StudentType)) });
+            string? expectedResult = @"
+select	a_1.CountryID as CountryId, JoinAggregate(a_1.StudentType, ', ') as StudentTypes
+	from	Student as a_1
+	group by a_1.CountryID
+";
+            Test("GroupBy select non grouped field", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void GroupBy_using_custom_String_Agg_function()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students
+                        .GroupBy(x => x.CountryID)
+                        .Select(g => new { CountryId = g.Key, StudentTypes = g.String_Agg(y => y.StudentType, ", ") });
+            string? expectedResult = @"
+select	a_1.CountryID as CountryId, string_agg(a_1.StudentType, ', ') as StudentTypes
+	from	Student as a_1
+	group by a_1.CountryID
+";
+            Test("GroupBy using custom String_Agg function", q.Expression, expectedResult);
+        }
+
+
+        [TestMethod]
+        public void String_Concat_on_GroupBy()
+        {
+            var students = new Queryable<Student>(queryProvider);
+            var q = students
+                        .GroupBy(x => x.CountryID)
+                        .Select(g => new { CountryId = g.Key, StudentTypes = string.Concat(g.Select(y => y.StudentType)) });
+            string? expectedResult = @"
+select	a_1.CountryID as CountryId, ConcatAggregate(a_1.StudentType) as StudentTypes
+	from	Student as a_1
+	group by a_1.CountryID
+";
+            Test("GroupBy Concat on GroupBy", q.Expression, expectedResult);
         }
     }
 }

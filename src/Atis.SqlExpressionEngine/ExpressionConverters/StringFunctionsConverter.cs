@@ -21,7 +21,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// </summary>
         protected static readonly string[] SupportedMethods = new string[] {
                 nameof(string.Substring), nameof(string.ToLower), nameof(string.ToUpper), nameof(string.Trim), nameof(string.TrimEnd), nameof(string.TrimStart),
-                nameof(string.Contains), nameof(string.StartsWith), nameof(string.EndsWith), nameof(string.IndexOf), nameof(string.Replace),
+                nameof(string.Contains), nameof(string.StartsWith), nameof(string.EndsWith), nameof(string.IndexOf), nameof(string.Replace)
             };
 
         /// <summary>
@@ -42,7 +42,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     (
                     SupportedMethods.Contains(methodCallExpr.Method.Name)
                     ||
-                    (methodCallExpr.Method.Name == nameof(string.Concat) && IsConcatMethodCall(methodCallExpr))
+                    IsConcatMethodCall(methodCallExpr)
+                    ||
+                    IsJoinMethodCall(methodCallExpr)
                     ))
             {
                 converter = new StringFunctionsConverter(this.Context, methodCallExpr, converterStack);
@@ -82,6 +84,27 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     return true;
             }
 
+            return false;
+        }
+
+        private bool IsJoinMethodCall(MethodCallExpression methodCallExpression)
+        {
+            if (methodCallExpression.Method.DeclaringType != typeof(string))
+                return false;
+            if (methodCallExpression.Method.Name != nameof(string.Join))
+                return false;
+            var parameters = methodCallExpression.Method.GetParameters();
+            if (parameters.Length == 2)
+            {
+                var paramType0 = parameters[0].ParameterType;
+                if (paramType0 != typeof(string))
+                    return false;
+                var paramType1 = parameters[1].ParameterType;
+                if (paramType1 != typeof(string[]) && paramType1 != typeof(object[]))
+                    return false;
+
+                return true;
+            }
             return false;
         }
 
@@ -182,6 +205,14 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 case nameof(string.Concat):
                     {
                         stringFunction = SqlStringFunction.Concat;
+                        break;
+                    }
+                case nameof(string.Join):
+                    {
+                        stringFunction = SqlStringFunction.Join;
+                        var separator = new[] { stringExpression };
+                        stringExpression = arguments[0];
+                        arguments = separator;
                         break;
                     }
                 default:

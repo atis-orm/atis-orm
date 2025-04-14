@@ -19,6 +19,14 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         }
 
         [TestMethod]
+        public void String_Join_method_test()
+        {
+            var q = queryProvider.Select(() => new { C1 = string.Join(", ", new object[] { "1", 2, "3" }), C2 = string.Join(", ", "abc", "def") });
+            string? expectedResult = @"select	Join('1', 2, '3', ', ') as C1, Join('abc', 'def', ', ') as C2";
+            Test("String join method test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
         public void ToString_method_should_translate_to_cast_test()
         {
             var q = queryProvider.Select(() => new { C1 = 123.ToString(), C2 = 123.456.ToString() });
