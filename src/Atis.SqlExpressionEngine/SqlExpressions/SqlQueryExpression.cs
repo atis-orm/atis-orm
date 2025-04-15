@@ -405,17 +405,16 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 if (!this.DataSources.Any(x => x == navigationParent))
                     throw new InvalidOperationException($"Argument '{nameof(navigationParent)}' is not a part of Data Source within this SQL query.");
             }
-            this.AddDataSource(childDataSourceExpression, checkWrap: this.LastSqlOperation != SqlQueryOperation.Where);
-            this.autoJoins.Add(this.joins.Last());
-            this.MapNavigationDataSource(navigationParent, navigationName, childDataSourceExpression);
-        }
 
-        // this collection helps to understand whether the join was added automatically
-        // because of navigation, therefore, when applying auto projection we'll
-        // check if the navigation which is present as a joined data source in the query
-        // was added automatically because of navigation then we will not use it's column
-        // when applying auto projection
-        private readonly List<SqlJoinExpression> autoJoins = new List<SqlJoinExpression>();
+            if (this.LastSqlOperation != SqlQueryOperation.Where)
+                childDataSourceExpression = this.WrapIfRequired(childDataSourceExpression, SqlQueryOperation.Join) as SqlDataSourceExpression
+                                                ??
+                                                throw new InvalidOperationException("Joined data source must be of type SqlDataSourceExpression.");
+
+            childDataSourceExpression.AttachToParentSqlQuery(this);
+            SqlJoinExpression joinExpression = this.SqlFactory.CreateNavigationJoin(SqlJoinType.Cross, childDataSourceExpression, null, navigationParent, navigationName);
+            this.joins.Add(joinExpression);
+        }
 
         private void AddDataSources(params SqlDataSourceExpression[] dataSources)
         {
@@ -564,7 +563,22 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             }
             projection = this.FixDuplicateColumns(projection);
             this.Projection = projection;
-            this.NavigationDataSourceMap.Clear();
+
+            //this.NavigationDataSourceMap.Clear();
+
+            this.ClearNavigationMap();
+        }
+
+        private void ClearNavigationMap()
+        {
+            for (int i = 0; i < this.joins.Count; i++)
+            {
+                var join = this.joins[i];
+                if (join.NodeType == SqlExpressionType.NavigationJoin)
+                {
+                    this.joins[i] = this.SqlFactory.CreateJoin(join.JoinType, join.JoinedSource, join.JoinCondition);
+                }
+            }
         }
 
         private void ConvertSubQueryProjectionToOuterApply(SqlColumnExpression sqlColumnExpression, List<SqlColumnExpression> projections)
@@ -739,17 +753,26 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             else
             {
                 var index = this.joins.IndexOf(join);
-                var autoJoin = false;
-                if (this.autoJoins.Contains(this.joins[index]))
-                {
-                    this.autoJoins.Remove(this.joins[index]);
-                    autoJoin = true;
-                }
+                //var autoJoin = false;
+                //if (this.autoJoins.Contains(this.joins[index]))
+                //{
+                //    this.autoJoins.Remove(this.joins[index]);
+                //    autoJoin = true;
+                //}
                 this.joins[index] = joinExpression;
-                if (autoJoin)
-                    this.autoJoins.Add(joinExpression);
+                //if (autoJoin)
+                //    this.autoJoins.Add(joinExpression);
             }
         }
+
+        //public void ReplaceJoin(SqlJoinExpression joinExpression)
+        //{
+        //    var join = this.joins.Where(x => x.JoinedSource == joinExpression.JoinedSource).FirstOrDefault()
+        //                    ??
+        //                    throw new InvalidOperationException($"Join was not found for the given join expression.");
+        //    var index = this.joins.IndexOf(join);
+        //    this.joins[index] = joinExpression;
+        //}
 
         /// <summary>
         ///     <para>
@@ -834,8 +857,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.unions.Clear();
             this.IsCte = false;
             this.DefaultDataSource = null;
-            this.NavigationDataSourceMap.Clear();
-            this.autoJoins.Clear();
+            //this.NavigationDataSourceMap.Clear();
+            //this.autoJoins.Clear();
             this.LastSqlOperation = null;
         }
 
@@ -876,16 +899,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             copy.whereClause.AddRange(source.whereClause);
             copy.havingClauseList.AddRange(source.havingClauseList);
 
-            // we want to reattach the joins' DataSource with this new copy
-            var newJoinDataSources = source.joins.Select(x => new { OldDs = x.JoinedSource, NewDs = sqlFactory.CreateDataSourceCopy(x.JoinedSource) })
-                                                    .ToDictionary(x => x.OldDs, x => x.NewDs);
-            var oldVsNewDataSource = new Dictionary<SqlDataSourceExpression, SqlDataSourceExpression>(newJoinDataSources);
-            if (source.InitialDataSource != null)
-            {
-                oldVsNewDataSource.Add(source.InitialDataSource, copy.InitialDataSource);
-            }
-
-            var joinsCopy = source.joins.Select(x => sqlFactory.CreateJoin(x.JoinType, newJoinDataSources[x.JoinedSource], x.JoinCondition));
+            var joinsCopy = source.joins.Select(x => sqlFactory.CreateJoin(x.JoinType, sqlFactory.CreateDataSourceCopy(x.JoinedSource), x.JoinCondition));
             foreach (var join in joinsCopy)
                 join.JoinedSource.AttachToParentSqlQuery(copy);
             copy.joins.AddRange(joinsCopy);
@@ -900,49 +914,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             copy.cteDataSources.AddRange(source.cteDataSources);
             copy.DefaultDataSource = source.DefaultDataSource;
             copy.AutoProjectionApplied = source.AutoProjectionApplied;
-
-            UpdateDataSourcesInChildDataSourceIdentifierMap(source, copy, oldVsNewDataSource);
-        }
-
-        private static void UpdateDataSourcesInChildDataSourceIdentifierMap(SqlQueryExpression source, SqlQueryExpression copy, Dictionary<SqlDataSourceExpression, SqlDataSourceExpression> oldVsNewDataSource)
-        {
-            foreach (var kv in source.NavigationDataSourceMap)
-            {
-                var oldParentExpression = kv.Key.ParentDataSource;
-                var oldChild = kv.Value;
-
-                // if source.DataSourceIdentifierMap.ParentExpression = source (means the parent was the query)
-                //  then we'll pick the `copy` as new parent (new query)
-                // otherwise, it means ParentExpression was a SqlDataSourceExpression so we pick the corresponding newly created data source
-                var newParentExpression = oldParentExpression == source ? copy : (SqlExpression)oldVsNewDataSource[(SqlDataSourceExpression)oldParentExpression];
-                var newChild = oldVsNewDataSource[oldChild];
-
-                var newIdentifier = new NavigationDataSourceIdentifier(kv.Key.NavigationName, newParentExpression);
-                copy.NavigationDataSourceMap.Add(newIdentifier, newChild);
-            }
-        }
-
-        /// <summary>
-        ///     <para>
-        ///         Maps the <paramref name="navigationParent"/> expression with <paramref name="childDataSource"/>
-        ///         using <paramref name="navigationName"/>.
-        ///     </para>
-        /// </summary>
-        /// <param name="navigationParent">Parent SQL expression to which the child data source is mapped, can be this query instance or a child Data Source.</param>
-        /// <param name="navigationName">Identifier to be used for mapping.</param>
-        /// <param name="childDataSource">Child Data Source within this instance.</param>
-        /// <remarks>
-        ///     <para>
-        ///         During Navigation Property conversion, we add the child data source to this query as a joined data source.
-        ///         Since navigation properties can be used more than once within single query, therefore, this mapping helps
-        ///         us identifying if the joined source has already been added to the query. So that we don't create redundant
-        ///         joins.
-        ///     </para>
-        /// </remarks>
-        protected void MapNavigationDataSource(SqlExpression navigationParent, string navigationName, SqlDataSourceExpression childDataSource)
-        {
-            var dataSourceIdentifier = new NavigationDataSourceIdentifier(navigationName, navigationParent);
-            this.NavigationDataSourceMap[dataSourceIdentifier] = childDataSource;
         }
 
         /// <summary>
@@ -956,34 +927,14 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <returns><c>true</c> if the child data source is found; otherwise, <c>false</c>.</returns>
         public bool TryGetNavigationDataSource(SqlExpression navigationParent, string navigationName, out SqlDataSourceExpression childDataSource)
         {
-            var dataSourceIdentifier = new NavigationDataSourceIdentifier(navigationName, navigationParent);
-            return this.NavigationDataSourceMap.TryGetValue(dataSourceIdentifier, out childDataSource);
-        }
-
-        protected Dictionary<NavigationDataSourceIdentifier, SqlDataSourceExpression> NavigationDataSourceMap { get; } = new Dictionary<NavigationDataSourceIdentifier, SqlDataSourceExpression>();
-
-        protected readonly struct NavigationDataSourceIdentifier
-        {
-            public string NavigationName { get; }
-            public SqlExpression ParentDataSource { get; }
-
-            public NavigationDataSourceIdentifier(string identifier, SqlExpression parentExpression)
+            var join = this.joins.Where(x => x.NavigationParent == navigationParent && x.NavigationName == navigationName).FirstOrDefault();
+            if (join != null)
             {
-                this.NavigationName = identifier;
-                this.ParentDataSource = parentExpression;
+                childDataSource = join.JoinedSource;
+                return true;
             }
-
-            public override bool Equals(object obj)
-            {
-                return obj is NavigationDataSourceIdentifier child &&
-                    child.NavigationName == this.NavigationName &&
-                    child.ParentDataSource == this.ParentDataSource;
-            }
-
-            public override int GetHashCode()
-            {
-                return HashCode.Combine(this.NavigationName, this.ParentDataSource);
-            }
+            childDataSource = null;
+            return false;
         }
 
         /// <summary>
@@ -1108,8 +1059,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         private bool IsAutoAddedNavigationDataSource(SqlDataSourceExpression ds)
         {
             var join = this.joins.Where(x => x.JoinedSource == ds).FirstOrDefault();
-            return join != null && 
-                        this.autoJoins.Contains(join);
+            return join?.NodeType == SqlExpressionType.NavigationJoin;
         }
 
         /// <summary>
@@ -1406,7 +1356,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 oldVsNewDataSource.Add(cteDataSource, dsToAdd);
             }
 
-            UpdateDataSourcesInChildDataSourceIdentifierMap(this, sqlQuery, oldVsNewDataSource);
+            //UpdateDataSourcesInChildDataSourceIdentifierMap(this, sqlQuery, oldVsNewDataSource);
             sqlQuery.unions.AddRange(unions);
 
             sqlQuery.IsCte = this.IsCte;

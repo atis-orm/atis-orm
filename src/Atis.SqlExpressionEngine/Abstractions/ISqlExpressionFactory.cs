@@ -58,5 +58,6 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlLikeExpression CreateLike(SqlExpression stringExpression, SqlExpression pattern);
         SqlLikeExpression CreateLikeStartsWith(SqlExpression stringExpression, SqlExpression pattern);
         SqlLikeExpression CreateLikeEndsWith(SqlExpression stringExpression, SqlExpression pattern);
+        SqlJoinExpression CreateNavigationJoin(SqlJoinType cross, SqlDataSourceExpression joinedSource, SqlExpression joinCondition, SqlExpression navigationParent, string navigationName);
     }
 }

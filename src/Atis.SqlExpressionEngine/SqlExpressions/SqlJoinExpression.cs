@@ -1,4 +1,7 @@
-﻿namespace Atis.SqlExpressionEngine.SqlExpressions
+﻿using System.Collections.Generic;
+using System;
+
+namespace Atis.SqlExpressionEngine.SqlExpressions
 {
     /// <summary>
     ///     <para>
@@ -34,6 +37,17 @@
     /// </summary>
     public class SqlJoinExpression : SqlExpression
     {
+        private static readonly ISet<SqlExpressionType> _allowedTypes = new HashSet<SqlExpressionType>
+            {
+                SqlExpressionType.Join,
+                SqlExpressionType.NavigationJoin,
+            };
+        private static SqlExpressionType ValidateNodeType(SqlExpressionType nodeType)
+            => _allowedTypes.Contains(nodeType)
+                ? nodeType
+                : throw new InvalidOperationException($"SqlExpressionType '{nodeType}' is not a valid SqlDataSourceExpression.");
+
+
         /// <summary>
         ///     <para>
         ///         Initializes a new instance of the <see cref="SqlJoinExpression"/> class.
@@ -46,10 +60,18 @@
         /// <param name="joinedSource">The data source to join.</param>
         /// <param name="joinCondition">The condition for the join.</param>
         public SqlJoinExpression(SqlJoinType joinType, SqlDataSourceExpression joinedSource, SqlExpression joinCondition)
+            : this(joinType, joinedSource, joinCondition, navigationParent: null, navigationName: null, nodeType: SqlExpressionType.Join)
+        { }
+
+        public SqlJoinExpression(SqlJoinType joinType, SqlDataSourceExpression joinedSource, SqlExpression joinCondition, SqlExpression navigationParent, string navigationName, SqlExpressionType nodeType)
         {
             this.JoinType = joinType;
             this.JoinedSource = joinedSource;
             this.JoinCondition = joinCondition;
+            this.NavigationParent = navigationParent;
+            this.NavigationName = navigationName;
+            ValidateNodeType(nodeType);
+            this.NodeType = nodeType;
         }
 
         /// <summary>
@@ -60,7 +82,7 @@
         ///         This property always returns <see cref="SqlExpressionType.Join"/>.
         ///     </para>
         /// </summary>
-        public override SqlExpressionType NodeType => SqlExpressionType.Join;
+        public override SqlExpressionType NodeType { get; }
 
         /// <summary>
         ///     <para>
@@ -83,11 +105,15 @@
         /// </summary>
         public SqlExpression JoinCondition { get; }
 
+        public SqlExpression NavigationParent { get; }
+        
+        public string NavigationName { get; }
+
         public SqlJoinExpression Update(SqlDataSourceExpression joinedSource, SqlExpression joinCondition)
         {
             if (joinedSource == this.JoinedSource && joinCondition == this.JoinCondition)
                 return this;
-            return new SqlJoinExpression(this.JoinType, joinedSource, joinCondition);
+            return new SqlJoinExpression(this.JoinType, joinedSource, joinCondition, this.NavigationParent, this.NavigationName, this.NodeType);
         }
 
         /// <summary>

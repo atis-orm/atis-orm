@@ -262,5 +262,10 @@ namespace Atis.SqlExpressionEngine.Services
         {
             return new SqlLikeExpression(stringExpression, pattern, SqlExpressionType.LikeEndsWith);
         }
+
+        public virtual SqlJoinExpression CreateNavigationJoin(SqlJoinType cross, SqlDataSourceExpression joinedSource, SqlExpression joinCondition, SqlExpression navigationParent, string navigationName)
+        {
+            return new SqlJoinExpression(cross, joinedSource, joinCondition, navigationParent, navigationName, SqlExpressionType.NavigationJoin);
+        }
     }
 }

@@ -185,7 +185,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
             if (applyJoin)
             {
-                var joinExpression = this.SqlFactory.CreateJoin(this.Expression.SqlJoinType, joinedDataSource, joinConditionSqlExpression);
+                var joinExpression = this.SqlFactory.CreateNavigationJoin(this.Expression.SqlJoinType, joinedDataSource, joinConditionSqlExpression, this.navigationParent, this.Expression.NavigationProperty);
                 var navigationParentSqlQuery = this.GetNavigationParentSqlQuery();
                 navigationParentSqlQuery.ApplyJoin(joinExpression);
             }

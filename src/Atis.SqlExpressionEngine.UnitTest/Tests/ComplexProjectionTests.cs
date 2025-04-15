@@ -118,7 +118,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
         public void Full_query_selected_using_LambdaParameter_in_Select_then_navigation_used_later_in_another_Select_should_translate_to_sub_query_and_then_inner_join_on_sub_query()
         {
             var assets = new Queryable<Asset>(new QueryProvider());
-            var q = assets.Where(x => x.NavItem().ItemId == "333" || x.NavItem().ItemId == "111").Select(x => x).Select(x => new { x.NavItem().ItemId, x.NavItem().ItemDescription });
+            var q = assets.Where(p1 => p1.NavItem().ItemId == "333" || p1.NavItem().ItemId == "111").Select(p2 => p2).Select(p3 => new { p3.NavItem().ItemId, p3.NavItem().ItemDescription });
             string? expectedResult = @"
 select	NavItem_4.ItemId as ItemId, NavItem_4.ItemDescription as ItemDescription
 	from	(
