@@ -48,6 +48,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         private readonly ILambdaParameterToDataSourceMapper parameterMap;
         private readonly int selectArgIndex = 2;
         private bool newDataSourceAdded;
+        private SqlJoinExpression join;
 
         /// <summary>
         ///     <para>
@@ -106,12 +107,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     if (otherSqlExpr is SqlQueryExpression otherSqlQuery)
                     {
                         SqlQuerySourceExpression newQuerySource;
-                        //string dataSourceAlias;
                         bool crossJoin;
                         if (otherSqlQuery.IsTableOnly())
                         {
                             newQuerySource = otherSqlQuery.InitialDataSource.QuerySource;
-                            //dataSourceAlias = otherSqlQuery.InitialDataSource.DataSourceAlias;
                             crossJoin = true;
                         }
                         else
@@ -127,13 +126,12 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                             else
                                 crossJoin = true;       // this will be cross join
                             newQuerySource = otherSqlQuery;
-                            //dataSourceAlias = this.Context.GenerateAlias();
                         }
 
                         var newDataSource = this.SqlFactory.CreateDataSourceForQuerySource(newQuerySource);
                         if (crossJoin)
                         {
-                            this.SourceQuery.AddDataSource(newDataSource);
+                            this.join = this.SourceQuery.AddCrossJoin(newDataSource);
                         }
                         else
                         {
@@ -141,8 +139,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                             SqlJoinType sqlJoinType = SqlJoinType.CrossApply;
                             if (otherSqlQuery.IsDefaultIfEmpty)
                                 sqlJoinType = SqlJoinType.OuterApply;
-                            var crossApplyJoin = this.SqlFactory.CreateJoin(sqlJoinType, newDataSource, joinPredicate: null);
-                            this.SourceQuery.ApplyJoin(crossApplyJoin);
+                            this.join = this.SourceQuery.AddCrossJoin(newDataSource);
+                            this.join.UpdateJoinType(sqlJoinType);
                         }
 
                         this.newDataSourceAdded = true;
@@ -176,13 +174,17 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                         if (otherSqlExpr is SqlDataSourceExpression otherDs &&
                                 otherDs.QuerySource.IsDefaultIfEmpty)
                         {
-                            var join = this.SourceQuery.Joins.Where(x => x.JoinedSource == otherDs).FirstOrDefault();
+                            this.join = this.SourceQuery.GetJoinByDataSource(otherDs);
                             if (join != null)
                             {
-                                if (join.JoinType == SqlJoinType.Inner)
+                                if (this.join.JoinType == SqlJoinType.Inner)
+                                {
                                     join.UpdateJoinType(SqlJoinType.Left);
-                                else if (join.JoinType == SqlJoinType.CrossApply)
+                                }
+                                else if (this.join.JoinType == SqlJoinType.CrossApply)
+                                {
                                     join.UpdateJoinType(SqlJoinType.OuterApply);
+                                }
                             }
                         }
                     }
@@ -197,7 +199,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     if (this.SourceQuery.IsDefaultIfEmpty)
                     {
                         var lastDataSource = this.SourceQuery.DataSources.Last();
-                        var join = this.SourceQuery.Joins.Where(x => x.JoinedSource == lastDataSource).First();
+                        var join = this.SourceQuery.GetJoinByDataSource(lastDataSource);
                         join.UpdateJoinType(SqlJoinType.Left);
 
                         // here we are reversing the SourceQuery IsDefaultIfEmpty flag because

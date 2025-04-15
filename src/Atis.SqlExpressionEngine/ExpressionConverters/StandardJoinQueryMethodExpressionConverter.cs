@@ -51,6 +51,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     public class StandardJoinQueryMethodExpressionConverter : QueryMethodExpressionConverterBase
     {
         private SqlDataSourceExpression joinedDataSource;
+        private SqlJoinExpression join;
         private SqlExpression sourceColumnSelection;
         private SqlBinaryExpression joinCondition;
 
@@ -136,7 +137,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 else
                 {
                     this.joinedDataSource = this.SqlFactory.CreateDataSourceForJoinedSource(Guid.NewGuid(), querySource);
-                    this.SourceQuery.AddDataSource(this.joinedDataSource);
+                    this.join = this.SourceQuery.AddCrossJoin(this.joinedDataSource);
                 }
 
                 var otherColumnLambda = this.GetArgumentLambda(this.OtherColumnsArgIndex);
@@ -217,8 +218,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             if (!this.UseSubQueryDataSource)
             {
                 var joinType = joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
-                var joinExpression = this.SqlFactory.CreateJoin(joinType, joinedDataSource, joinCondition);
-                sqlQuery.ApplyJoin(joinExpression);
+                
+                this.join.UpdateJoinType(joinType);
+                this.join.UpdateJoinCondition(joinCondition);
             }
 
             if (this.HasProjection)

@@ -56,6 +56,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         private readonly ILambdaParameterToDataSourceMapper parameterToDataSourceMap;
         private SqlExpression navigationParent;
         private SqlDataSourceExpression joinedDataSource;
+        private SqlJoinExpression navigationJoin;
         private bool applyJoin;
 
         /// <summary>
@@ -128,7 +129,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     if (this.Expression.SqlJoinType != SqlJoinType.CrossApply && this.Expression.SqlJoinType != SqlJoinType.OuterApply)
                         sqlQuerySource = sqlQuerySource.ConvertToTableIfPossible();
                     this.joinedDataSource = this.SqlFactory.CreateDataSourceForNavigation(sqlQuerySource, this.Expression.NavigationProperty);
-                    navigationParentSqlQuery.AddNavigationDataSource(this.navigationParent, this.joinedDataSource, this.Expression.NavigationProperty);
+                    this.navigationJoin = navigationParentSqlQuery.AddNavigationJoin(this.navigationParent, this.joinedDataSource, this.Expression.NavigationProperty);
                 }
 
                 if (this.Expression.JoinCondition != null)
@@ -185,9 +186,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
             if (applyJoin)
             {
-                var joinExpression = this.SqlFactory.CreateNavigationJoin(this.Expression.SqlJoinType, joinedDataSource, joinConditionSqlExpression, this.navigationParent, this.Expression.NavigationProperty);
-                var navigationParentSqlQuery = this.GetNavigationParentSqlQuery();
-                navigationParentSqlQuery.ApplyJoin(joinExpression);
+                if (this.navigationJoin is null)
+                    throw new InvalidOperationException($"Navigation join is null, but applyJoin is true. This should not happen.");
+
+                this.navigationJoin.UpdateJoinType(this.Expression.SqlJoinType);
+                this.navigationJoin.UpdateJoinCondition(joinConditionSqlExpression);
             }
 
             return this.SqlFactory.CreateDataSourceReference(this.joinedDataSource);

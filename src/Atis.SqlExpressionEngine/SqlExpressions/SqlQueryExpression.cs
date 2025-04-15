@@ -365,18 +365,18 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         ///         within join condition can be converted to the column expression.
         ///     </para>
         /// </remarks>
-        public void AddDataSource(SqlDataSourceExpression joinedDataSource)
+        public SqlJoinExpression AddCrossJoin(SqlDataSourceExpression joinedDataSource)
         {
-            this.AddDataSource(joinedDataSource, checkWrap: true);
+            return this.AddCrossJoin(joinedDataSource, checkWrap: true);
         }
 
-        private void AddDataSource(SqlDataSourceExpression joinedDataSource, bool checkWrap)
+        private SqlJoinExpression AddCrossJoin(SqlDataSourceExpression joinedDataSource, bool checkWrap)
         {
             if (checkWrap)
                 joinedDataSource = this.WrapIfRequired(joinedDataSource, SqlQueryOperation.Join) as SqlDataSourceExpression
                                     ?? throw new InvalidOperationException("Joined data source must be of type SqlDataSourceExpression.");
 
-            this.AddDataSources(joinedDataSource);
+            return this.AddDataSources(joinedDataSource).FirstOrDefault();
         }
 
         /// <summary>
@@ -389,7 +389,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <param name="navigationName">Navigation name to identify this child data source.</param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public void AddNavigationDataSource(SqlExpression navigationParent, SqlDataSourceExpression childDataSourceExpression, string navigationName)
+        public SqlJoinExpression AddNavigationJoin(SqlExpression navigationParent, SqlDataSourceExpression childDataSourceExpression, string navigationName)
         {
             if (navigationParent is null)
                 throw new ArgumentNullException(nameof(navigationParent));
@@ -406,17 +406,13 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                     throw new InvalidOperationException($"Argument '{nameof(navigationParent)}' is not a part of Data Source within this SQL query.");
             }
 
-            if (this.LastSqlOperation != SqlQueryOperation.Where)
-                childDataSourceExpression = this.WrapIfRequired(childDataSourceExpression, SqlQueryOperation.Join) as SqlDataSourceExpression
-                                                ??
-                                                throw new InvalidOperationException("Joined data source must be of type SqlDataSourceExpression.");
+            var sqlJoin = this.AddCrossJoin(childDataSourceExpression, checkWrap: this.LastSqlOperation != SqlQueryOperation.Where);
+            sqlJoin.SetNavigationInfo(navigationParent, navigationName);
 
-            childDataSourceExpression.AttachToParentSqlQuery(this);
-            SqlJoinExpression joinExpression = this.SqlFactory.CreateNavigationJoin(SqlJoinType.Cross, childDataSourceExpression, null, navigationParent, navigationName);
-            this.joins.Add(joinExpression);
+            return sqlJoin;
         }
 
-        private void AddDataSources(params SqlDataSourceExpression[] dataSources)
+        private SqlJoinExpression[] AddDataSources(params SqlDataSourceExpression[] dataSources)
         {
             // CAUTION: use the given dataSources only and do not create a new instance,
             //          because it might break the caller
@@ -424,6 +420,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             //          its provided dataSource.
             if (dataSources is null || !dataSources.Any())
                 throw new ArgumentNullException(nameof(dataSources));
+
             foreach (var dataSource in dataSources)
             {
                 dataSource.AttachToParentSqlQuery(this);
@@ -434,9 +431,13 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 this.InitialDataSource = dataSources[0];
                 dataSourcesToAdd = dataSources.Skip(1);
             }
+            var crossJoins = dataSourcesToAdd.Select(x => this.CreateCrossJoin(x)).ToArray();
+
             // by default any data source that is added to the query will be added
             // as Cross Join
-            this.joins.AddRange(dataSourcesToAdd.Select(x => this.CreateCrossJoin(x)));
+            this.joins.AddRange(crossJoins);
+
+            return crossJoins;
         }
 
         protected virtual SqlJoinExpression CreateCrossJoin(SqlDataSourceExpression joinedSource)
@@ -574,9 +575,9 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             for (int i = 0; i < this.joins.Count; i++)
             {
                 var join = this.joins[i];
-                if (join.NodeType == SqlExpressionType.NavigationJoin)
+                if (join.IsNavigationJoin)
                 {
-                    this.joins[i] = this.SqlFactory.CreateJoin(join.JoinType, join.JoinedSource, join.JoinCondition);
+                    join.ClearNavigationalInfo();
                 }
             }
         }
@@ -720,79 +721,11 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 this.havingClauseList.Add(new FilterPredicate { Predicate = whereCondition, UseOrOperator = useOrOperator });
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Applies Join to the query.
-        ///     </para>
-        /// </summary>
-        /// <param name="joinExpression">A SQL join expression to be applied to the query.</param>
-        /// <remarks>
-        ///     <para>
-        ///         If the <paramref name="joinExpression"/>.JoinedDataSource has not already been added, then it adds it,
-        ///         note that while adding this data source, if it's already a part of another SQL query then 
-        ///         this method will give an error.
-        ///     </para>
-        /// </remarks>
-        public void ApplyJoin(SqlJoinExpression joinExpression)
+        public SqlJoinExpression GetJoinByDataSource(SqlDataSourceExpression ds)
         {
-            // And if the joinExpression.JoinDataSource is already added, then we are
-            // sure that it is already a child of this query with correct ParentQuery set.
-
-            var join = this.joins.Where(x => x.JoinedSource == joinExpression.JoinedSource).FirstOrDefault();
-            if (join is null)
-            {
-                // TODO: check if we would ever land here
-
-                joinExpression = this.WrapIfRequired(joinExpression, SqlQueryOperation.Join) as SqlJoinExpression
-                                ?? throw new InvalidOperationException("Join expression must be of type SqlJoinExpression.");
-
-                if (joinExpression.JoinedSource.ParentSqlQuery == null)
-                    joinExpression.JoinedSource.AttachToParentSqlQuery(this);
-                this.joins.Add(joinExpression);
-            }
-            else
-            {
-                var index = this.joins.IndexOf(join);
-                //var autoJoin = false;
-                //if (this.autoJoins.Contains(this.joins[index]))
-                //{
-                //    this.autoJoins.Remove(this.joins[index]);
-                //    autoJoin = true;
-                //}
-                this.joins[index] = joinExpression;
-                //if (autoJoin)
-                //    this.autoJoins.Add(joinExpression);
-            }
+            return this.joins.Where(x => x.JoinedSource == ds).FirstOrDefault();
         }
 
-        //public void ReplaceJoin(SqlJoinExpression joinExpression)
-        //{
-        //    var join = this.joins.Where(x => x.JoinedSource == joinExpression.JoinedSource).FirstOrDefault()
-        //                    ??
-        //                    throw new InvalidOperationException($"Join was not found for the given join expression.");
-        //    var index = this.joins.IndexOf(join);
-        //    this.joins[index] = joinExpression;
-        //}
-
-        /// <summary>
-        ///     <para>
-        ///         Gets the expression which represents a scalar value.
-        ///     </para>
-        /// </summary>
-        /// <returns>SQL Expression representing a scalar value or <c>null</c> in case of no scalar value.</returns>
-        /// <remarks>
-        ///     <para>
-        ///         In case if projection is applied and the applied projection is Scalar Column
-        ///         then this method will return the column expression from the scalar column expression.
-        ///     </para>
-        ///     <para>
-        ///         In case if there is a sub-query present within this query and the sub-query has a scalar column
-        ///         then this method will return the column expression from the scalar column expression.
-        ///     </para>
-        ///     <para>
-        ///         If none of the above conditions are met then this method will return <c>null</c>.
-        ///     </para>
-        /// </remarks>
         public SqlExpression GetScalarColumnExpression()
         {
             if (this.Projection.TryGetScalarColumn(out var scalarCol))
@@ -1059,7 +992,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         private bool IsAutoAddedNavigationDataSource(SqlDataSourceExpression ds)
         {
             var join = this.joins.Where(x => x.JoinedSource == ds).FirstOrDefault();
-            return join?.NodeType == SqlExpressionType.NavigationJoin;
+            return join?.IsNavigationJoin == true;
         }
 
         /// <summary>
@@ -1547,25 +1480,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.DefaultDataSource = this.DataSources.Last();
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Updates the join type of the given data source.
-        ///     </para>
-        /// </summary>
-        /// <param name="ds">Joined data source to update the join type.</param>
-        /// <param name="joinType">Sql join type to be updated.</param>
-        /// <remarks>
-        ///     <para>
-        ///         As mentioned in <see cref="AddDataSource(SqlDataSourceExpression)"/> method that when
-        ///         we add the data source in this class, it is added as Cross Join, so later during
-        ///         the conversion process, this method can be used to update the join type.
-        ///     </para>
-        /// </remarks>
-        public void UpdateJoinType(SqlDataSourceExpression ds, SqlJoinType joinType)
-        {
-            this.joins.Where(x => x.JoinedSource == ds).FirstOrDefault()?.UpdateJoinType(joinType);
-            
-        }
 
         /// <summary>
         ///     <para>

@@ -40,12 +40,11 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         private static readonly ISet<SqlExpressionType> _allowedTypes = new HashSet<SqlExpressionType>
             {
                 SqlExpressionType.Join,
-                SqlExpressionType.NavigationJoin,
             };
         private static SqlExpressionType ValidateNodeType(SqlExpressionType nodeType)
             => _allowedTypes.Contains(nodeType)
                 ? nodeType
-                : throw new InvalidOperationException($"SqlExpressionType '{nodeType}' is not a valid SqlDataSourceExpression.");
+                : throw new InvalidOperationException($"SqlExpressionType '{nodeType}' is not a valid SqlJoinExpression.");
 
 
         /// <summary>
@@ -73,6 +72,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             ValidateNodeType(nodeType);
             this.NodeType = nodeType;
         }
+
+        public bool IsNavigationJoin => this.NavigationParent != null;
 
         /// <summary>
         ///     <para>
@@ -103,11 +104,23 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         ///         Gets the condition for the join.
         ///     </para>
         /// </summary>
-        public SqlExpression JoinCondition { get; }
+        public SqlExpression JoinCondition { get; private set; }
 
-        public SqlExpression NavigationParent { get; }
+        public SqlExpression NavigationParent { get; private set; }
         
-        public string NavigationName { get; }
+        public string NavigationName { get; private set; }
+
+        public void ClearNavigationalInfo()
+        {
+            this.NavigationParent = null;
+            this.NavigationName = null;
+        }
+
+        public void SetNavigationInfo(SqlExpression navigationParent, string navigationName)
+        {
+            this.NavigationParent = navigationParent;
+            this.NavigationName = navigationName;
+        }
 
         public SqlJoinExpression Update(SqlDataSourceExpression joinedSource, SqlExpression joinCondition)
         {
@@ -137,6 +150,11 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         public void UpdateJoinType(SqlJoinType joinType)
         {
             this.JoinType = joinType;
+        }
+
+        public void UpdateJoinCondition(SqlExpression joinCondition)
+        {
+            this.JoinCondition = joinCondition;
         }
 
         /// <summary>

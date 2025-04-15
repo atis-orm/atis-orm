@@ -110,7 +110,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         LikeStartsWith,
         LikeEndsWith,
         DateSubtract,
-        NavigationJoin
     }
 
 

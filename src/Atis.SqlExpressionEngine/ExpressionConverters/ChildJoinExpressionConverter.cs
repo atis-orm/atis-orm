@@ -59,6 +59,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     {
         private SqlQueryExpression sourceSqlQuery;
         private SqlDataSourceExpression joinedDataSource;
+        private SqlJoinExpression join;
         private ParameterExpression joinLambdaExpressionParameter;
 
         private bool defaultIfEmpty;
@@ -125,7 +126,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 // conflicting that same data source marked as Auto Added and then becoming Default Data Source.
 
                 this.joinedDataSource = this.SqlFactory.CreateDataSourceForNavigation(joinedSource, this.Expression.NavigationName);
-                this.sourceSqlQuery.AddDataSource(joinedDataSource);
+                this.join = this.sourceSqlQuery.AddCrossJoin(joinedDataSource);
 
                 if (this.Expression.JoinCondition != null)
                 {
@@ -163,8 +164,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             SqlJoinType sqlJoinType = SqlJoinType.Inner;
             if (this.defaultIfEmpty)
                 sqlJoinType = SqlJoinType.Left;
-            var joinExpression = this.SqlFactory.CreateJoin(sqlJoinType, this.joinedDataSource, joinPredicate);
-            this.sourceSqlQuery.ApplyJoin(joinExpression);
+            
+            this.join.UpdateJoinType(sqlJoinType);
+            this.join.UpdateJoinCondition(joinPredicate);
 
             return this.sourceSqlQuery;
         }

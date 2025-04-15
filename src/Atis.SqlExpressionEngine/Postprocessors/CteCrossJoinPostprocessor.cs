@@ -82,7 +82,7 @@ namespace Atis.SqlExpressionEngine.Postprocessors
                     var cteUsage = dataSourcesToAdd[i];
                     if (!(sqlQuery.AllQuerySources.Any(x => x.DataSourceAlias == cteUsage.NewCteReferenceToAdd.DataSourceAlias)))
                     {
-                        sqlQuery.AddDataSource(cteUsage.NewCteReferenceToAdd);
+                        sqlQuery.AddCrossJoin(cteUsage.NewCteReferenceToAdd);
                     }
                 }
             }

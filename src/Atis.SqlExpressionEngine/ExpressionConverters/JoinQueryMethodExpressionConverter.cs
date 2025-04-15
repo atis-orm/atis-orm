@@ -127,6 +127,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
 
         private SqlDataSourceExpression newJoinedDataSource = null;
+        private SqlJoinExpression join;
 
         /// <inheritdoc />
         protected override void OnArgumentConverted(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression argument, SqlExpression convertedArgument)
@@ -151,7 +152,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     //alias = this.Context.GenerateAlias();
                 }
                 this.newJoinedDataSource = this.SqlFactory.CreateDataSourceForQuerySource(joinedQuery);
-                this.SourceQuery.AddDataSource(this.newJoinedDataSource);
+                this.join = this.SourceQuery.AddCrossJoin(this.newJoinedDataSource);
             }
             else if (this.GetNewExpressionIndex() == argIndex)
             {
@@ -200,11 +201,22 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 joinCondition = arguments[joinConditionIndex];
             var otherDataSource = arguments[0];
             SqlJoinType joinType = this.GetJoinType();
-            var ds = this.newJoinedDataSource
+            
+            if (this.join != null)
+            {
+                this.join.UpdateJoinType(joinType);
+                this.join.UpdateJoinCondition(joinCondition);
+            }
+            else
+            {
+                var ds = this.newJoinedDataSource
                         ?? (otherDataSource as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression
                         ?? throw new InvalidOperationException($"2nd argument of Join Query Method must be a {nameof(SqlDataSourceExpression)}.");
-            var joinExpression = this.SqlFactory.CreateJoin(joinType, ds, joinCondition);
-            sqlQuery.ApplyJoin(joinExpression);
+
+                var join = sqlQuery.GetJoinByDataSource(ds);
+                join.UpdateJoinType(joinType);
+                join.UpdateJoinCondition(joinCondition);
+            }
             return sqlQuery;
         }
 
