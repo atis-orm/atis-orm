@@ -59,7 +59,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                                 if (matchedColumns.GroupBy(x => ((SqlDataSourceColumnExpression)x.ColumnExpression).DataSource).Count() == 1)
                                 {
                                     var ds = ((SqlDataSourceColumnExpression)matchedColumns.First().ColumnExpression).DataSource;
-                                    convertedExpression = ds;
+                                    convertedExpression = new SqlDataSourceReferenceExpression(ds);
                                     return true;
                                 }
                             }
@@ -80,9 +80,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 
                 selectedDataSource = (arguments[sqlExpressionArgIndex] as SqlDataSourceReferenceExpression)?.Reference
                                         ??
-                                    (arguments[sqlExpressionArgIndex] as SqlDataSourceExpression)
-                                    ??
-                                    throw new InvalidOperationException($"The arg-0 of the {nameof(QueryExtensions.Update)} method must be a data source. Make sure arg-0 is a {nameof(SqlDataSourceExpression)}.");
+                                        throw new InvalidOperationException($"The arg-{sqlExpressionArgIndex} of the {nameof(QueryExtensions.Update)} method must be a data source. Make sure arg-{sqlExpressionArgIndex} is a {nameof(SqlDataSourceReferenceExpression)}. Current type is '{arguments[sqlExpressionArgIndex].GetType()}'.");
             }
             else
                 selectedDataSource = sqlQuery.InitialDataSource;
