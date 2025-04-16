@@ -378,9 +378,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 var subQueryColumn = first.ColumnExpression as SqlDataSourceColumnExpression
                                     ??
                                     throw new InvalidOperationException($"Expected {nameof(SqlDataSourceColumnExpression)} but got {first.ColumnExpression.GetType().Name}");
-                var subQuery = subQueryColumn.DataSource.QuerySource as SqlQueryExpression
+                var subQuery = subQueryColumn.DataSourceReference.Reference.QuerySource as SqlQueryExpression
                                     ??
-                                    throw new InvalidOperationException($"Property '{nameof(SqlDataSourceColumnExpression.DataSource)}' in type '{nameof(SqlDataSourceColumnExpression)}' is not {nameof(SqlQueryExpression)}.");
+                                    throw new InvalidOperationException($"Property '{nameof(SqlDataSourceColumnExpression.DataSourceReference)}' in type '{nameof(SqlDataSourceColumnExpression)}' is not yielding {nameof(SqlQueryExpression)}.");
                 var copied = subQuery.CreateCopy();
                 var projection = this.CreateSqlColumn(copied, matchedProjections[0].ColumnAlias, matchedProjections[0].ModelPath);
                 updatedResult = new[] { projection };

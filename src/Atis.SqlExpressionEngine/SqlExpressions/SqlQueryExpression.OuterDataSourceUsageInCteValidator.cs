@@ -41,7 +41,7 @@ public partial class SqlQueryExpression
 
             protected internal override SqlExpression VisitSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
             {
-                this.ValidateOuterDataSourceUsageInCte(sqlDataSourceColumnExpression.DataSource.DataSourceAlias);
+                this.ValidateOuterDataSourceUsageInCte(sqlDataSourceColumnExpression.DataSourceReference.Reference.DataSourceAlias);
                 return base.VisitSqlDataSourceColumnExpression(sqlDataSourceColumnExpression);
             }
 

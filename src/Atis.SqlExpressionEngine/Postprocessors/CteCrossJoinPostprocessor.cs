@@ -40,14 +40,14 @@ namespace Atis.SqlExpressionEngine.Postprocessors
 
         protected internal override SqlExpression VisitSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
         {
-            if (sqlDataSourceColumnExpression.DataSource.NodeType == SqlExpressionType.CteDataSource)
+            if (sqlDataSourceColumnExpression.DataSourceReference.Reference.NodeType == SqlExpressionType.CteDataSource)
             {
                 var consumerDataSource = this.dataSourceStack.Count > 0 ? this.dataSourceStack.Peek() : null;
                 if (consumerDataSource != null)
                 {
                     if (consumerDataSource.NodeType == SqlExpressionType.CteDataSource)
                     {
-                        var cteReference = this.sqlFactory.CreateCteReference(sqlDataSourceColumnExpression.DataSource.DataSourceAlias);
+                        var cteReference = this.sqlFactory.CreateCteReference(sqlDataSourceColumnExpression.DataSourceReference.Reference.DataSourceAlias);
                         var cteReferenceDataSource =this.sqlFactory.CreateDataSourceForCteReference(cteReference.CteAlias, cteReference);
                         // now this new data source (cteReferenceDataSource) needs to be added in the consumer CTE (lastDataSource.ParentSqlQuery)
                         // but we cannot modify the SqlQueryExpression here it will disturb the whole visit process

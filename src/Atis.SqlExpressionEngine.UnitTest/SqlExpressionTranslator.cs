@@ -562,7 +562,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string TranslateSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
         {
-            return $"{this.GetSimpleAlias(sqlDataSourceColumnExpression.DataSource.DataSourceAlias)}.{sqlDataSourceColumnExpression.ColumnName}";
+            return $"{this.GetSimpleAlias(sqlDataSourceColumnExpression.DataSourceReference.Reference.DataSourceAlias)}.{sqlDataSourceColumnExpression.ColumnName}";
         }
 
         private string TranslateSqlExistsExpression(SqlExistsExpression sqlExistsExpression)

@@ -52,7 +52,7 @@ public partial class SqlQueryExpression
 
             protected internal override SqlExpression VisitSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
             {
-                this.FindOuterDataSource(sqlDataSourceColumnExpression.DataSource.DataSourceAlias);
+                this.FindOuterDataSource(sqlDataSourceColumnExpression.DataSourceReference.Reference.DataSourceAlias);
                 if (this.HasOuterDataSource)
                     return sqlDataSourceColumnExpression;
                 return base.VisitSqlDataSourceColumnExpression(sqlDataSourceColumnExpression);

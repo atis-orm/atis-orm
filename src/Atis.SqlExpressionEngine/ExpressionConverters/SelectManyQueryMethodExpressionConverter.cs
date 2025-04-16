@@ -381,7 +381,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             /// <inheritdoc />
             protected internal override SqlExpression VisitSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
             {
-                this.IsMyDataSource(sqlDataSourceColumnExpression.DataSource.DataSourceAlias);
+                this.IsMyDataSource(sqlDataSourceColumnExpression.DataSourceReference.Reference.DataSourceAlias);
                 return sqlDataSourceColumnExpression;
             }
         }

@@ -62,7 +62,7 @@ namespace Atis.SqlExpressionEngine
         protected internal override SqlExpression VisitSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
         {
             this.hashCode.Add(sqlDataSourceColumnExpression.ColumnName);
-            this.hashCode.Add(sqlDataSourceColumnExpression.DataSource.DataSourceAlias);
+            this.hashCode.Add(sqlDataSourceColumnExpression.DataSourceReference.Reference.DataSourceAlias);
             return base.VisitSqlDataSourceColumnExpression(sqlDataSourceColumnExpression);
         }
 

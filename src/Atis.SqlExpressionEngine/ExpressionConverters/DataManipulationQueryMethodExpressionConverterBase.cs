@@ -4,6 +4,7 @@ using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
@@ -53,15 +54,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
                             var projections = this.SourceQuery.Projection.GetProjections();
                             var matchedColumns = projections.Where(x => x.ModelPath.StartsWith(path)).ToArray();
-                            if (matchedColumns.Length > 0 &&
-                                matchedColumns.All(x => x.ColumnExpression is SqlDataSourceColumnExpression))
+                            var columnDataSources = ExtensionMethods.GetColumnExpressionDataSources(matchedColumns);
+                            if (columnDataSources.Length == 1)
                             {
-                                if (matchedColumns.GroupBy(x => ((SqlDataSourceColumnExpression)x.ColumnExpression).DataSource).Count() == 1)
-                                {
-                                    var ds = ((SqlDataSourceColumnExpression)matchedColumns.First().ColumnExpression).DataSource;
-                                    convertedExpression = this.SqlFactory.CreateDataSourceReference(ds);
-                                    return true;
-                                }
+                                convertedExpression = new SqlDataSourceReferenceExpression(columnDataSources[0]);
+                                return true;
                             }
                         }
                     }

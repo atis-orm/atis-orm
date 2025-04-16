@@ -19,7 +19,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <param name="columnName">Column name in the data source.</param>
         public SqlDataSourceColumnExpression(SqlDataSourceExpression dataSource, string columnName)
         {
-            this.DataSource = dataSource;
+            this.DataSourceReference = new SqlDataSourceReferenceExpression(dataSource);
             this.ColumnName = columnName;
         }
 
@@ -37,7 +37,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         ///         This is just for the reference of the data source.
         ///     </para>
         /// </remarks>
-        public SqlDataSourceExpression DataSource { get; }
+        public SqlDataSourceReferenceExpression DataSourceReference { get; }
 
         /// <summary>
         ///     <para>
@@ -69,7 +69,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <returns>A string representation of the SQL data source column expression.</returns>
         public override string ToString()
         {
-            return $"{DebugAliasGenerator.GetAlias(this.DataSource)}.{this.ColumnName}";
+            return $"{DebugAliasGenerator.GetAlias(this.DataSourceReference.Reference.DataSourceAlias)}.{this.ColumnName}";
         }
     }
 }

@@ -73,5 +73,15 @@ namespace Atis.SqlExpressionEngine
             sqlQueryCopy = null;
             return false;
         }
+
+        public static SqlDataSourceExpression[] GetColumnExpressionDataSources(SqlColumnExpression[] columnExpressions)
+        {
+            if (columnExpressions?.Length > 0 &&
+                    columnExpressions.All(x => x.ColumnExpression is SqlDataSourceColumnExpression))
+            {
+                return columnExpressions.GroupBy(x => ((SqlDataSourceColumnExpression)x.ColumnExpression).DataSourceReference.Reference).Select(x => x.Key).ToArray();
+            }
+            return Array.Empty<SqlDataSourceExpression>();
+        }
     }
 }

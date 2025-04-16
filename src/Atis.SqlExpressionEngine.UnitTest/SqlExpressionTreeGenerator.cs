@@ -66,10 +66,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
         protected override SqlExpression VisitSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
         {
             var elem = XmlDoc.CreateElement(nameof(SqlDataSourceColumnExpression));
-            elem.Attributes.Append(elem.OwnerDocument.CreateAttribute("Expression")).Value = $"{sqlDataSourceColumnExpression.DataSource.DataSourceAlias}.{sqlDataSourceColumnExpression.ColumnName}";
+            elem.Attributes.Append(elem.OwnerDocument.CreateAttribute("Expression")).Value = $"{sqlDataSourceColumnExpression.DataSourceReference.Reference.DataSourceAlias}.{sqlDataSourceColumnExpression.ColumnName}";
             currentNode.AppendChild(elem);
 
-            System.Diagnostics.Debug.WriteLine($"{nameof(SqlDataSourceColumnExpression)}: {sqlDataSourceColumnExpression.DataSource.DataSourceAlias}.{sqlDataSourceColumnExpression.ColumnName}");
+            System.Diagnostics.Debug.WriteLine($"{nameof(SqlDataSourceColumnExpression)}: {sqlDataSourceColumnExpression.DataSourceReference.Reference.DataSourceAlias}.{sqlDataSourceColumnExpression.ColumnName}");
             return sqlDataSourceColumnExpression;
         }
 
