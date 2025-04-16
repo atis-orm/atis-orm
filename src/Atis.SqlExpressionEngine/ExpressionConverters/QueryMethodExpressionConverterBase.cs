@@ -111,7 +111,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         ///     <para>
         ///         Usually the implementers of this class should over this method for the conversion.
         ///         However, in-case if the query method initializes the instance of <see cref="SqlQueryExpression"/>
-        ///         class, then <see cref="Convert(IReadOnlyStack{SqlExpression})"/> method should be overridden.
+        ///         class, then <see cref="Convert(SqlExpression[])"/> method should be overridden.
         ///         But doing so will sill require to override this method as well, in that case the implementation
         ///         of this method can simply throw NotImplementedException.
         ///     </para>
@@ -126,7 +126,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <remarks>
         ///     <para>
         ///         This property is set by this class when the first argument of the query method is converted to <see cref="SqlQueryExpression"/>.
-        ///         However, in-case if the the implementer of this class is directly overriding <see cref="Convert(IReadOnlyStack{SqlExpression})"/> method,
+        ///         However, in-case if the the implementer of this class is directly overriding <see cref="Convert(SqlExpression[])"/> method,
         ///         then it's implementer's responsibility to set this property after initializing the <see cref="SqlQueryExpression"/> instance.
         ///     </para>
         /// </remarks>
@@ -139,23 +139,16 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             {
                 SqlQueryExpression sqlQuery = (convertedExpression as SqlQueryReferenceExpression)?.Reference
                                                 ??
-                                                (convertedExpression as SqlDataSourceReferenceExpression)?.Reference?.QuerySource as SqlQueryExpression
+                                                convertedExpression as SqlQueryExpression
                                                 ??
-                                                convertedExpression as SqlQueryExpression;
-                
-                if (this.SourceQuery == null)
-                {
-                    this.SourceQuery = sqlQuery;
-                }
+                                                throw new InvalidOperationException($"Expected {nameof(SqlQueryReferenceExpression)} or {nameof(SqlQueryExpression)} on the stack, but got {convertedExpression.GetType()}");
 
-                if (sqlQuery != null)
-                {
-                    this.OnSourceQueryCreated();
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($" ****** WARNING: Query Method Converter = {this.GetType().Name}, First argument was not translated to {nameof(SqlQueryExpression)}, instead it was translated to {convertedExpression.GetType().Name} ****** ");
-                }
+                if (this.SourceQuery != null)
+                    throw new InvalidOperationException($"SourceQuery must be null at this point");
+
+                this.SourceQuery = sqlQuery;
+
+                this.OnSourceQueryCreated();
             }
             else
                 this.OnArgumentConverted(childConverter, childNode, convertedExpression);

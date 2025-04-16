@@ -58,5 +58,20 @@ namespace Atis.SqlExpressionEngine
             } while (memberExpression != null);
             return pathElements.Reverse<string>().ToArray();
         }
+
+        public static bool TryCreateSubQueryDataSourceCopy(this SqlExpression sqlExpression, out SqlQueryExpression sqlQueryCopy)
+        {
+            if (sqlExpression is SqlDataSourceExpression ds && ds.NodeType == SqlExpressionType.SubQueryDataSource)
+            {
+                var otherDataSourceQuery = ds.QuerySource as SqlQueryExpression
+                                            ??
+                                            throw new InvalidOperationException($"'{ds.QuerySource}' is not a SqlQueryExpression");
+                // other data source cannot be modified itself, it will always make a copy whenever used
+                sqlQueryCopy = otherDataSourceQuery.CreateCopy();
+                return true;
+            }
+            sqlQueryCopy = null;
+            return false;
+        }
     }
 }

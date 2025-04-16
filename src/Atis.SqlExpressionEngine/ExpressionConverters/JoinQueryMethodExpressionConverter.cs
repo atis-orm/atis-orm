@@ -135,9 +135,15 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var argIndex = this.Expression.Arguments.IndexOf(argument);
             if (this.GetNewlyJoinedDataSourceIndex() == argIndex)
             {
+                // usually convertedArgument will be SqlQueryExpression
+                // in-case of SelectMany we can pass the ParameterExpression in the 1st argument, so in that
+                // case we'll receive the SqlQueryReferenceExpression
+                //      .RecursiveUnion(anchor => otherTable.InnerJoin(anchor .....
+                // In above example we can see we are using `anchor` in InnerJoin which is a Lambda Parameter and 
+                // a SqlQueryExpression already present which will be returned as SqlQueryReferenceExpression in above
+                // case
                 SqlQuerySourceExpression joinedQuery = convertedArgument as SqlQueryExpression 
                                                         ??
-                                                        // TODO: check when below condition gets true, usually we should get SqlQueryExpression not a reference
                                                         (convertedArgument as SqlQueryReferenceExpression)?.Reference
                                                         ?? 
                                                         throw new InvalidOperationException($"2nd argument of Join Query Method must be a {nameof(SqlQueryReferenceExpression)}.");

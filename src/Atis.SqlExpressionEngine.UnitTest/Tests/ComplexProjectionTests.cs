@@ -131,5 +131,28 @@ select	NavItem_4.ItemId as ItemId, NavItem_4.ItemDescription as ItemDescription
 ";
             Test("Navigation Full Selection Test", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void Single_sub_query_selected_as_column_should_not_select_the_whole_query_in_outer_query()
+        {
+            var employees = new Queryable<Employee>(new QueryProvider());
+            var employeeDegrees = new Queryable<EmployeeDegree>(new QueryProvider());
+            var q = employees.Select(x => new { C1 = employeeDegrees.Count() })
+                            .Where(x => x.C1 > 5)
+                            .Select(x => new { x.C1 })
+                            ;
+            string? expectedResult = @"
+select	a_3.C1 as C1
+    	from	(
+    		select	(
+    			select	Count(1) as Col1
+    			from	EmployeeDegree as a_2
+    		) as C1
+    		from	Employee as a_1
+    	) as a_3
+    	where	(a_3.C1 > 5)
+";
+            Test("Sub Query Selection Test", q.Expression, expectedResult);
+        }
     }
 }

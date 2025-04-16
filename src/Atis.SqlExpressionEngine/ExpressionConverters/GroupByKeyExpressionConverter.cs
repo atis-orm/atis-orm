@@ -90,10 +90,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var child = convertedChildren[0];
             var sqlQuery = (child as SqlQueryReferenceExpression)?.Reference
                             ??
-                            // TODO: check if we can ever receive direct SqlQueryExpression
-                            child as SqlQueryExpression
-                            ??
-                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
+                            throw new InvalidOperationException($"Expected {nameof(SqlQueryReferenceExpression)} on the stack, given type is '{child.GetType()}'.");
             // Case-1: x.Key
             // Case-2: x.Key.Name
             // if we are here it means either of the 2 cases are true
@@ -110,7 +107,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                             sqlQuery.GroupBy;
                 }
                 else
-                    return sqlQuery;
+                    return this.SqlFactory.CreateQueryReference(sqlQuery);
             }
             else if (this.Expression.Expression is MemberExpression parentOfMemberExpr)
             {

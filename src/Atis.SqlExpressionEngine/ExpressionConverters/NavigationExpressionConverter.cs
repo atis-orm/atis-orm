@@ -96,8 +96,13 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             if (childNode == this.Expression.SourceExpression)          // source in which join needs to be added is converted
             {
                 // it should always be a reference
-                // TODO: check if it will ever be other than ISqlReferenceExpression
-                this.navigationParent = (convertedExpression as ISqlReferenceExpression)?.Reference ?? convertedExpression;
+                if (convertedExpression is SqlDataSourceReferenceExpression dsRef)
+                    this.navigationParent = dsRef.Reference;
+                else if (convertedExpression is SqlQueryReferenceExpression queryRef)
+                    this.navigationParent = queryRef.Reference;
+
+                if (this.navigationParent is null)
+                    throw new InvalidProgramException($"navigationParent was not initialized, convertedExpressionType is '{convertedExpression.GetType()}'.");
             }
             else if (childNode == this.Expression.JoinedDataSource)     // the joined table is converted
             {

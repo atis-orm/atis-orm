@@ -62,30 +62,22 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             this.parameterMap = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
 
-        private SqlExpression sourceDatasource;
-
         /// <inheritdoc />
         public override void OnConversionCompletedByChild(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression childNode, SqlExpression convertedExpression)
         {
             if (this.Expression.Arguments.FirstOrDefault() == childNode)    // if 1st arg was converted
             {
-                this.sourceDatasource = convertedExpression;
-            }
-        }
+                var sqlQuery = (convertedExpression as SqlQueryReferenceExpression)?.Reference 
+                                ?? 
+                                convertedExpression as SqlQueryExpression
+                                ??
+                                throw new InvalidOperationException($"Expected SqlQueryReferenceExpression or SqlQueryExpression, but got {convertedExpression.GetType().Name}.");
 
-        /// <inheritdoc/>
-        public override void OnBeforeChildVisit(Expression childNode)
-        {
-            if (this.Expression.Arguments.IndexOf(childNode) == 1)      // y => y.Field argument
-            {
+                // mapping given query with next Lambda Parameter (if available)
                 var arg1LambdaParameter = GetArg1LambdaParameter();
                 if (arg1LambdaParameter != null)
                 {
-                    if (this.sourceDatasource is null)
-                        throw new InvalidOperationException($"1st Argument of Aggregate method '{this.Expression.Method.Name}' is not converted yet.");
-                    // TODO: see if we can avoid ISqlReferenceExpression
-                    var dataSource = (this.sourceDatasource as ISqlReferenceExpression)?.Reference ?? this.sourceDatasource;
-                    this.parameterMap.TrySetParameterMap(arg1LambdaParameter, dataSource);
+                    this.parameterMap.TrySetParameterMap(arg1LambdaParameter, sqlQuery);
                 }
             }
         }
@@ -95,9 +87,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             if (this.Expression.Arguments.Count > 1)        // at-least 2 arguments
             {
                 var childNode = this.Expression.Arguments[1];
-                var nextLambda = childNode as LambdaExpression
-                                            ??
-                                            (childNode as UnaryExpression)?.Operand as LambdaExpression;
+                var nextLambda = (childNode as UnaryExpression)?.Operand as LambdaExpression
+                                ??
+                                childNode as LambdaExpression;
                 if (nextLambda != null && nextLambda.Parameters.Count > 0)
                 {
                     var nextLambdaParameter = nextLambda.Parameters.First();

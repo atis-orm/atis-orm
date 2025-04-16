@@ -50,15 +50,15 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     {
         private static readonly Dictionary<string, SqlDatePart> PropertyToDatePart = new Dictionary<string, SqlDatePart>()
         {
-            ["Year"] = SqlDatePart.Year,
-            ["Month"] = SqlDatePart.Month,
-            ["Day"] =  SqlDatePart.Day,
-            ["Hour"] =  SqlDatePart.Hour,
-            ["Minute"] =  SqlDatePart.Minute,
-            ["Second"] =  SqlDatePart.Second,
-            ["Millisecond"] =  SqlDatePart.Millisecond,
-            ["Ticks"] = SqlDatePart.Tick,
-            ["DayOfWeek"] = SqlDatePart.WeekDay,
+            [nameof(DateTime.Year)] = SqlDatePart.Year,
+            [nameof(DateTime.Month)] = SqlDatePart.Month,
+            [nameof(DateTime.Day)] =  SqlDatePart.Day,
+            [nameof(DateTime.Hour)] =  SqlDatePart.Hour,
+            [nameof(DateTime.Minute)] =  SqlDatePart.Minute,
+            [nameof(DateTime.Second)] =  SqlDatePart.Second,
+            [nameof(DateTime.Millisecond)] =  SqlDatePart.Millisecond,
+            [nameof(DateTime.Ticks)] = SqlDatePart.Tick,
+            [nameof(DateTime.DayOfWeek)] = SqlDatePart.WeekDay,
         };
         private readonly ISqlDataTypeFactory sqlDataTypeFactory;
 

@@ -71,11 +71,17 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var parent = convertedChildren[0];
             var path = this.Expression.GetModelPath();
 
-            if (parent is ISqlReferenceExpression refExpression)
+            SqlExpression parent;
+
+            // parent can be a ParameterExpression, in that case it must be a ISqlReferenceExpression
+            if (convertedChildren[0] is ISqlReferenceExpression refExpression)
                 parent = refExpression.Reference;
+            else
+                // otherwise parent can be nested MemberExpression, so it usually is translated
+                // into SqlCollectionExpression or SqlQueryExpression
+                parent = convertedChildren[0];
 
             SqlExpression[] result;
             SqlExpression resultSource;
@@ -87,13 +93,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
                 if (sqlQuery.Projection != null)        // if projection has been applied
                 {
-                    if (sqlQuery.InitialDataSource == null)
-                    {
-                        // we'll be here if query was created with direct Select
-                        sqlQuery.WrapInSubQuery();
-                        sqlQuery.ApplyAutoProjection();
-                    }
-
                     // we'll match with the projection
                     // if the projection has been applied, then we'll match with full or partial
                     // we cannot go anywhere else if the projection has been applied in the query
@@ -258,16 +257,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                         if (sqlQueryDs.QuerySource is SqlQueryExpression innerQuery &&
                             innerQuery.Projection.TryGetScalarColumn(out var scalarColExpr))
                             return this.CreateSqlDataSourceColumn(sqlQueryDs, scalarColExpr.ColumnAlias);
-                        else if (sqlQueryDs.NodeType == SqlExpressionType.SubQueryDataSource)
-                        {
-                            // this in-case if other data source directly selected
-                            var otherDataSourceSqlQuery = sqlQueryDs.QuerySource as SqlQueryExpression
-                                                            ??
-                                                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} but got {sqlQueryDs.QuerySource.GetType().Name}");
-                            var newSqlQuery = otherDataSourceSqlQuery.CreateCopy();
+                        else if (sqlQueryDs.TryCreateSubQueryDataSourceCopy(out var newSqlQuery))
                             return newSqlQuery;
-                        }
-                         
                     }
 
                     return firstItem;

@@ -41,17 +41,5 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var deleteSqlExpression = this.SqlFactory.CreateDelete(sqlQuery, selectedDataSource);
             return deleteSqlExpression;
         }
-
-        //protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
-        //{
-        //    var predicate = arguments[0];
-        //    sqlQuery.ApplyWhere(predicate);
-
-        //    var deletingDataSource = sqlQuery.InitialDataSource;
-
-        //    var deleteSqlExpression = new SqlDeleteExpression(sqlQuery, deletingDataSource);
-
-        //    return deleteSqlExpression;
-        //}
     }
 }

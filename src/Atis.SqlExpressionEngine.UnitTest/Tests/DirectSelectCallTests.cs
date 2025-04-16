@@ -83,7 +83,10 @@ where	(a_2.InvoiceCount > 5)
             string? expectedResult = @"
 with cte_1 as 
 (	
-	select	1 as n	
+    select  a_2.n as n
+    from (
+	    select	1 as n	
+    ) as a_2
 	union all	
 	select	(a_2.n + 1) as n	
 	from	cte_1 as a_2	
@@ -118,25 +121,30 @@ from	cte_1 as cte_1
             string? expectedResult = @"
 with cte_1 as 
 (	
-	select	0 as DayOffset	
-	union all	
-	select	(a_3.DayOffset + 1) as DayOffset	
-	from	cte_1 as a_3	
-	where	(a_3.DayOffset < 30)	
+    select	a_3.DayOffset as DayOffset	
+    from	(
+            select	0 as DayOffset	
+    ) as a_3
+    union all	
+    select	(a_3.DayOffset + 1) as DayOffset	
+    from	cte_1 as a_3	
+    where	(a_3.DayOffset < 30)	
 )
-select	a_2.Date as Date, (
-	select	Count(1) as Col1
-	from	Invoice as a_4
-	where	(a_2.Date = a_4.InvoiceDate)
-) as InvoiceCount, (
-	select	Sum(NavLines_5.LineTotal) as Col1
-	from	Invoice as a_4
-		inner join InvoiceDetail as NavLines_5 on (a_4.RowId = NavLines_5.InvoiceId)
-	where	(a_2.Date = a_4.InvoiceDate)
-) as TotalSales
+select	a_2.Date as Date, 
+        (
+    	    select	Count(1) as Col1
+    	    from	Invoice as a_4
+    	    where	(a_2.Date = a_4.InvoiceDate)
+        ) as InvoiceCount, 
+        (
+    	    select	Sum(NavLines_5.LineTotal) as Col1
+    	    from	Invoice as a_4
+    		    inner join InvoiceDetail as NavLines_5 on (a_4.RowId = NavLines_5.InvoiceId)
+    	    where	(a_2.Date = a_4.InvoiceDate)
+        ) as TotalSales
 from	(
-	select	dateadd(day, cte_1.DayOffset, '2024-01-01 00:00:00') as Date
-	from	cte_1 as cte_1
+    select	dateAdd(Day, cte_1.DayOffset, '2024-01-01 00:00:00') as Date
+    from	cte_1 as cte_1
 ) as a_2
 ";
             Test("Direct Select with recursive query to generate missing dates", q.Expression, expectedResult);

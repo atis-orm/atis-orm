@@ -84,28 +84,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             if (this.Expression.Parent == childNode)          // parent source
             {
-                try
-                {
-                    if (convertedExpression is SqlDataSourceReferenceExpression dsRef)
-                        this.sourceSqlQuery = dsRef.Reference.ParentSqlQuery;
-                    else if (convertedExpression is SqlQueryReferenceExpression queryRef)
-                        this.sourceSqlQuery = queryRef.Reference;
-                    else if (convertedExpression is SqlSelectedCollectionExpression collection)
-                    {
-                        if (collection.SourceExpression is SqlQueryExpression collectionQuery)
-                            this.sourceSqlQuery = collectionQuery;
-                        else if (collection.SourceExpression is SqlDataSourceExpression collectionDataSource)
-                            this.sourceSqlQuery = collectionDataSource.ParentSqlQuery;
-                    }
-                    if (this.sourceSqlQuery is null)
-                        this.sourceSqlQuery = convertedExpression as SqlQueryExpression 
-                                                ?? 
-                                                throw new InvalidOperationException($"Parent was not converted to {nameof(SqlQueryExpression)}");
-                }
-                catch (Exception ex)
-                {
-                    throw new InvalidOperationException($"ChildJoinExpression Converter: System is unable to extract the source sql query, make sure if the expression is a SqlDataSourceExpression then it's ParentSqlQuery is set, this can happen if a SqlDataSourceExpression was created but never added to SqlQueryExpression. See inner exception for details.", ex);
-                }
+                this.sourceSqlQuery = (convertedExpression as SqlQueryReferenceExpression)?.Reference
+                                        ??
+                                        throw new InvalidOperationException($"convertedExpression is not {nameof(SqlQueryReferenceExpression)}, it's '{convertedExpression.GetType()}'");
             }
             else if (this.Expression.Query == childNode)     // child source
             {
