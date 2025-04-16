@@ -1238,12 +1238,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         {
             if (this.InitialDataSource == initialDataSource && this.joins?.SequenceEqual(joins) == true && this.whereClause?.SequenceEqual(whereClause) == true && this.GroupBy == groupBy && this.Projection == projection && this.orderBy?.SequenceEqual(orderByClause) == true && this.Top == top && this.cteDataSources?.SequenceEqual(cteDataSources) == true && this.havingClauseList.SequenceEqual(havingClause) && this.unions?.SequenceEqual(unions) == true)
                 return this;
-            
+
             var initialDataSourceCopy = this.SqlFactory.CreateDataSourceCopy(initialDataSource);
-            Dictionary<SqlDataSourceExpression, SqlDataSourceExpression> oldVsNewDataSource = new Dictionary<SqlDataSourceExpression, SqlDataSourceExpression>
-            {
-                { initialDataSource, initialDataSourceCopy }
-            };
             var sqlQuery = this.SqlFactory.CreateQueryFromDataSource(initialDataSourceCopy);
             foreach (var join in joins)
             {
@@ -1258,14 +1254,12 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 {
                     join.JoinedSource.AttachToParentSqlQuery(sqlQuery);
                     sqlQuery.joins.Add(join);
-                    oldVsNewDataSource.Add(join.JoinedSource, join.JoinedSource);
                 }
                 else
                 {
                     var newJoin = this.CreateJoin(join.JoinType, this.CreateSqlDataSourceCopy(join.JoinedSource), join.JoinCondition);
                     newJoin.JoinedSource.AttachToParentSqlQuery(sqlQuery);
                     sqlQuery.joins.Add(newJoin);
-                    oldVsNewDataSource.Add(join.JoinedSource, newJoin.JoinedSource);
                 }
             }
             sqlQuery.whereClause.AddRange(whereClause);
@@ -1287,10 +1281,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 else
                     dsToAdd = this.CreateSqlDataSourceCopy(cteDataSource);
                 sqlQuery.cteDataSources.Add(dsToAdd);
-                oldVsNewDataSource.Add(cteDataSource, dsToAdd);
             }
 
-            //UpdateDataSourcesInChildDataSourceIdentifierMap(this, sqlQuery, oldVsNewDataSource);
             sqlQuery.unions.AddRange(unions);
 
             sqlQuery.IsCte = this.IsCte;

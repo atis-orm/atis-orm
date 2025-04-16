@@ -129,6 +129,11 @@ namespace Atis.SqlExpressionEngine
             {
                 joins.Add(this.VisitAndConvert(join));
             }
+            var subQueryDataSources = new List<SqlDataSourceExpression>();
+            foreach (var subQueryDataSource in sqlQueryExpression.SubQueryDataSources)
+            {
+                subQueryDataSources.Add(this.VisitAndConvert(subQueryDataSource));
+            }
             var whereClause = new List<FilterPredicate>();
             foreach(var where in sqlQueryExpression.WhereClause)
             {
