@@ -54,6 +54,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             if (!(projection is SqlCollectionExpression || projection is SqlColumnExpression))
                 projection = this.SqlFactory.CreateScalarColumn(projection, "Col1", ModelPath.Empty);
             var sqlQuery = this.SqlFactory.CreateQueryFromSelect(projection);
+            sqlQuery.WrapInSubQuery();
+            sqlQuery.ApplyAutoProjection();
             return sqlQuery;
         }
     }

@@ -87,13 +87,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
                 if (sqlQuery.Projection != null)        // if projection has been applied
                 {
-                    if (sqlQuery.InitialDataSource == null)
-                    {
-                        // we'll be here if query was created with direct Select
-                        sqlQuery.WrapInSubQuery();
-                        sqlQuery.ApplyAutoProjection();
-                    }
-
                     // we'll match with the projection
                     // if the projection has been applied, then we'll match with full or partial
                     // we cannot go anywhere else if the projection has been applied in the query

@@ -13,7 +13,11 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void String_Concat_method_test()
         {
             var q = queryProvider.Select(() => new { C1 = string.Concat(new object[] { "1", 2, "3" }), C2 = string.Concat("abc", "def") });
-            string? expectedResult = @"select	Concat('1', 2, '3') as C1, Concat('abc', 'def') as C2";
+            string? expectedResult = @"
+select	a_1.C1 as C1, a_1.C2 as C2
+from	(
+    select	Concat('1', 2, '3') as C1, Concat('abc', 'def') as C2
+) as a_1";
 
             Test("String concat method test", q.Expression, expectedResult);
         }
@@ -22,7 +26,12 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void String_Join_method_test()
         {
             var q = queryProvider.Select(() => new { C1 = string.Join(", ", new object[] { "1", 2, "3" }), C2 = string.Join(", ", "abc", "def") });
-            string? expectedResult = @"select	Join('1', 2, '3', ', ') as C1, Join('abc', 'def', ', ') as C2";
+            string? expectedResult = @"
+select	a_1.C1 as C1, a_1.C2 as C2
+from	(
+    select	Join('1', 2, '3', ', ') as C1, Join('abc', 'def', ', ') as C2    		
+) as a_1
+";
             Test("String join method test", q.Expression, expectedResult);
         }
 
@@ -30,7 +39,12 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void ToString_method_should_translate_to_cast_test()
         {
             var q = queryProvider.Select(() => new { C1 = 123.ToString(), C2 = 123.456.ToString() });
-            string? expectedResult = @"select	cast(123 as NonUnicodeString(max)) as C1, cast(123.456 as NonUnicodeString(max)) as C2";
+            string? expectedResult = @"
+select	a_1.C1 as C1, a_1.C2 as C2
+from	(
+    select	cast(123 as NonUnicodeString(max)) as C1, cast(123.456 as NonUnicodeString(max)) as C2    		
+) as a_1
+";
             Test("ToString method test", q.Expression, expectedResult);
         }
 
