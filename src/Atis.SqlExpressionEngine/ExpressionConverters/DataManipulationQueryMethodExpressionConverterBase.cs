@@ -59,7 +59,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                                 if (matchedColumns.GroupBy(x => ((SqlDataSourceColumnExpression)x.ColumnExpression).DataSource).Count() == 1)
                                 {
                                     var ds = ((SqlDataSourceColumnExpression)matchedColumns.First().ColumnExpression).DataSource;
-                                    convertedExpression = new SqlDataSourceReferenceExpression(ds);
+                                    convertedExpression = this.SqlFactory.CreateDataSourceReference(ds);
                                     return true;
                                 }
                             }
