@@ -193,7 +193,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 // will be using same DataSourceAlias
                 var newDataSource = this.SqlFactory.CreateDataSourceForCteReference(anchorMember.InitialDataSource.DataSourceAlias, cteReference);
 
-                unionQuery = anchorMember.Update(newDataSource, anchorMember.Joins, anchorMember.WhereClause, anchorMember.GroupBy, anchorMember.Projection, anchorMember.OrderBy, anchorMember.Top, anchorMember.CteDataSources, anchorMember.HavingClause, anchorMember.Unions);
+                unionQuery = anchorMember.Update(newDataSource, anchorMember.Joins, anchorMember.WhereClause, anchorMember.GroupBy, anchorMember.Projection, anchorMember.OrderBy, anchorMember.Top, anchorMember.CteDataSources, anchorMember.HavingClause, anchorMember.Unions, anchorMember.SubQueryDataSources);
             }
 
             var cteQuery = this.CreateCteQuery(unionQuery, cteAlias);
@@ -256,7 +256,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 {
                     var cteReference = this.sqlFactory.CreateCteReference(this.cteAlias);
                     var newDataSource = this.sqlFactory.CreateDataSourceForCteReference(sqlQueryExpression.InitialDataSource.DataSourceAlias, cteReference);
-                    var updatedSqlQuery = sqlQueryExpression.Update(newDataSource, sqlQueryExpression.Joins, sqlQueryExpression.WhereClause, sqlQueryExpression.GroupBy, sqlQueryExpression.Projection, sqlQueryExpression.OrderBy, sqlQueryExpression.Top, sqlQueryExpression.CteDataSources, sqlQueryExpression.HavingClause, sqlQueryExpression.Unions);
+                    var updatedSqlQuery = sqlQueryExpression.Update(newDataSource, sqlQueryExpression.Joins, sqlQueryExpression.WhereClause, sqlQueryExpression.GroupBy, sqlQueryExpression.Projection, sqlQueryExpression.OrderBy, sqlQueryExpression.Top, sqlQueryExpression.CteDataSources, sqlQueryExpression.HavingClause, sqlQueryExpression.Unions, sqlQueryExpression.SubQueryDataSources);
                     return updatedSqlQuery;
                 }
                 return base.VisitSqlQueryExpression(sqlQueryExpression);

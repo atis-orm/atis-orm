@@ -54,7 +54,7 @@ namespace Atis.SqlExpressionEngine.Postprocessors
                     var cteAlias = cteDataSource.DataSourceAlias;
                     var cteReference = this.sqlFactory.CreateCteReference(cteAlias);
                     var newDataSource = this.sqlFactory.CreateDataSourceForCteReference(cteAlias, cteReference);
-                    var updatedSqlQuery = updatedQuery.Update(newDataSource, updatedQuery.Joins, updatedQuery.WhereClause, updatedQuery.GroupBy, updatedQuery.Projection, updatedQuery.OrderBy, updatedQuery.Top, updatedQuery.CteDataSources, updatedQuery.HavingClause, updatedQuery.Unions);
+                    var updatedSqlQuery = updatedQuery.Update(newDataSource, updatedQuery.Joins, updatedQuery.WhereClause, updatedQuery.GroupBy, updatedQuery.Projection, updatedQuery.OrderBy, updatedQuery.Top, updatedQuery.CteDataSources, updatedQuery.HavingClause, updatedQuery.Unions, updatedQuery.SubQueryDataSources);
                     updatedSqlQuery.SetAsNonCte();
                     return updatedSqlQuery;
                 }

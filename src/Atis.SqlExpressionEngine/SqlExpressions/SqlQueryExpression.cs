@@ -1233,13 +1233,15 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <param name="top">New top to be applied to the query.</param>
         /// <param name="cteDataSources">New CTE data sources to be applied to the query.</param>
         /// <param name="havingClause">New having clause to be applied to the query.</param>
+        /// <param name="unions"></param>
+        /// <param name="subQueryDataSources"></param>
         /// <returns>A new instance of <see cref="SqlQueryExpression"/> with updated properties.</returns>
-        public SqlQueryExpression Update(SqlDataSourceExpression initialDataSource, IEnumerable<SqlJoinExpression> joins, IEnumerable<FilterPredicate> whereClause, SqlExpression groupBy, SqlExpression projection, IEnumerable<SqlOrderByExpression> orderByClause, SqlExpression top, IEnumerable<SqlDataSourceExpression> cteDataSources, IEnumerable<FilterPredicate> havingClause, IEnumerable<SqlUnionExpression> unions)
+        public SqlQueryExpression Update(SqlDataSourceExpression initialDataSource, IEnumerable<SqlJoinExpression> joins, IEnumerable<FilterPredicate> whereClause, SqlExpression groupBy, SqlExpression projection, IEnumerable<SqlOrderByExpression> orderByClause, SqlExpression top, IEnumerable<SqlDataSourceExpression> cteDataSources, IEnumerable<FilterPredicate> havingClause, IEnumerable<SqlUnionExpression> unions, IEnumerable<SqlDataSourceExpression> subQueryDataSources)
         {
-            if (this.InitialDataSource == initialDataSource && this.joins?.SequenceEqual(joins) == true && this.whereClause?.SequenceEqual(whereClause) == true && this.GroupBy == groupBy && this.Projection == projection && this.orderBy?.SequenceEqual(orderByClause) == true && this.Top == top && this.cteDataSources?.SequenceEqual(cteDataSources) == true && this.havingClauseList.SequenceEqual(havingClause) && this.unions?.SequenceEqual(unions) == true)
+            if (this.InitialDataSource == initialDataSource && this.joins?.SequenceEqual(joins) == true && this.whereClause?.SequenceEqual(whereClause) == true && this.GroupBy == groupBy && this.Projection == projection && this.orderBy?.SequenceEqual(orderByClause) == true && this.Top == top && this.cteDataSources?.SequenceEqual(cteDataSources) == true && this.havingClauseList.SequenceEqual(havingClause) && this.unions?.SequenceEqual(unions) == true && this.subQueryDataSources?.SequenceEqual(subQueryDataSources) == true)
                 return this;
 
-            var initialDataSourceCopy = this.SqlFactory.CreateDataSourceCopy(initialDataSource);
+            var initialDataSourceCopy = this.SqlFactory.CreateDataSourceCopy(initialDataSource);            
             var sqlQuery = this.SqlFactory.CreateQueryFromDataSource(initialDataSourceCopy);
             foreach (var join in joins)
             {
@@ -1287,7 +1289,20 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
             sqlQuery.IsCte = this.IsCte;
             sqlQuery.IsDistinct = this.IsDistinct;
-            
+
+            foreach (var subQueryDataSource in subQueryDataSources)
+            {
+                SqlDataSourceExpression dsToAdd;
+                if (subQueryDataSource.ParentSqlQuery == null)
+                {
+                    subQueryDataSource.AttachToParentSqlQuery(sqlQuery);
+                    dsToAdd = subQueryDataSource;
+                }
+                else
+                    dsToAdd = this.CreateSqlDataSourceCopy(subQueryDataSource);
+                sqlQuery.subQueryDataSources.Add(dsToAdd);
+            }
+
             return sqlQuery;
         }
 

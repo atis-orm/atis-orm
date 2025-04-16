@@ -159,7 +159,7 @@ namespace Atis.SqlExpressionEngine
             {
                 unions.Add(this.VisitAndConvert(union));
             }
-            return sqlQueryExpression.Update(initialDataSource, joins, whereClause, groupBy, projection, orderByClause, top, cteDataSources, havingClause, unions);
+            return sqlQueryExpression.Update(initialDataSource, joins, whereClause, groupBy, projection, orderByClause, top, cteDataSources, havingClause, unions, subQueryDataSources);
         }
 
         protected internal virtual SqlExpression VisitCustom(SqlExpression node)
