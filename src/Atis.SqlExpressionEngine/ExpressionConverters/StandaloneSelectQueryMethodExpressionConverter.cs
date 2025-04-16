@@ -38,7 +38,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public override bool TryOverrideChildConversion(Expression sourceExpression, out SqlExpression convertedExpression)
         {
             if (sourceExpression == this.Expression.Arguments[0])
-{
+            {
                 convertedExpression = this.SqlFactory.CreateLiteral("dummy");
                 return true;
             }
