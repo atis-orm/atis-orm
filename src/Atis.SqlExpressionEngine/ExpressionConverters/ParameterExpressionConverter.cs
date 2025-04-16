@@ -78,6 +78,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return this.parameterMapper.GetDataSourceByParameterExpression(this.Expression);
         }
 
+        /// <summary>
+        ///     <para>
+        ///         Gets a value indicating whether the current parameter expression is a leaf node in the expression tree.
+        ///     </para>
+        /// </summary>
         protected virtual bool IsLefNode => !(this.ParentConverter is MemberExpressionConverter);
 
         /// <inheritdoc />
@@ -95,6 +100,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             {
                 return subQuery.CreateCopy();
             }
+            else if (sqlExpression.TryCreateSubQueryDataSourceCopy(out var subQueryCopy))
+            {
+                return subQueryCopy;
+            }
 
             // previously we were testing of the parent expression is MemberExpression
             // to know if this is the leaf node, that's actually a problem, because
@@ -103,7 +112,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             // considered as Leaf Node because .Value will be resolved by other converter
             var isLeafNode = this.IsLefNode;
 
-            SqlExpression result;
             if (isLeafNode)
             {
                 if (sqlExpression is SqlQueryExpression sqlQuery && !sqlQuery.IsMultiDataSourceQuery)
@@ -112,27 +120,16 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     if (scalarVal != null)
                         return scalarVal;
                 }
-                if (sqlExpression is SqlDataSourceExpression ds && ds.NodeType == SqlExpressionType.SubQueryDataSource)
-                {
-                    var otherDataSourceQuery = ds.QuerySource as SqlQueryExpression
-                                                ??
-                                                throw new InvalidOperationException($"'{ds.QuerySource}' is not a SqlQueryExpression");
-                    // other data source cannot be modified itself, it will always make a copy whenever used
-                    var newSqlQuery = otherDataSourceQuery.CreateCopy();
-                    result = newSqlQuery;
-                }
-                else
-                {
-                    if (sqlExpression is SqlQueryExpression sqlQuery2)
-                        result = this.SqlFactory.CreateQueryReference(sqlQuery2);
-                    else if (sqlExpression is SqlDataSourceExpression dataSource)
-                        result = this.SqlFactory.CreateDataSourceReference(dataSource);
-                    else
-                        throw new InvalidOperationException($"'{sqlExpression}' is neither SqlQueryExpression nor SqlDataSourceExpression");
-                }
             }
+
+            SqlExpression result;
+
+            if (sqlExpression is SqlQueryExpression sqlQuery2)
+                result = this.SqlFactory.CreateQueryReference(sqlQuery2);
+            else if (sqlExpression is SqlDataSourceExpression dataSource)
+                result = this.SqlFactory.CreateDataSourceReference(dataSource);
             else
-                result = sqlExpression;
+                throw new InvalidOperationException($"'{sqlExpression}' is neither SqlQueryExpression nor SqlDataSourceExpression");
 
             // In-case if ParameterExpression is representing a Multi Data Source Query, then it's impossible
             // that single direct ParameterExpression will ever translate into scalar column,
