@@ -43,9 +43,9 @@ namespace Atis.SqlExpressionEngine.UnitTest.Converters
         {
             if (childNode == this.Expression.Arguments.FirstOrDefault())
             {
-                if (convertedExpression is SqlDataSourceReferenceExpression ds &&
-                    ds.DataSource is SqlQueryExpression sqlQuery)
+                if (convertedExpression is SqlQueryReferenceExpression queryRef)
                 {
+                    var sqlQuery = queryRef.Reference;
                     // first argument might be the query argument
                     // if that's the case, we might need to the lambda parameter with
                     // this query

@@ -164,11 +164,11 @@ namespace Atis.SqlExpressionEngine.Internal
                 string columnAlias;
                 ModelPath columnModelPath;
 
-                if (children[j] is SqlDataSourceReferenceExpression dsRef && dsRef.DataSource is SqlDataSourceExpression dsExpr)
+                if (children[j] is SqlDataSourceReferenceExpression dsRef)
                 {
                     columnExpr = dsRef;
                     columnAlias = null;
-                    columnModelPath = dsExpr.ModelPath;
+                    columnModelPath = dsRef.Reference.ModelPath;
                 }
                 else if (children[j] is SqlColumnExpression colExpr)
                 {

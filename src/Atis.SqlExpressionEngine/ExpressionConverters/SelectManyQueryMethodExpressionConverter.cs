@@ -101,8 +101,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     // This will cause convertedArgument to be a different query then this.SourceQuery
                     var otherSqlExpr = convertedArgument;
 
-                    if (otherSqlExpr is SqlDataSourceReferenceExpression dsRef)
-                        otherSqlExpr = dsRef.DataSource;
+                    if (otherSqlExpr is ISqlReferenceExpression refExpression)
+                        otherSqlExpr = refExpression.Reference;
 
                     if (otherSqlExpr is SqlQueryExpression otherSqlQuery)
                     {

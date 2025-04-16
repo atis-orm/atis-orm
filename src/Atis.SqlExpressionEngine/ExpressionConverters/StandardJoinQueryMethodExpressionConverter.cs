@@ -110,12 +110,12 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var argIndex = this.Expression.Arguments.IndexOf(argument);
             if (argIndex == this.OtherDataArgIndex)     // this is the other data source converted
             {
-                if (converterArgument is SqlDataSourceReferenceExpression dsRef)
-                    converterArgument = dsRef.DataSource;
-                var otherDataSqlQuery = converterArgument as SqlQueryExpression
-                                           ??
-                                           throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
-
+                var otherDataSqlQuery = (converterArgument as SqlQueryReferenceExpression)?.Reference
+                                            ??
+                                            converterArgument as SqlQueryExpression
+                                            ??
+                                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
+                
                 SqlQuerySourceExpression querySource;
                 if (!this.UseSubQueryDataSource && otherDataSqlQuery.IsTableOnly())
                 {

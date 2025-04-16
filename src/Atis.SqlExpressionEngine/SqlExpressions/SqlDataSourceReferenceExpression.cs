@@ -42,54 +42,22 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
     ///         simply select it as is and finally will be rendered as sub-query.
     ///     </para>
     /// </remarks>
-    public class SqlDataSourceReferenceExpression : SqlExpression
+    public class SqlDataSourceReferenceExpression : SqlReferenceExpression<SqlDataSourceExpression>
     {
-        /// <inheritdoc/>
-        public override SqlExpressionType NodeType => SqlExpressionType.DataSourceReference;
-
-        // we cannot use SqlQuerySourceExpression here because SqlDataSourceReferenceExpression
-        // will be used to keep a reference of either SqlQueryExpression or SqlDataSourceExpression
-        // both classes are not related to a single source except for SqlExpression.
-
-        /// <summary>
-        ///     <para>
-        ///         Gets the Data Source either SqlQueryExpression or SqlDataSourceExpression.
-        ///     </para>
-        /// </summary>
-        public SqlExpression DataSource { get; }
-
         /// <summary>
         ///     <para>
         ///         Creates a new instance of <see cref="SqlDataSourceReferenceExpression" />.
         ///     </para>
         /// </summary>
-        /// <param name="sqlQueryOrSqlDataSourceExpression">Only <see cref="SqlQueryExpression"/> and <see cref="SqlDataSourceExpression"/> can be passed.</param>
-        /// <exception cref="ArgumentNullException"></exception>
-        /// <exception cref="ArgumentException"></exception>
-        public SqlDataSourceReferenceExpression(SqlExpression sqlQueryOrSqlDataSourceExpression)
-        {
-            if (sqlQueryOrSqlDataSourceExpression is null)
-                throw new ArgumentNullException(nameof(sqlQueryOrSqlDataSourceExpression));
-            if (!(sqlQueryOrSqlDataSourceExpression is SqlQueryExpression || sqlQueryOrSqlDataSourceExpression is SqlDataSourceExpression))
-                throw new ArgumentException($"{nameof(sqlQueryOrSqlDataSourceExpression)} must be either {nameof(SqlQueryExpression)} or {nameof(SqlDataSourceExpression)}");
-            DataSource = sqlQueryOrSqlDataSourceExpression;
-        }
+        /// <param name="dataSource"></param>
+        public SqlDataSourceReferenceExpression(SqlDataSourceExpression dataSource)
+            : base(dataSource)
+        { }
 
         /// <inheritdoc />
-        protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
-        {
-            return sqlExpressionVisitor.VisitDataSourceReferenceExpression(this);
-        }
-
-        /// <summary>
-        ///     <para>
-        ///         Converts the current object to its string representation.
-        ///     </para>
-        /// </summary>
-        /// <returns>String representation of the current object.</returns>
         public override string ToString()
         {
-            return $"ds-ref: {this.DataSource.NodeType}";
+            return $"ds-ref: {this.Reference.DataSourceAlias}";
         }
     }
 }

@@ -93,9 +93,9 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlDataSourceReferenceExpression(dataSource);
         }
 
-        public virtual SqlDataSourceReferenceExpression CreateQueryReference(SqlQueryExpression sqlQuery)
+        public virtual SqlQueryReferenceExpression CreateQueryReference(SqlQueryExpression sqlQuery)
         {
-            return new SqlDataSourceReferenceExpression(sqlQuery);
+            return new SqlQueryReferenceExpression(sqlQuery);
         }
 
         public virtual SqlDeleteExpression CreateDelete(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource)

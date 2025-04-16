@@ -77,8 +77,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         Dummy,
         /// <summary> Represents a FROM source in an SQL query. </summary>
         FromSource,
-        /// <summary> Represents a reference to a previously defined data source. </summary>
-        DataSourceReference,
+        ///// <summary> Represents a reference to a previously defined data source. </summary>
+        //DataSourceReference,
         /// <summary> Represents a UNION operation in an SQL query. </summary>
         Union,
         /// <summary> Represents a UNION ALL operation in an SQL query. </summary>
@@ -110,6 +110,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         LikeStartsWith,
         LikeEndsWith,
         DateSubtract,
+        Reference,
     }
 
 

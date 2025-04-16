@@ -95,7 +95,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             if (childNode == this.Expression.SourceExpression)          // source in which join needs to be added is converted
             {
-                this.navigationParent = (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource ?? convertedExpression;
+                // it should always be a reference
+                // TODO: check if it will ever be other than ISqlReferenceExpression
+                this.navigationParent = (convertedExpression as ISqlReferenceExpression)?.Reference ?? convertedExpression;
             }
             else if (childNode == this.Expression.JoinedDataSource)     // the joined table is converted
             {
@@ -144,7 +146,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var parentDs = this.navigationParent;
             if (parentDs is SqlDataSourceReferenceExpression dsRef)
             {
-                parentDs = dsRef.DataSource;
+                parentDs = dsRef.Reference;
             }
             if (parentDs is SqlQueryExpression queryDataSource)
             {

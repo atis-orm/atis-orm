@@ -73,11 +73,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
             if (sourceExpression is SqlDataSourceReferenceExpression dsRef)
             {
-                if (dsRef.DataSource is SqlDataSourceExpression ds)
-                    ds.QuerySource.IsDefaultIfEmpty = true;
-                else if (dsRef.DataSource is SqlQuerySourceExpression sqlQ)
-                    sqlQ.IsDefaultIfEmpty = true;
-                return sourceExpression;
+                dsRef.Reference.QuerySource.IsDefaultIfEmpty = true;
+            }
+            else if (sourceExpression is SqlQueryReferenceExpression queryRef)
+            {
+                queryRef.Reference.IsDefaultIfEmpty = true;
             }
             else
             {
@@ -86,9 +86,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                                 throw new InvalidOperationException($"sourceExpression is not a {nameof(SqlQuerySourceExpression)}");
 
                 sqlQuery.IsDefaultIfEmpty = true;
-
-                return sqlQuery;
             }
+
+            return sourceExpression;
         }
     }
 }

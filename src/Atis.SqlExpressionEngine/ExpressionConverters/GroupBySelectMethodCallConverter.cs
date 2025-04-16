@@ -53,7 +53,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
             if (childNode == this.Expression.Arguments[0])      // childNode = x
             {
-                SqlQueryExpression sqlQuery = (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlQueryExpression
+                SqlQueryExpression sqlQuery = (convertedExpression as SqlQueryReferenceExpression)?.Reference
                                                 ??
                                                 throw new InvalidOperationException($"The first argument of the Select method must be a SqlQueryExpression. The provided argument is of type {convertedExpression.GetType()}.");
 

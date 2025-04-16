@@ -77,7 +77,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             if (HasTableSelection)
             {
                 var sqlExpressionArgIndex = this.TableSelectionArgumentIndex - 1;
-                selectedDataSource = (arguments[sqlExpressionArgIndex] as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression
+                
+                selectedDataSource = (arguments[sqlExpressionArgIndex] as SqlDataSourceReferenceExpression)?.Reference
                                         ??
                                     (arguments[sqlExpressionArgIndex] as SqlDataSourceExpression)
                                     ??

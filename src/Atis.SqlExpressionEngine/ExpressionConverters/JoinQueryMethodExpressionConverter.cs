@@ -135,21 +135,16 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var argIndex = this.Expression.Arguments.IndexOf(argument);
             if (this.GetNewlyJoinedDataSourceIndex() == argIndex)
             {
-                if (convertedArgument is SqlDataSourceReferenceExpression dsRef)
-                    convertedArgument = dsRef.DataSource;
-                var joinedQuery = convertedArgument as SqlQuerySourceExpression
-                                        ?? throw new InvalidOperationException($"2nd argument of Join Query Method must be a SqlQuerySourceExpression.");
+                SqlQuerySourceExpression joinedQuery = convertedArgument as SqlQueryExpression 
+                                                        ??
+                                                        // TODO: check when below condition gets true, usually we should get SqlQueryExpression not a reference
+                                                        (convertedArgument as SqlQueryReferenceExpression)?.Reference
+                                                        ?? 
+                                                        throw new InvalidOperationException($"2nd argument of Join Query Method must be a {nameof(SqlQueryReferenceExpression)}.");
 
-                //string alias;
                 if (joinedQuery is SqlQueryExpression sqlQuery && sqlQuery.IsTableOnly())
                 {
-                    var firstDataSource = sqlQuery.DataSources.First();
-                    joinedQuery = firstDataSource.QuerySource;
-                    //alias = firstDataSource.DataSourceAlias;
-                }
-                else
-                {
-                    //alias = this.Context.GenerateAlias();
+                    joinedQuery = sqlQuery.DataSources.First().QuerySource;
                 }
                 this.newJoinedDataSource = this.SqlFactory.CreateDataSourceForQuerySource(joinedQuery);
                 this.join = this.SourceQuery.AddCrossJoin(this.newJoinedDataSource);
@@ -199,7 +194,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var joinConditionIndex = this.GetJoinConditionIndex() - 1;
             if (joinConditionIndex >= 0)
                 joinCondition = arguments[joinConditionIndex];
-            var otherDataSource = arguments[0];
             SqlJoinType joinType = this.GetJoinType();
             
             if (this.join != null)
@@ -209,10 +203,17 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             }
             else
             {
-                var ds = this.newJoinedDataSource
-                        ?? (otherDataSource as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression
-                        ?? throw new InvalidOperationException($"2nd argument of Join Query Method must be a {nameof(SqlDataSourceExpression)}.");
-
+                SqlDataSourceExpression ds;
+                if (this.newJoinedDataSource != null)
+                    ds = this.newJoinedDataSource;
+                else
+                {
+                    var otherDataSource = arguments[0];
+                    // newJoinedDataSource will be null in-case of if query was started with From() method
+                    ds = (otherDataSource as SqlDataSourceReferenceExpression)?.Reference
+                                ??
+                        throw new InvalidOperationException($"2nd argument of Join Query Method must be a {nameof(SqlDataSourceExpression)}.");
+                }
                 var join = sqlQuery.GetJoinByDataSource(ds);
                 join.UpdateJoinType(joinType);
                 join.UpdateJoinCondition(joinCondition);

@@ -83,7 +83,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 {
                     if (this.sourceDatasource is null)
                         throw new InvalidOperationException($"1st Argument of Aggregate method '{this.Expression.Method.Name}' is not converted yet.");
-                    var dataSource = (this.sourceDatasource as SqlDataSourceReferenceExpression)?.DataSource ?? this.sourceDatasource;
+                    // TODO: see if we can avoid ISqlReferenceExpression
+                    var dataSource = (this.sourceDatasource as ISqlReferenceExpression)?.Reference ?? this.sourceDatasource;
                     this.parameterMap.TrySetParameterMap(arg1LambdaParameter, dataSource);
                 }
             }

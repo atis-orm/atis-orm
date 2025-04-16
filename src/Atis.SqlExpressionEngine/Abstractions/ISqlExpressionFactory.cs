@@ -24,7 +24,7 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlDataSourceExpression CreateDataSourceForJoinedSource(Guid guid, SqlQuerySourceExpression querySource);
         SqlDataSourceExpression CreateDataSourceCopy(SqlDataSourceExpression cteDataSource);
         SqlDataSourceReferenceExpression CreateDataSourceReference(SqlDataSourceExpression dataSource);
-        SqlDataSourceReferenceExpression CreateQueryReference(SqlQueryExpression sqlQuery);
+        SqlQueryReferenceExpression CreateQueryReference(SqlQueryExpression sqlQuery);
         SqlDeleteExpression CreateDelete(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource);
         SqlExistsExpression CreateExists(SqlQueryExpression sqlQuery);
         SqlDataSourceExpression CreateFromSource(SqlQuerySourceExpression dataSource, ModelPath modelPath);

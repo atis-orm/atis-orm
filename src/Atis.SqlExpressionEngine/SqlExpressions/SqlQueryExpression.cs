@@ -502,9 +502,9 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             selector = this.WrapIfRequired(selector, SqlQueryOperation.Select);
 
             SqlExpression projection;
-            if (selector is SqlDataSourceReferenceExpression dsReference)
+            if (selector is ISqlReferenceExpression refExpr1)
             {
-                var columns = this.GetColumnsFromDataSourceReference(dsReference, ModelPath.Empty);
+                var columns = this.GetColumnsFromDataSourceReference(refExpr1, ModelPath.Empty);
                 projection = this.CreateSqlCollection(columns);
             }
             else if (selector is SqlCollectionExpression sqlCollection)
@@ -522,9 +522,10 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 var columns = new List<SqlColumnExpression>();
                 foreach (var colExpr in columnExpressions)
                 {
-                    if (colExpr.ColumnExpression is SqlDataSourceReferenceExpression dsReference1)
+                    // TODO: check if we can use only SqlDataSourceReferenceExpression
+                    if (colExpr.ColumnExpression is ISqlReferenceExpression refExpression)
                     {
-                        var dsColumns = this.GetColumnsFromDataSourceReference(dsReference1, colExpr.ModelPath);
+                        var dsColumns = this.GetColumnsFromDataSourceReference(refExpression, colExpr.ModelPath);
                         columns.AddRange(dsColumns);
                     }
                     else
@@ -1392,9 +1393,9 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         }
 
 
-        private IEnumerable<SqlColumnExpression> GetColumnsFromDataSourceReference(SqlDataSourceReferenceExpression dataSourceReference, ModelPath modelPath)
+        private IEnumerable<SqlColumnExpression> GetColumnsFromDataSourceReference(ISqlReferenceExpression refExpression, ModelPath modelPath)
         {
-            var dataSource = dataSourceReference.DataSource;
+            var dataSource = refExpression.Reference;
             if (dataSource is SqlDataSourceExpression ds)
             {
                 return this.GetColumnsFromDataSource(ds, modelPath);

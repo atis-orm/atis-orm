@@ -86,17 +86,21 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             {
                 try
                 {
-                    this.sourceSqlQuery = (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlQueryExpression
-                                                ??
-                                            ((convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression)?.ParentSqlQuery
-                                                ??
-                                            (convertedExpression as SqlSelectedCollectionExpression)?.SourceExpression as SqlQueryExpression
-                                                ??
-                                            ((convertedExpression as SqlSelectedCollectionExpression)?.SourceExpression as SqlDataSourceExpression)?.ParentSqlQuery
-                                                ??
-                                            convertedExpression as SqlQueryExpression
-                                                ??
-                                            throw new InvalidOperationException($"Parent was not converted to {nameof(SqlQueryExpression)}");
+                    if (convertedExpression is SqlDataSourceReferenceExpression dsRef)
+                        this.sourceSqlQuery = dsRef.Reference.ParentSqlQuery;
+                    else if (convertedExpression is SqlQueryReferenceExpression queryRef)
+                        this.sourceSqlQuery = queryRef.Reference;
+                    else if (convertedExpression is SqlSelectedCollectionExpression collection)
+                    {
+                        if (collection.SourceExpression is SqlQueryExpression collectionQuery)
+                            this.sourceSqlQuery = collectionQuery;
+                        else if (collection.SourceExpression is SqlDataSourceExpression collectionDataSource)
+                            this.sourceSqlQuery = collectionDataSource.ParentSqlQuery;
+                    }
+                    if (this.sourceSqlQuery is null)
+                        this.sourceSqlQuery = convertedExpression as SqlQueryExpression 
+                                                ?? 
+                                                throw new InvalidOperationException($"Parent was not converted to {nameof(SqlQueryExpression)}");
                 }
                 catch (Exception ex)
                 {

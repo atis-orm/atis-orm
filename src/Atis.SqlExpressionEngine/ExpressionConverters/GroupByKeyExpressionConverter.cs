@@ -88,9 +88,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             var child = convertedChildren[0];
-            if (child is SqlDataSourceReferenceExpression ds)
-                child = ds.DataSource;
-            var sqlQuery = child as SqlQueryExpression
+            var sqlQuery = (child as SqlQueryReferenceExpression)?.Reference
+                            ??
+                            // TODO: check if we can ever receive direct SqlQueryExpression
+                            child as SqlQueryExpression
                             ??
                             throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
             // Case-1: x.Key

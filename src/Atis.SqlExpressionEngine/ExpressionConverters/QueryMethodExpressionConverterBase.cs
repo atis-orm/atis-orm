@@ -91,11 +91,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             var arguments = convertedChildren;
             var arg0 = arguments[0];
-            if (arg0 is SqlDataSourceReferenceExpression dsRef)
-                arg0 = dsRef.DataSource;
-            var sqlQuery = arg0 as SqlQueryExpression
-                           ??
-                           throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
+            var sqlQuery = (arg0 as SqlQueryReferenceExpression)?.Reference
+                            ??
+                            arg0 as SqlQueryExpression
+                            ??
+                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
             return this.Convert(sqlQuery, arguments.Skip(1).ToArray());
         }
 
@@ -137,9 +137,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             if (childNode == this.Expression.Arguments.FirstOrDefault())
             {
-                SqlQueryExpression sqlQuery = (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlQueryExpression
+                SqlQueryExpression sqlQuery = (convertedExpression as SqlQueryReferenceExpression)?.Reference
                                                 ??
-(                                                (convertedExpression as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression)?.QuerySource as SqlQueryExpression
+                                                (convertedExpression as SqlDataSourceReferenceExpression)?.Reference?.QuerySource as SqlQueryExpression
                                                 ??
                                                 convertedExpression as SqlQueryExpression;
                 

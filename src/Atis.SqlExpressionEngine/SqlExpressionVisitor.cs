@@ -213,10 +213,10 @@ namespace Atis.SqlExpressionEngine
             return sqlNotExpression.Update(operand);
         }
 
-        protected internal virtual SqlExpression VisitDataSourceReferenceExpression(SqlDataSourceReferenceExpression sqlDataSourceReferenceExpression)
-        {
-            return sqlDataSourceReferenceExpression;
-        }
+        //protected internal virtual SqlExpression VisitDataSourceReferenceExpression(SqlDataSourceReferenceExpression sqlDataSourceReferenceExpression)
+        //{
+        //    return sqlDataSourceReferenceExpression;
+        //}
 
         protected internal virtual SqlExpression VisitSelectedCollectionExpression(SqlSelectedCollectionExpression sqlSelectedCollectionExpression)
         {
@@ -286,6 +286,11 @@ namespace Atis.SqlExpressionEngine
             var stringExpression = this.Visit(sqlLikeExpression.Expression);
             var pattern = this.Visit(sqlLikeExpression.Pattern);
             return sqlLikeExpression.Update(stringExpression, pattern);
+        }
+
+        protected internal SqlExpression VisitSqlReferenceExpression<T>(SqlReferenceExpression<T> sqlReferenceExpression) where T : SqlExpression
+        {
+            return sqlReferenceExpression;
         }
 
         //protected internal SqlExpression VisitSqlSubQueryColumnExpression(SqlSubQueryColumnExpression sqlSubQueryColumnExpression)

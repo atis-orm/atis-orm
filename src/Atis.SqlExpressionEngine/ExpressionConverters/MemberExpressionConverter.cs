@@ -74,8 +74,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var parent = convertedChildren[0];
             var path = this.Expression.GetModelPath();
 
-            if (parent is SqlDataSourceReferenceExpression dsRef)
-                parent = dsRef.DataSource;
+            if (parent is ISqlReferenceExpression refExpression)
+                parent = refExpression.Reference;
 
             SqlExpression[] result;
             SqlExpression resultSource;
@@ -123,11 +123,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             else if (parent is SqlCollectionExpression sqlDsCollection && sqlDsCollection.SqlExpressions.Any(x => x is SqlDataSourceReferenceExpression))
             {
                 var dsCollection = sqlDsCollection.SqlExpressions.Cast<SqlDataSourceReferenceExpression>()
-                                                    .Select(x => x.DataSource as SqlDataSourceExpression)
+                                                    .Select(x => x.Reference)
                                                     .ToArray();
-                if (dsCollection.Any(x => x is null))
-                    throw new InvalidOperationException($"One or more expressions Collection of {nameof(SqlDataSourceReferenceExpression)} is not {nameof(SqlDataSourceExpression)}");
-
                 if (dsCollection.Length > 1)
                 {
                     // it means we have to match in the data sources because there are multiple data sources
@@ -200,24 +197,23 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             {
                 if (result.Length > 1)
                 {
-                    if (result.Any(x => x is SqlColumnExpression))
+                    if (result.All(x => x is SqlColumnExpression))
                     {
                         result = result.Cast<SqlColumnExpression>()
                                         .Select(x => this.CreateSqlColumn(x.ColumnExpression, x.ColumnAlias, x.ModelPath.RemovePrefixPath(path)))
                                         .ToArray();
                     }
-                    else if (result.Any(x => x is SqlDataSourceReferenceExpression))
+                    else if (result.All(x => x is SqlDataSourceReferenceExpression))
                     {
                         // we'll usually reach here in case if the data source is directly selected in projection
                         // e.g. q.Select(x => x.nestedShape)        <- nestedShape = { t1, t2 }
                         //      so before this selection, we had to select a field like this, x.nestedShape.t1.Field1
                         //      but after this selection we'll select field like this, x.t1.Field1
                         var newResult = new List<SqlExpression>();
-                        for (var i = 0; i < result.Length; i++)
+                        var resultAsDataSourceRef = result.Cast<SqlDataSourceReferenceExpression>().ToArray();
+                        for (var i = 0; i < resultAsDataSourceRef.Length; i++)
                         {
-                            var ds = (result[i] as SqlDataSourceReferenceExpression).DataSource as SqlDataSourceExpression
-                                        ??
-                                        throw new InvalidOperationException($"result[{i}] does not contain SqlDataSourceExpression.");
+                            var ds = resultAsDataSourceRef[i].Reference;
                             // from above example, path would be t1, so we'll create a new path using data source's path
                             // like this,
                             //      data source path = nestedShape.t1
@@ -256,7 +252,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     var resultAsDsRef = firstItem as SqlDataSourceReferenceExpression
                                             ??
                                             throw new InvalidOperationException($"Expected {nameof(SqlDataSourceReferenceExpression)} but got {firstItem.GetType().Name}");
-                    var resultDs = resultAsDsRef.DataSource;
+                    var resultDs = resultAsDsRef.Reference;
                     if (resultDs is SqlDataSourceExpression sqlQueryDs)
                     {
                         if (sqlQueryDs.QuerySource is SqlQueryExpression innerQuery &&
