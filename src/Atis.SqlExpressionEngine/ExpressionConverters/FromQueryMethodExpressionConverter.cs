@@ -157,7 +157,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             if (sqlQuery != null && sqlQuery.IsTableOnly())
             {
                 var firstDataSource = sqlQuery.DataSources.First();
-                //return this.SqlFactory.CreateFromSource(firstDataSource.DataSourceAlias, firstDataSource.DataSource, fromSource?.ModelPath ?? ModelPath.Empty);
                 return this.SqlFactory.CreateFromSource(firstDataSource.QuerySource, fromSource?.ModelPath ?? ModelPath.Empty);
             }
             else if (fromSource != null)
