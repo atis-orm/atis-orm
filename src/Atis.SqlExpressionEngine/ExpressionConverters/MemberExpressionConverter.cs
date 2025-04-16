@@ -84,7 +84,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 parent = convertedChildren[0];
 
             SqlExpression[] result;
-            SqlExpression resultSource;
 
             if (parent is SqlQueryExpression sqlQuery)          // x is a query
             {
@@ -101,21 +100,18 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                         result = columnExpressions;
                     else
                         result = newResult;
-                    resultSource = sqlQuery;
                 }
                 else
                 {
                     var matchedDataSources = sqlQuery.AllQuerySources.Where(x => x.ModelPath.StartsWith(path)).ToArray();
                     var dataSourceReferences = matchedDataSources.Select(x => this.SqlFactory.CreateDataSourceReference(x)).ToArray();
                     result = dataSourceReferences;
-                    resultSource = sqlQuery;
                     // x.Field, in-case of if x is a SqlQueryExpression and there is only 1 data source available
                     // above result will have no items, so we need to check if there is any column available
                     if (result.Length == 0)
                     {
                         var dsToUse = sqlQuery.HandleCteOrUsualDataSource(sqlQuery.DefaultDataSource ?? sqlQuery.InitialDataSource);
                         result = this.GetMatchingColumnsFromDataSource(path.Last(), dsToUse);
-                        resultSource = dsToUse;
                     }
                 }
             }
@@ -130,7 +126,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     result = dsCollection.Where(x => x.ModelPath.StartsWith(path))
                                 .Select(x => this.SqlFactory.CreateDataSourceReference(x))
                                 .ToArray();
-                    resultSource = parent;
                 }
                 else
                 {
@@ -142,7 +137,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                         // and it will only have 1 SqlDataSourceReferenceExpression, but we cannot return sql columns because
                         // it has another data source nested i.e. DataSource1
                         result = sqlDsCollection.SqlExpressions.Cast<SqlDataSourceReferenceExpression>().ToArray();
-                    resultSource = dsCollection.First();
                 }
             }
             else if (parent is SqlCollectionExpression sqlColCollection && sqlColCollection.SqlExpressions.Any(x => x is SqlColumnExpression))
@@ -169,7 +163,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                      *                                  with ModelPath FullDetail.Employee
                      */
                     result = sqlColumns.Where(x => x.ModelPath.Equals(p) || x.ModelPath.StartsWith(path)).ToArray();
-                    resultSource = parent;
                 }
                 else
                 {
@@ -180,7 +173,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             else if (parent is SqlDataSourceExpression parentDs)
             {
                 result = GetMatchingColumnsFromDataSource(path.Last(), parentDs);
-                resultSource = parentDs;
             }
             else
                 throw new InvalidOperationException($"Unknown case");
@@ -239,7 +231,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     //          .Select(x => new { OuterProperty = new { InnerProperty = new { x.Field1, x.Field2 } } })
                     //          .Select(x => x.OuterProperty.InnerProperty );
                     // In above example, x.OuterProperty.InnerProperty is a collection of SqlColumnExpression, and we are at leaf node level.
-                    return this.SqlFactory.CreateSelectedCollection(resultSource, result);
+                    return this.SqlFactory.CreateCollection(result);
                 }
 
                 var firstItem = result.First();

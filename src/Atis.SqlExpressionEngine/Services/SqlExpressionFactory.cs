@@ -148,11 +148,6 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlQueryExpression((SqlExpression)select, this);
         }
 
-        public virtual SqlSelectedCollectionExpression CreateSelectedCollection(SqlExpression collectionSource, SqlExpression[] collection)
-        {
-            return new SqlSelectedCollectionExpression(collectionSource, collection);
-        }
-
         public virtual SqlTableExpression CreateTable(string tableName, TableColumn[] tableColumns)
         {
             return new SqlTableExpression(tableName, tableColumns);

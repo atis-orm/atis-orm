@@ -85,8 +85,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         UnionAll,
         /// <summary> Represents a reference to a Common Table Expression (CTE). </summary>
         CteReference,
-        /// <summary> Represents a selected collection of columns or expressions in an SQL query. </summary>
-        SelectedCollection,
         /// <summary> Represents a data source that has been joined to another. </summary>
         JoinedDataSource,
         /// <summary> Represents the SQL `OUTER APPLY` or `LEFT JOIN ... ON TRUE` when no matching records exist. </summary>

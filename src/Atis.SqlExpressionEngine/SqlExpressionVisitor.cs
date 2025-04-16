@@ -213,16 +213,6 @@ namespace Atis.SqlExpressionEngine
             return sqlNotExpression.Update(operand);
         }
 
-        //protected internal virtual SqlExpression VisitDataSourceReferenceExpression(SqlDataSourceReferenceExpression sqlDataSourceReferenceExpression)
-        //{
-        //    return sqlDataSourceReferenceExpression;
-        //}
-
-        protected internal virtual SqlExpression VisitSelectedCollectionExpression(SqlSelectedCollectionExpression sqlSelectedCollectionExpression)
-        {
-            return sqlSelectedCollectionExpression;
-        }
-
         protected internal virtual SqlExpression VisitInValuesExpression(SqlInValuesExpression sqlInValuesExpression)
         {
             var expression = this.Visit(sqlInValuesExpression.Expression);
@@ -292,11 +282,5 @@ namespace Atis.SqlExpressionEngine
         {
             return sqlReferenceExpression;
         }
-
-        //protected internal SqlExpression VisitSqlSubQueryColumnExpression(SqlSubQueryColumnExpression sqlSubQueryColumnExpression)
-        //{
-        //    var columnExpression = this.VisitAndConvert(sqlSubQueryColumnExpression.ColumnExpression);
-        //    return sqlSubQueryColumnExpression.Update(columnExpression);
-        //}
     }
 }

@@ -35,7 +35,6 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlQueryExpression CreateQueryFromDataSources(IEnumerable<SqlDataSourceExpression> dataSourceList);
         SqlQueryExpression CreateQueryFromDataSource(SqlDataSourceExpression sqlDataSourceExpression);
         SqlQueryExpression CreateQueryFromSelect(SqlExpression select);
-        SqlSelectedCollectionExpression CreateSelectedCollection(SqlExpression collectionSource, SqlExpression[] collection);
         SqlTableExpression CreateTable(string tableName, TableColumn[] tableColumns);
         SqlUpdateExpression CreateUpdate(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource, string[] columnNames, SqlExpression[] values);
         SqlColumnExpression ChangeColumnAlias(SqlColumnExpression sqlColumnExpression, string alias);

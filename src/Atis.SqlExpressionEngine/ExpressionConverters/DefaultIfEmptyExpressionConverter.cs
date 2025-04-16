@@ -62,14 +62,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var source = convertedChildren[0];
-
-            SqlExpression sourceExpression;
-
-            if (source is SqlSelectedCollectionExpression selectedColExpr)
-                sourceExpression = selectedColExpr.SourceExpression;
-            else
-                sourceExpression = source;
+            var sourceExpression = convertedChildren[0];
 
             if (sourceExpression is SqlDataSourceReferenceExpression dsRef)
             {
