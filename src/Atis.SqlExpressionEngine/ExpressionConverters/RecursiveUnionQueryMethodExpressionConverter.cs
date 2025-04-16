@@ -111,10 +111,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
         private SqlQueryExpression GetSqlQueryRequired(SqlExpression sqlExpression)
         {
-            // TODO: check if it can be a Query Reference
-            var sqlQuery = (sqlExpression as SqlQueryReferenceExpression)?.Reference
-                            ??
-                            sqlExpression as SqlQueryExpression
+            var sqlQuery =  sqlExpression as SqlQueryExpression
                             ??
                             throw new ArgumentException("Unable to convert to SqlQueryExpression", nameof(sqlExpression));
             return sqlQuery;
