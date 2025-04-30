@@ -19,7 +19,7 @@ namespace Atis.Expressions
         /// </summary>
         /// <param name="expression">The source expression that will be converted.</param>
         /// <param name="converterStack">The stack of converters representing the parent chain for context-aware conversion.</param>
-        public ExpressionConverterBase(TSourceExpression expression, ExpressionConverterBase<TSourceExpression, TDestinationExpression>[] converterStack)
+        protected ExpressionConverterBase(TSourceExpression expression, ExpressionConverterBase<TSourceExpression, TDestinationExpression>[] converterStack)
         {
             this.Expression = expression;
             this.ConverterStack = converterStack;
@@ -58,7 +58,7 @@ namespace Atis.Expressions
         /// </summary>
         /// <param name="convertedChildren">Children expressions that are already converted and required for this converter.</param>
         /// <returns>The converted destination expression.</returns>
-        public abstract TDestinationExpression Convert(TDestinationExpression[] convertedChildren);
+        public abstract TDestinationExpression CreateFromChildren(TDestinationExpression[] convertedChildren);
 
         /// <summary>
         /// Method called before visiting the source expression. Allows for pre-processing or preparation.
@@ -85,15 +85,10 @@ namespace Atis.Expressions
             // No default action
         }
 
-        /// <summary>
-        /// Method called when a child expression has been successfully converted.
-        /// </summary>
-        /// <param name="childConverter">The converter responsible for converting the child expression.</param>
-        /// <param name="childNode">The original child source expression.</param>
-        /// <param name="convertedExpression">The converted destination expression of the child node.</param>
-        public virtual void OnConversionCompletedByChild(ExpressionConverterBase<TSourceExpression, TDestinationExpression> childConverter, TSourceExpression childNode, TDestinationExpression convertedExpression)
+        
+        public virtual TDestinationExpression TransformConvertedChild(ExpressionConverterBase<TSourceExpression, TDestinationExpression> childConverter, TSourceExpression childNode, TDestinationExpression convertedExpression)
         {
-            // No default action
+            return convertedExpression;
         }
 
         /// <summary>

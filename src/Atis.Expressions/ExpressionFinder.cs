@@ -51,7 +51,7 @@ namespace Atis.Expressions
         /// <returns>The visited expression.</returns>
         public override Expression Visit(Expression node)
         {
-            if (node == this.Target)
+            if (this.Found || node == this.Target)
             {
                 this.Found = true;
                 return node; // Early exit: no need to visit further
