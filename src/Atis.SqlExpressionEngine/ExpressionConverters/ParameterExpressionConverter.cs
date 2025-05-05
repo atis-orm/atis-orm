@@ -2,6 +2,7 @@
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
@@ -49,7 +50,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converts <see cref="ParameterExpression"/> instances to SQL expressions.
     ///     </para>
     /// </summary>
-    public class ParameterExpressionConverter : LinqToSqlExpressionConverterBase<ParameterExpression>
+    public class ParameterExpressionConverter : LinqToNonSqlQueryConverterBase<ParameterExpression>
     {
         private readonly ILambdaParameterToDataSourceMapper parameterMapper;
 
@@ -78,75 +79,38 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return this.parameterMapper.GetDataSourceByParameterExpression(this.Expression);
         }
 
+        /// <summary>
+        ///     <para>
+        ///         Gets a value indicating whether the current parameter expression is a leaf node in the expression tree.
+        ///     </para>
+        /// </summary>
         protected virtual bool IsLefNode => !(this.ParentConverter is MemberExpressionConverter);
 
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var sqlExpression = this.GetDataSourceByParameterExpression()
-                            ??
-                            throw new InvalidOperationException($"No SqlExpression found for ParameterExpression '{this.Expression}'. This error usually indicates that the Query Method converter is not converting the first parameter to SqlQueryExpression, e.g. Select(customExpression, x => x.Field1), assume that 'customExpression' is not converting correctly to SqlQueryExpression, therefore, parameter 'x' will not be linked to any SqlQueryExpression instance and will cause this error when translating 'x' part of 'x.Field1' expression. Another reason could be that a custom query method's LambdaExpression parameter is not being mapped to any Data Source. E.g. CustomMethod(query, x => x.Field1, (p1, p2) => new {{ p1, p2 }}), so 'p1' and 'p2' parameters might be presenting data sources but not mapped to any. This is the responsibility of CustomMethod converter class to map those using {nameof(ILambdaParameterToDataSourceMapper)}.");
-            // previously we were testing of the parent expression is MemberExpression
-            // to know if this is the leaf node, that's actually a problem, because
-            //  entity.Select(x => x.NullableDate).OrderBy(x => x.Value)
-            // in above statement x will be a child of MemberExpression but it should be
-            // considered as Leaf Node because .Value will be resolved by other converter
-            var isLeafNode = this.IsLefNode;
-            // isLeafNode is true when the ParameterExpression is selected alone
-            if (!(sqlExpression is SqlQueryExpression || sqlExpression is SqlDataSourceExpression))
-                throw new InvalidOperationException($"'{sqlExpression}' is neither SqlQueryExpression nor SqlDataSourceExpression");
+            var sqlExpression = this.parameterMapper.GetDataSourceByParameterExpression(this.Expression)
+                                    ??
+                                    throw new InvalidOperationException($"No SqlExpression found for ParameterExpression '{this.Expression}'. This error usually indicates that the Query Method converter is not converting the first parameter to SqlQueryExpression, e.g. Select(customExpression, x => x.Field1), assume that 'customExpression' is not converting correctly to SqlQueryExpression, therefore, parameter 'x' will not be linked to any SqlQueryExpression instance and will cause this error when translating 'x' part of 'x.Field1' expression. Another reason could be that a custom query method's LambdaExpression parameter is not being mapped to any Data Source. E.g. CustomMethod(query, x => x.Field1, (p1, p2) => new {{ p1, p2 }}), so 'p1' and 'p2' parameters might be presenting data sources but not mapped to any. This is the responsibility of CustomMethod converter class to map those using {nameof(ILambdaParameterToDataSourceMapper)}.");
 
-            if (sqlExpression is SqlSubQueryExpression subQuery)
+            SqlDataSourceReferenceExpression sqlDataSourceReferenceExpression = null;
+            if (sqlExpression is SqlDataSourceReferenceExpression dsRef)
+                sqlDataSourceReferenceExpression = dsRef;
+            else if (!(sqlExpression is SqlDerivedTableExpression))
+                // TODO: we might need to look at what other expressions a parameter can be
+                throw new InvalidOperationException($"Either ParameterExpression should yield SqlDataSourceReferenceExpression or SqlDerivedTableExpression");
+
+
+            if (this.IsLefNode)
             {
-                sqlExpression = subQuery.CreateCopy();
-                return sqlExpression;
+                if (sqlDataSourceReferenceExpression != null)
+                    if (sqlDataSourceReferenceExpression.TryResolveScalarColumn(out var scalarColumn))
+                        return scalarColumn;
             }
 
-            SqlExpression result;
-            if (isLeafNode)
-            {
-                if (sqlExpression is SqlQueryExpression sqlQuery && !sqlQuery.IsMultiDataSourceQuery)
-                {
-                    if (sqlQuery.InitialDataSource == null) 
-                    {
-                        // this would the case where a query is created without From i.e. direct Select call
-                        // in that case we need to wrap the query so that columns will be available to select
-                        sqlQuery.WrapInSubQuery();
-                    }
-
-                    var scalarVal = sqlQuery.GetScalarColumnExpression();
-                    if (scalarVal != null)
-                        return scalarVal;
-                }
-                if (sqlExpression is SqlDataSourceExpression ds && ds.NodeType == SqlExpressionType.SubQueryDataSource)
-                {
-                    var otherDataSourceQuery = ds.QuerySource as SqlQueryExpression
-                                                ??
-                                                throw new InvalidOperationException($"'{ds.QuerySource}' is not a SqlQueryExpression");
-                    // other data source cannot be modified itself, it will always make a copy whenever used
-                    var newSqlQuery = otherDataSourceQuery.CreateCopy();
-                    result = newSqlQuery;
-                }
-                else
-                {
-                    if (sqlExpression is SqlQueryExpression sqlQuery2)
-                        result = this.SqlFactory.CreateQueryReference(sqlQuery2);
-                    else if (sqlExpression is SqlDataSourceExpression dataSource)
-                        result = this.SqlFactory.CreateDataSourceReference(dataSource);
-                    else
-                        throw new InvalidOperationException($"'{sqlExpression}' is neither SqlQueryExpression nor SqlDataSourceExpression");
-                }
-            }
-            else
-                result = sqlExpression;
-
-            // In-case if ParameterExpression is representing a Multi Data Source Query, then it's impossible
-            // that single direct ParameterExpression will ever translate into scalar column,
-            // in that case, the direct ParameterExpression selection will cause all the columns in all the
-            // data sources to be selected in projection.
-            // Which means either the ParameterExpression will be a part of MemberExpression or it will be
-            // selected by user directly in Projection.
-            return result;
+            // either SqlExpression will be a SqlDataSourceReferenceExpression or
+            // SqlDerivedTableExpression
+            return sqlDataSourceReferenceExpression ?? sqlExpression;
         }
     }
 }

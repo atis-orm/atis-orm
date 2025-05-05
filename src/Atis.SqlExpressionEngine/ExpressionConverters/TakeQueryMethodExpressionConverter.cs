@@ -1,6 +1,7 @@
 ﻿using Atis.Expressions;
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.SqlExpressions;
+using System;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -59,10 +60,16 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
             var top = arguments[0];
-            sqlQuery.ApplyTop(top);
+            var topNumber = (top as SqlLiteralExpression)?.LiteralValue as int?
+                            ??
+                            (top as SqlParameterExpression)?.Value as int?
+                            ??
+                            throw new InvalidOperationException($"Top argument must be a literal or parameter expression, but got {top.GetType().Name}.");
+
+            sqlQuery.ApplyTop(topNumber);
             return sqlQuery;
         }
     }

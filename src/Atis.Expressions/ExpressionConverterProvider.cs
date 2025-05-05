@@ -37,6 +37,7 @@ namespace Atis.Expressions
         /// </summary>
         protected virtual Stack<ExpressionConverterBase<TSourceExpression, TDestinationExpression>> ConverterStack { get; } = new Stack<ExpressionConverterBase<TSourceExpression, TDestinationExpression>>();
 
+        
         /// <summary>
         /// Prepares for visiting a source expression by determining the appropriate converter
         /// and pushing it onto the converter stack.
@@ -87,10 +88,13 @@ namespace Atis.Expressions
         public virtual TDestinationExpression Convert(TSourceExpression sourceExpression, TDestinationExpression[] convertedChildren)
         {
             var currentConverter = this.CurrentConverter ?? throw new InvalidOperationException("No current converter found.");
-            var convertedValue = currentConverter.Convert(convertedChildren);
+            var convertedValue = currentConverter.CreateFromChildren(convertedChildren);
             this.ConverterStack.Pop();
             var parentConverter = this.CurrentConverter;
-            parentConverter?.OnConversionCompletedByChild(currentConverter, sourceExpression, convertedValue);
+            if (parentConverter != null)
+            {
+                convertedValue = parentConverter.TransformConvertedChild(currentConverter, sourceExpression, convertedValue);
+            }
             currentConverter.OnAfterVisit();
             return convertedValue;
         }
@@ -108,7 +112,7 @@ namespace Atis.Expressions
             {
                 if (parentConverter.TryOverrideChildConversion(node, out convertedExpression))
                 {
-                    parentConverter.OnConversionCompletedByChild(null, node, convertedExpression);
+                    convertedExpression = parentConverter.TransformConvertedChild(null, node, convertedExpression);
                     return true;
                 }
             }

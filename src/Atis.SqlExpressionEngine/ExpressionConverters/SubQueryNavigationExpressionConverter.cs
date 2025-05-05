@@ -2,6 +2,7 @@
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.ExpressionExtensions;
 using Atis.SqlExpressionEngine.SqlExpressions;
+using System;
 using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
@@ -44,7 +45,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for converting <see cref="SubQueryNavigationExpression"/> to <see cref="SqlExpression"/>.
     ///     </para>
     /// </summary>
-    public class SubQueryNavigationExpressionConverter : LinqToSqlExpressionConverterBase<SubQueryNavigationExpression>
+    public class SubQueryNavigationExpressionConverter : LinqToSqlQueryConverterBase<SubQueryNavigationExpression>
     {
         /// <summary>
         ///     <para>
@@ -61,8 +62,14 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var sqlQuery = convertedChildren[0];
+            var sqlQuery = convertedChildren[0] as SqlSelectExpression
+                            ??
+                            throw new InvalidOperationException($"Expected a {nameof(SqlSelectExpression)} but got {convertedChildren[0].GetType().Name}.");
+            sqlQuery.Tag = this.Expression.NavigationProperty;
             return sqlQuery;
         }
+
+        /// <inheritdoc />
+        public override bool IsChainedQueryArgument(Expression childNode) => childNode == this.Expression.Query;
     }
 }

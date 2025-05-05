@@ -32,13 +32,13 @@ select	NavItem_2.ItemId as ItemId, NavItem_2.UnitPrice as UnitPrice, a_1.EquipId
             var inventoryTransactions = new Queryable<ItemInventoryTransaction>(new QueryProvider());
             var q = inventoryTransactions.Select(x => new { x.TransactionId, x.ItemId, x.NavSummaryLine().TotalCapturedQty, x.NavSummaryLine().TotalQtyGained, x.NavSummaryLine().TotalQtyLost });
             string? expectedResult = @"
-select	a_1.TransactionId as TransactionId, a_1.ItemId as ItemId, NavSummaryLine_3.TotalCapturedQty as TotalCapturedQty, NavSummaryLine_3.TotalQtyGained as TotalQtyGained, NavSummaryLine_3.TotalQtyLost as TotalQtyLost
-	from	ItemInventoryTransaction as a_1
-		left join (
-			select	a_2.TransactionRowId as TransactionRowId, Sum(a_2.CapturedQty) as TotalCapturedQty, Sum(case when (a_2.NewQty > a_2.CapturedQty) then (a_2.NewQty - a_2.CapturedQty) else 0 end) as TotalQtyGained, Sum(case when (a_2.CapturedQty > a_2.NewQty) then (a_2.CapturedQty - a_2.NewQty) else 0 end) as TotalQtyLost
-			from	ItemInventoryTransactionDetail as a_2
-			group by a_2.TransactionRowId
-		) as NavSummaryLine_3 on (a_1.RowId = NavSummaryLine_3.TransactionRowId)
+select a_1.TransactionId as TransactionId, a_1.ItemId as ItemId, NavSummaryLine_2.TotalCapturedQty as TotalCapturedQty, NavSummaryLine_2.TotalQtyGained as TotalQtyGained, NavSummaryLine_2.TotalQtyLost as TotalQtyLost
+	from ItemInventoryTransaction as a_1
+			left join (
+				select a_3.TransactionRowId as TransactionRowId, Sum(a_3.CapturedQty) as TotalCapturedQty, Sum(case when (a_3.NewQty > a_3.CapturedQty) then (a_3.NewQty - a_3.CapturedQty) else 0 end) as TotalQtyGained, Sum(case when (a_3.CapturedQty > a_3.NewQty) then (a_3.CapturedQty - a_3.NewQty) else 0 end) as TotalQtyLost
+				from ItemInventoryTransactionDetail as a_3
+				group by a_3.TransactionRowId
+			) as NavSummaryLine_2 on (a_1.RowId = NavSummaryLine_2.TransactionRowId)
 ";
 
             Test("Relation Navigation To Custom Type Test", q.Expression, expectedResult);
@@ -174,14 +174,14 @@ select	NavItemMoreInfo_4.TrackingType as TrackingType, NavItemMoreInfo_4.ItemId 
             IQueryable<StudentGrade> studentGrades = new Queryable<StudentGrade>(new QueryProvider());
             var q = studentGrades.Where(x => x.NavStudentGradeDetails.Any(y => y.MarksGained > 50));
             string? expectedResult = @"
-select	a_1.RowId as RowId, a_1.StudentId as StudentId, a_1.Grade as Grade
-from	StudentGrade as a_1
-where	exists(
-	select	1
-	from	StudentGradeDetail as a_2
-	where	(a_1.RowId = a_2.StudentGradeRowId)
-		and	(a_2.MarksGained > 50)
-)
+    select a_1.RowId as RowId, a_1.StudentId as StudentId, a_1.Grade as Grade
+	from StudentGrade as a_1
+	where exists(
+			select 1 as Col1
+			from StudentGradeDetail as a_2
+			where (a_1.RowId = a_2.StudentGradeRowId)
+				 and (a_2.MarksGained > 50)
+		)
 ";
             Test("To Multiple Children Navigation Property Test", q.Expression, expectedResult);
         }
@@ -196,7 +196,7 @@ where	exists(
 	from	ItemBase as a_1
 		left join ItemExtension as NavItemExt_2 on (a_1.ItemId = NavItemExt_2.ItemId)
 	where	exists(
-		select	1
+		select	1 as Col1
 		from	ItemPart as a_3
 		where	(NavItemExt_2.ItemId = a_3.ItemId) and (a_3.PartNumber = '123')
 	)
@@ -262,16 +262,13 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
                 DegreeCount = x.NavDegrees.SelectMany(y => y.NavMarksheets).Count()
             });
             string? expectedResult = @"
-select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
-		select	Count(1) as Col1
-		from	(
-			select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a_2.University as University
-			from	EmployeeDegree as a_2
-			where	(a_1.EmployeeId = a_2.EmployeeId)
-		) as a_3
-			inner join Marksheet as NavMarksheets_4 on (a_3.RowId = NavMarksheets_4.EmployeeDegreeRowId)
-	) as DegreeCount
-	from	Employee as a_1
+   	select a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
+			select Count(1) as Col1
+			from EmployeeDegree as a_2
+					inner join Marksheet as NavMarksheets_3 on (a_2.RowId = NavMarksheets_3.EmployeeDegreeRowId)
+			where (a_1.EmployeeId = a_2.EmployeeId)
+		) as DegreeCount
+	from Employee as a_1
 ";
             Test("Nav Children Sub Query Test", q.Expression, expectedResult);
         }
@@ -289,19 +286,19 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
                     x.Name,
                 });
             string? expectedResult = @"
-select	a_1.EmployeeId as EmployeeId, a_1.Name as Name
-	from	Employee as a_1
-	where	exists(
-		select	1
-		from	EmployeeDegree as a_2
-		where	(a_1.EmployeeId = a_2.EmployeeId)
-			and	exists(
-			select	1
-			from	Marksheet as a_3
-			where	(a_2.RowId = a_3.EmployeeDegreeRowId)
-				and	(a_3.TotalMarks > 50)
+    select a_1.EmployeeId as EmployeeId, a_1.Name as Name
+	from Employee as a_1
+	where exists(
+			select 1 as Col1
+			from EmployeeDegree as a_2
+			where (a_1.EmployeeId = a_2.EmployeeId)
+				 and exists(
+					select 1 as Col1
+					from Marksheet as a_3
+					where (a_2.RowId = a_3.EmployeeDegreeRowId)
+						 and (a_3.TotalMarks > 50)
+				)
 		)
-	)
 ";
             Test("Nav Children Sub Query Where Test", q.Expression, expectedResult);
         }
@@ -322,14 +319,14 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name
                         });
 
             string? expectedResult = @"
-select	a_1.InvoiceId as InvoiceId, NavFirstLine_3.ItemId as Item, NavItem_4.ItemDescription as ItemDescription, NavFirstLine_3.UnitPrice as UnitPrice
-	from	Invoice as a_1
-		outer apply (
-			select	top (1)	a_2.RowId as RowId, a_2.InvoiceId as InvoiceId, a_2.ItemId as ItemId, a_2.UnitPrice as UnitPrice, a_2.Quantity as Quantity, a_2.LineTotal as LineTotal
-			from	InvoiceDetail as a_2
-			where	(a_1.RowId = a_2.InvoiceId)
-		) as NavFirstLine_3
-		left join ItemBase as NavItem_4 on (NavItem_4.ItemId = NavFirstLine_3.ItemId)
+    	select a_1.InvoiceId as InvoiceId, NavFirstLine_2.ItemId as Item, NavItem_4.ItemDescription as ItemDescription, NavFirstLine_2.UnitPrice as UnitPrice
+	from Invoice as a_1
+			outer apply (
+				select top (1) a_3.RowId as RowId, a_3.InvoiceId as InvoiceId, a_3.ItemId as ItemId, a_3.UnitPrice as UnitPrice, a_3.Quantity as Quantity, a_3.LineTotal as LineTotal
+				from InvoiceDetail as a_3
+				where (a_1.RowId = a_3.InvoiceId)
+			) as NavFirstLine_2
+			left join ItemBase as NavItem_4 on (NavItem_4.ItemId = NavFirstLine_2.ItemId)
 ";
 
             Test("Calculated Property to Outer Apply Test", q.Expression, expectedResult);
@@ -343,13 +340,13 @@ select	a_1.InvoiceId as InvoiceId, NavFirstLine_3.ItemId as Item, NavItem_4.Item
             var invoiceDetails = new Queryable<InvoiceDetail>(queryProvider);
             var q = invoices.Select(x => new { x.InvoiceId, x.NavTop2Lines().ItemId, x.NavTop2Lines().UnitPrice });
             string? expectedResult = @"
-select	a_1.InvoiceId as InvoiceId, NavTop2Lines_3.ItemId as ItemId, NavTop2Lines_3.UnitPrice as UnitPrice
-	from	Invoice as a_1
-		outer apply (
-			select	top (2)	a_2.RowId as RowId, a_2.InvoiceId as InvoiceId, a_2.ItemId as ItemId, a_2.UnitPrice as UnitPrice, a_2.Quantity as Quantity, a_2.LineTotal as LineTotal
-			from	InvoiceDetail as a_2
-			where	(a_1.RowId = a_2.InvoiceId)
-		) as NavTop2Lines_3
+   	select a_1.InvoiceId as InvoiceId, NavTop2Lines_2.ItemId as ItemId, NavTop2Lines_2.UnitPrice as UnitPrice
+	from Invoice as a_1
+			outer apply (
+				select top (2) a_3.RowId as RowId, a_3.InvoiceId as InvoiceId, a_3.ItemId as ItemId, a_3.UnitPrice as UnitPrice, a_3.Quantity as Quantity, a_3.LineTotal as LineTotal
+				from InvoiceDetail as a_3
+				where (a_1.RowId = a_3.InvoiceId)
+			) as NavTop2Lines_2
 ";
             Test("Navigation to Child with More than 1 Lines Outer Apply Test", q.Expression, expectedResult);
         }

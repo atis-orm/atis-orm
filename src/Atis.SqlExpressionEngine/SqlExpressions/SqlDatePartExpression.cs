@@ -19,7 +19,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlDatePartExpression(this);
+            return sqlExpressionVisitor.VisitSqlDatePart(this);
         }
 
         public SqlDatePartExpression Update(SqlExpression dateExpression)

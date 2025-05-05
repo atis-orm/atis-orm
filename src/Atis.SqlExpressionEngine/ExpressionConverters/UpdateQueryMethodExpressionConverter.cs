@@ -7,23 +7,24 @@ using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
-    public class UpdateQueryMethodExpressionConverterFactory : QueryMethodExpressionConverterFactoryBase
+    public class UpdateQueryMethodExpressionConverterFactory : LinqToSqlExpressionConverterFactoryBase<MethodCallExpression>
     {
         public UpdateQueryMethodExpressionConverterFactory(IConversionContext context) : base(context)
         {
         }
 
         /// <inheritdoc />
-        protected override ExpressionConverterBase<Expression, SqlExpression> CreateConverter(MethodCallExpression methodCallExpression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
+        public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
         {
-            return new UpdateQueryMethodExpressionConverter(this.Context, methodCallExpression, converterStack);
-        }
-
-        /// <inheritdoc />
-        protected override bool IsQueryMethodCall(MethodCallExpression methodCallExpression)
-        {
-            return methodCallExpression.Method.Name == nameof(QueryExtensions.Update) &&
-                     methodCallExpression.Method.DeclaringType == typeof(QueryExtensions);
+            if (expression is MethodCallExpression methodCallExpression && 
+                    methodCallExpression.Method.Name == nameof(QueryExtensions.Update) &&
+                    methodCallExpression.Method.DeclaringType == typeof(QueryExtensions))
+            {
+                converter = new UpdateQueryMethodExpressionConverter(this.Context, methodCallExpression, converterStack);
+                return true;
+            }
+            converter = null;
+            return false;
         }
     }
     public class UpdateQueryMethodExpressionConverter : DataManipulationQueryMethodExpressionConverterBase
@@ -37,25 +38,26 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         protected override int WherePredicateArgumentIndex => this.Expression.Arguments.Count == 4 ? 3 : 2;
         /// <inheritdoc />
-        protected override SqlExpression CreateDmSqlExpression(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource, SqlExpression[] arguments)
+        protected override SqlExpression CreateDmSqlExpression(SqlDerivedTableExpression sqlQuery, Guid selectedDataSource, SqlExpression[] arguments)
         {
             var columnsArgIndex = arguments.Length == 2 ? 0 : 1;
-            var columns = arguments[columnsArgIndex];
-            if (!(columns is SqlCollectionExpression sqlCollectionExpression))
+            var setClause = arguments[columnsArgIndex];
+            if (!(setClause is SqlCompositeBindingExpression compositeBinding))
                 throw new InvalidOperationException($"The arg-1 of the {nameof(QueryExtensions.Update)} method must be a collection of columns. Make sure arg-1 is a {nameof(MemberInitExpression)}.");
 
-            SqlColumnExpression[] sqlColumns;
-            try
-            {
-                sqlColumns = sqlCollectionExpression.SqlExpressions.Cast<SqlColumnExpression>().ToArray();
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"The arg-1 of the {nameof(QueryExtensions.Update)} is a {nameof(SqlCollectionExpression)}, however, property {nameof(SqlCollectionExpression.SqlExpressions)} is not {nameof(SqlColumnExpression)}.", ex);
-            }
+            var dataSourceToUpdate = sqlQuery.AllDataSources.Where(x=>x.Alias == selectedDataSource).FirstOrDefault()
+                                        ??
+                                        throw new InvalidOperationException($"The data source is not found in the query.");
+            var tableToUpdate = dataSourceToUpdate.QuerySource as SqlTableExpression
+                                ??
+                                throw new InvalidOperationException($"The data source is not a {nameof(SqlTableExpression)}.");
 
-            var columnNames = sqlColumns.Select(x => x.ColumnAlias).ToArray();
-            var values = sqlColumns.Select(x => x.ColumnExpression).ToArray();
+
+            string[] columnNames;
+            SqlExpression[] values;
+
+            columnNames = compositeBinding.Bindings.Select(x => tableToUpdate.GetByPropertyName(x.ModelPath.GetLastElementRequired())).ToArray();
+            values = compositeBinding.Bindings.Select(x => x.SqlExpression).ToArray();
 
             var updateSqlExpression = this.SqlFactory.CreateUpdate(sqlQuery, selectedDataSource, columnNames, values);
 

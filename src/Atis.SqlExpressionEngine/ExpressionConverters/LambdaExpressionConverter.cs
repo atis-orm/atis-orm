@@ -41,7 +41,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for converting LambdaExpression instances to SQL expressions.
     ///     </para>
     /// </summary>
-    public class LambdaExpressionConverter : LinqToSqlExpressionConverterBase<LambdaExpression>
+    public class LambdaExpressionConverter : LinqToNonSqlQueryConverterBase<LambdaExpression>
     {
         /// <summary>
         ///     <para>

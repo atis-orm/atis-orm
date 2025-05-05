@@ -62,7 +62,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
             var takeCountExpr = arguments[0];
             var takeCount = this.GetValue(takeCountExpr);

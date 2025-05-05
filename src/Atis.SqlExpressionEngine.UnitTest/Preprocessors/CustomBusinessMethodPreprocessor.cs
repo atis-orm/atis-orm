@@ -1,5 +1,5 @@
 ﻿using Atis.Expressions;
-using Atis.SqlExpressionEngine.UnitTest.Tests;
+using Atis.SqlExpressionEngine.UnitTest.Metadata;
 using System.Linq.Expressions;
 using System.Reflection;
 

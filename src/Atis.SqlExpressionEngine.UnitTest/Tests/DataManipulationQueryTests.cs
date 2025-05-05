@@ -31,11 +31,11 @@ where	(a_1.SerialNumber = '123')
                                                         asset => asset.SerialNumber == "123");
             var queryExpression = expr.Body;
             string? expectedResult = @"
-update NavItem_1
-	set ItemDescription = (NavItem_1.ItemDescription + a_2.SerialNumber)
-from	Asset as a_2
-	inner join ItemBase as NavItem_1 on (NavItem_1.ItemId = a_2.ItemId)
-where	(a_2.SerialNumber = '123')
+update NavItem_2
+	set ItemDescription = (NavItem_2.ItemDescription + a_1.SerialNumber)
+from Asset as a_1
+			inner join ItemBase as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)
+	where (a_1.SerialNumber = '123')
 ";
             Test($"Update Query Multiple Table Navigation Test", queryExpression, expectedResult);
         }
@@ -63,11 +63,11 @@ where	(a_2.SerialNumber = '123')
 
             var queryExpression = expr.Body;
             string? expectedResult = @"
-update a_1
-	set ItemDescription = (a_1.ItemDescription + a_2.SerialNumber)
-from	Asset as a_2
-	inner join ItemBase as a_1 on (a_2.ItemId = a_1.ItemId)
-where	(a_2.SerialNumber = '123')
+update a_2
+	set ItemDescription = (a_2.ItemDescription + a_1.SerialNumber)
+from Asset as a_1
+			inner join ItemBase as a_2 on (a_1.ItemId = a_2.ItemId)
+	where (a_1.SerialNumber = '123')
 ";
             Test($"Update Query Multiple Table Join Test", queryExpression, expectedResult);
         }
@@ -83,15 +83,15 @@ where	(a_2.SerialNumber = '123')
                                                     .Update(ms => ms.NavItemMoreInfo(), ms => new ItemMoreInfo { TrackingType = "TT" }, ms => ms.ItemDescription.Contains("123"));
             var queryExpression = expr.Body;
             string? expectedResult = @"
-update NavItemMoreInfo_1
+update NavItemMoreInfo_4
 	set TrackingType = 'TT'
-from	(
-	select	a_3.ItemId as ItemId, a_3.ItemDescription as ItemDescription
-	from	Asset as a_2
-		inner join ItemBase as a_3 on (a_2.ItemId = a_3.ItemId)
-) as a_4
-	left join ItemMoreInfo as NavItemMoreInfo_1 on (a_4.ItemId = NavItemMoreInfo_1.ItemId)
-where	(a_4.ItemDescription like '%' + '123' + '%')
+from (
+			select a_2.ItemId as ItemId, a_2.ItemDescription as ItemDescription
+			from Asset as a_1
+					inner join ItemBase as a_2 on (a_1.ItemId = a_2.ItemId)
+		) as a_3
+			left join ItemMoreInfo as NavItemMoreInfo_4 on (a_3.ItemId = NavItemMoreInfo_4.ItemId)
+where (a_3.ItemDescription like '%' + '123' + '%')
 ";
             Test($"Update Query Multiple Table From Test", queryExpression, expectedResult);
         }
@@ -109,12 +109,12 @@ where	(a_4.ItemDescription like '%' + '123' + '%')
                                                     .Update(ms => ms.j1, ms => new ItemBase { ItemDescription = ms.a.SerialNumber + ms.j1.ItemId }, ms => ms.j1.ItemDescription.Contains("123"));
             var queryExpression = expr.Body;
             string? expectedResult = @"
-  update a_1
-	set ItemDescription = (a_2.SerialNumber + a_1.ItemId)
-from	Asset as a_2
-	inner join ItemBase as a_1 on (a_2.ItemId = a_1.ItemId)
-	inner join ItemMoreInfo as a_3 on (a_3.ItemId = a_1.ItemId)
-where	(a_1.ItemDescription like '%' + '123' + '%')
+update a_2
+	set ItemDescription = (a_1.SerialNumber + a_2.ItemId)
+from Asset as a_1
+			inner join ItemBase as a_2 on (a_1.ItemId = a_2.ItemId)
+			inner join ItemMoreInfo as a_3 on (a_3.ItemId = a_2.ItemId)
+	where (a_2.ItemDescription like '%' + '123' + '%')
 ";
             Test($"Update Query Multiple Table Complex Object For ModelPath Test", queryExpression, expectedResult);
         }
@@ -141,10 +141,10 @@ where	(a_1.SerialNumber = '123')
                                                                 asset => asset.SerialNumber == "123");
             var queryExpression = expr.Body;
             string? expectedResult = @"
-delete NavItem_1
-from	Asset as a_2
-	inner join ItemBase as NavItem_1 on (NavItem_1.ItemId = a_2.ItemId)
-where	(a_2.SerialNumber = '123')
+delete NavItem_2
+from Asset as a_1
+			inner join ItemBase as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)
+	where (a_1.SerialNumber = '123')
 ";
 
 

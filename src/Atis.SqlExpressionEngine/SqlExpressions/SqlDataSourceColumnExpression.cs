@@ -1,75 +1,53 @@
 ﻿using Atis.SqlExpressionEngine.Internal;
 using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Atis.SqlExpressionEngine.SqlExpressions
 {
-    /// <summary>
-    ///     <para>
-    ///         Represents a column in a data source with an alias.
-    ///     </para>
-    /// </summary>
-    public class SqlDataSourceColumnExpression : SqlExpression
+    public class SqlDataSourceColumnExpression : SqlExpression, IEquatable<SqlDataSourceColumnExpression>
     {
-        /// <summary>
-        ///     <para>
-        ///         Creates a new instance of the <see cref="SqlDataSourceColumnExpression" /> class.
-        ///     </para>
-        /// </summary>
-        /// <param name="dataSource">Instance of <see cref="SqlDataSourceExpression"/> class.</param>
-        /// <param name="columnName">Column name in the data source.</param>
-        public SqlDataSourceColumnExpression(SqlDataSourceExpression dataSource, string columnName)
+        public SqlDataSourceColumnExpression(Guid dataSourceAlias, string columnName)
         {
-            this.DataSource = dataSource;
+            this.DataSourceAlias = dataSourceAlias;
+            if (string.IsNullOrWhiteSpace(columnName))
+                throw new ArgumentNullException(nameof(columnName));
             this.ColumnName = columnName;
         }
 
-        /// <inheritdoc />
         public override SqlExpressionType NodeType => SqlExpressionType.DataSourceColumn;
-
-        /// <summary>
-        ///     <para>
-        ///         Gets the data source of the column.
-        ///     </para>
-        /// </summary>
-        /// <remarks>
-        ///     <para>
-        ///         This property will not be visited by the <see cref="SqlExpressionVisitor" />.
-        ///         This is just for the reference of the data source.
-        ///     </para>
-        /// </remarks>
-        public SqlDataSourceExpression DataSource { get; }
-
-        /// <summary>
-        ///     <para>
-        ///         Gets the name of the column.
-        ///     </para>
-        /// </summary>
+        public Guid DataSourceAlias { get; }
         public string ColumnName { get; }
 
-        /// <summary>
-        ///     <para>
-        ///         Accepts a visitor to visit this SQL data source column expression.
-        ///     </para>
-        /// </summary>
-        /// <param name="sqlExpressionVisitor">The visitor to accept.</param>
-        /// <returns>The result of visiting this expression.</returns>
-        protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
+        protected internal override SqlExpression Accept(SqlExpressionVisitor visitor)
         {
-            return sqlExpressionVisitor.VisitSqlDataSourceColumnExpression(this);
+            return visitor.VisitSqlDataSourceColumn(this);
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Returns a string representation of the SQL data source column expression.
-        ///     </para>
-        ///     <para>
-        ///         The string representation includes the alias of the data source and the name of the column.
-        ///     </para>
-        /// </summary>
-        /// <returns>A string representation of the SQL data source column expression.</returns>
         public override string ToString()
         {
-            return $"{DebugAliasGenerator.GetAlias(this.DataSource)}.{this.ColumnName}";
+            return $"{DebugAliasGenerator.GetAlias(this.DataSourceAlias)}.{this.ColumnName}";
+        }
+
+        public bool Equals(SqlDataSourceColumnExpression other)
+        {
+            if (other is null)
+                return false;
+            if (ReferenceEquals(this, other))
+                return true;
+
+            return this.DataSourceAlias == other.DataSourceAlias &&
+                   this.ColumnName == other.ColumnName;
+        }
+
+        public override bool Equals(object obj) => Equals(obj as SqlDataSourceColumnExpression);
+
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            hash.Add(this.DataSourceAlias);
+            hash.Add(this.ColumnName);
+            return hash.ToHashCode();
         }
     }
 }

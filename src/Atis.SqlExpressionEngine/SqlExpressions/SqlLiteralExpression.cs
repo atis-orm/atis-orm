@@ -43,7 +43,7 @@
         /// <returns>The result of visiting this expression.</returns>
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlLiteralExpression(this);
+            return sqlExpressionVisitor.VisitSqlLiteral(this);
         }
 
         /// <summary>

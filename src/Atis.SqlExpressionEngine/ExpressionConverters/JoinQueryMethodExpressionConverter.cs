@@ -59,24 +59,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
         }
 
-        /// <inheritdoc />
-        public override bool TryOverrideChildConversion(Expression sourceExpression, out SqlExpression convertedExpression)
-        {
-            // we don't want to the conversion system to go into 'NewExpression' part of Join Query Method
-            // therefore, we are returning a dummy expression
-            var newExpressionIndex = GetNewExpressionIndex();
-            if (newExpressionIndex >= 0)
-            {
-                if (sourceExpression == this.Expression.Arguments[newExpressionIndex])
-                {
-                    convertedExpression = this.SqlFactory.CreateLiteral("dummy");
-                    return true;
-                }
-            }
-            convertedExpression = null;
-            return false;
-        }
-
         private bool IsCrossOrOuterApply()
         {
             return this.Expression.Method.Name == nameof(QueryExtensions.CrossApply) ||
@@ -101,13 +83,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return -1;
         }
         
-        private int GetAlreadyAvailableJoinedDataSourceIndex()
-        {
-            if (this.ArgCount == 3)
-                return 1;
-            return -1;
-        }
-        
         private int GetNewExpressionIndex()
         {
             if (this.ArgCount == 4)
@@ -126,7 +101,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return -1;
         }
 
-        private SqlDataSourceExpression newJoinedDataSource = null;
+        private Guid? newlyJoinedDataSourceAlias;
 
         /// <inheritdoc />
         protected override void OnArgumentConverted(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression argument, SqlExpression convertedArgument)
@@ -134,78 +109,74 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var argIndex = this.Expression.Arguments.IndexOf(argument);
             if (this.GetNewlyJoinedDataSourceIndex() == argIndex)
             {
-                if (convertedArgument is SqlDataSourceReferenceExpression dsRef)
-                    convertedArgument = dsRef.DataSource;
-                var joinedQuery = convertedArgument as SqlQuerySourceExpression
-                                        ?? throw new InvalidOperationException($"2nd argument of Join Query Method must be a SqlQuerySourceExpression.");
+                var derivedTable = convertedArgument as SqlDerivedTableExpression
+                                    ??
+                                    throw new InvalidOperationException($"2nd argument of Join Query Method must be a {nameof(SqlDerivedTableExpression)}, currently it's being converted to {convertedArgument.GetType().Name}.");
+                var joinedQuery = derivedTable.ConvertToTableIfPossible();
+                var ds = this.SourceQuery.AddJoin(joinedQuery, SqlJoinType.Cross);
+                this.newlyJoinedDataSourceAlias = ds.DataSourceAlias;
 
-                //string alias;
-                if (joinedQuery is SqlQueryExpression sqlQuery && sqlQuery.IsTableOnly())
-                {
-                    var firstDataSource = sqlQuery.DataSources.First();
-                    joinedQuery = firstDataSource.QuerySource;
-                    //alias = firstDataSource.DataSourceAlias;
-                }
-                else
-                {
-                    //alias = this.Context.GenerateAlias();
-                }
-                this.newJoinedDataSource = this.SqlFactory.CreateDataSourceForQuerySource(joinedQuery);
-                this.SourceQuery.AddDataSource(this.newJoinedDataSource);
+                var newShapeLambda = this.GetArgumentLambda(this.GetNewExpressionIndex());
+                // The base converter class `QueryMethodExpressionConverter` automatically maps the first argument 
+                // of all LambdaExpressions in this method call. However, we need to manually map the second argument 
+                // because the base class does not handle it. 
+                // The base class removes all mapped parameters at the end, not just the first parameter, 
+                // so we do not need to explicitly remove the second parameter mapping ourselves.
+                this.ParameterMap.TrySetParameterMap(newShapeLambda.Parameters[1], ds);
             }
             else if (this.GetNewExpressionIndex() == argIndex)
             {
-                var dataSourcePropertyInfoExtractor = new DataSourcePropertyInfoExtractor();
-                var updatedMapping = dataSourcePropertyInfoExtractor.RecalculateMemberMapping(this.GetArgumentLambda(argIndex));
-                if (updatedMapping.NewDataSourceMemberInfo == null)
-                    throw new InvalidOperationException($"Unable to find the new data source in the 2nd argument of Join Query Method, make sure you have selected the 2nd parameter in New Data Source Expression.");
-
-                if (updatedMapping.CurrentDataSourceMemberInfo == null)
-                {
-                    var dataSourceWithModelPath = this.SourceQuery.AllQuerySources
-                                                                    .Where(x => !x.ModelPath.IsEmpty)
-                                                                    .Select(x => new { Ds = x, DsModelPath = x.ModelPath.GetLastElement() })
-                                                                    .ToDictionary(x => x.DsModelPath, x => x.Ds);
-                    foreach (var kv in updatedMapping.NewMap)
-                    {
-                        if (dataSourceWithModelPath.TryGetValue(kv.Value.Name, out var ds))
-                        {
-                            ds.ReplaceModelPathPrefix(kv.Key.Name);
-                        }
-                    }
-                }
-                else
-                {
-                    foreach (var ds in this.SourceQuery.AllQuerySources)
-                    {
-                        if (ds != this.newJoinedDataSource)
-                        {
-                            ds.AddModelPathPrefix(updatedMapping.CurrentDataSourceMemberInfo.Name);
-                        }
-                    }
-                }
-                this.newJoinedDataSource.AddModelPathPrefix(updatedMapping.NewDataSourceMemberInfo.Name);
+                var compositeBindingExpression = convertedArgument as SqlCompositeBindingExpression 
+                                                    ??
+                                                    throw new InvalidOperationException($"3rd argument of Join Query Method must be a {nameof(SqlCompositeBindingExpression)}.");
+                this.SourceQuery.UpdateModelBinding(compositeBindingExpression);
             }
         }
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression selectQuery, SqlExpression[] arguments)
         {
-            SqlExpression joinCondition = null;
+            var joinCondition = this.GetJoinCondition(arguments);
+            var joinType = this.GetJoinType();
+            Guid joinedDataSourceAlias;
+            if (this.newlyJoinedDataSourceAlias != null)
+            {
+                // if we are here it means a separate query was provided in join method
+                // to be added on the fly
+                joinedDataSourceAlias = this.newlyJoinedDataSourceAlias.Value;
+            }
+            else
+            {
+                // if we are here it means a data source was already added through "From" method
+
+                // below index will be returned as per the MethodCallExpression while we are trying to
+                // get the argument from `arguments` array (method argument), which will not have SqlSelectExpression
+                var alreadyAvailableDataSourceArgIndex = this.GetAlreadyAvailableDataSourceIndex() - 1;
+                var alreadyAvailableDataSource = arguments[alreadyAvailableDataSourceArgIndex] as SqlDataSourceExpression
+                                                    ??
+                                                    throw new InvalidOperationException($"2nd argument of Join Query Method must be a {nameof(SqlDataSourceExpression)}.");
+                joinedDataSourceAlias = alreadyAvailableDataSource.DataSourceAlias;
+            }
+
+            this.SourceQuery.UpdateJoin(joinedDataSourceAlias, joinType, joinCondition, joinName: null, navigationJoin: false, navigationParent: null);
+
+            return selectQuery;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="arguments"></param>
+        /// <returns></returns>
+        protected virtual SqlExpression GetJoinCondition(SqlExpression[] arguments)
+        {
             // -1 is because 1st arg is always removed by base class, usually SqlExpression[] has
             // sqlQuery as 1st arg, but base class removes it and pass it in the first argument, however, the original
             // LINQ Expression has the sqlQuery in the 1st argument, that's why we are doing -1 here.
             var joinConditionIndex = this.GetJoinConditionIndex() - 1;
             if (joinConditionIndex >= 0)
-                joinCondition = arguments[joinConditionIndex];
-            var otherDataSource = arguments[0];
-            SqlJoinType joinType = this.GetJoinType();
-            var ds = this.newJoinedDataSource
-                        ?? (otherDataSource as SqlDataSourceReferenceExpression)?.DataSource as SqlDataSourceExpression
-                        ?? throw new InvalidOperationException($"2nd argument of Join Query Method must be a {nameof(SqlDataSourceExpression)}.");
-            var joinExpression = this.SqlFactory.CreateJoin(joinType, ds, joinCondition);
-            sqlQuery.ApplyJoin(joinExpression);
-            return sqlQuery;
+                return arguments[joinConditionIndex];
+            return null;
         }
 
         /// <summary>

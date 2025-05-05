@@ -1,290 +1,396 @@
 ﻿using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Atis.SqlExpressionEngine
 {
-
-    // CAUTION: when visiting the SqlQueryExpression and try to modify it through other methods is NOT 
-    // going to work, e.g. you are in SqlDataSourceColumnExpression and you add a new DataSource in
-    // the columns' data source, it will not be reflected in the SqlQueryExpression.
-    // The VisitSqlQueryExpression method has already taken all the data sources in an array before
-    // visiting them, therefore, if we add a new data source in sub-visit, then the array is not
-    // going to be changed and thus the actual query might remain same.
-    // Another point is that if we try to modify a query that has already been visited then
-    // this will not trigger the expression tree update to the point which detects change in expression tree.
-
-    public class SqlExpressionVisitor
+    public abstract class SqlExpressionVisitor
     {
         public virtual SqlExpression Visit(SqlExpression node) => node?.Accept(this);
 
-        public T VisitAndConvert<T>(T node) where T : SqlExpression
+        protected T VisitAndConvert<T>(T node) where T : SqlExpression
         {
             if (node == null)
                 return default;
-
-            var result = this.Visit(node);
-            if (result == null)
-                throw new InvalidOperationException("Visit method must return a non-null value.");
-            if (!(result is T))
-                throw new InvalidOperationException($"Visit method must return a value of type {typeof(T).Name}.");
-            return (T)result;
+            var visited = Visit(node);
+            if (visited == null)
+                return default;
+            if (visited is T converted)
+                return converted;
+            throw new InvalidOperationException($"Expected {typeof(T).Name}, but got {visited.GetType().Name}");
         }
 
-        protected internal virtual SqlExpression VisitSqlBinaryExpression(SqlBinaryExpression sqlBinaryExpression)
-        {
-            var left = this.Visit(sqlBinaryExpression.Left);
-            var right = this.Visit(sqlBinaryExpression.Right);
-            return sqlBinaryExpression.Update(left, right, sqlBinaryExpression.NodeType);
-        }
 
-        protected internal virtual SqlExpression VisitSqlAliasExpression(SqlAliasExpression sqlAliasExpression)
-        {
-            // there is no sub-expression to visit
-            return sqlAliasExpression;
-        }
-
-        protected internal virtual SqlExpression VisitSqlCollectionExpression(SqlCollectionExpression sqlCollectionExpression)
-        {
-            var items = new List<SqlExpression>();
-            foreach (var item in sqlCollectionExpression.SqlExpressions)
-            {
-                items.Add(this.Visit(item));
-            }
-            return sqlCollectionExpression.Update(items);
-        }
-
-        protected internal virtual SqlExpression VisitSqlColumnExpression(SqlColumnExpression sqlColumnExpression)
-        {
-            var columnExpression = this.Visit(sqlColumnExpression.ColumnExpression);
-            return sqlColumnExpression.Update(columnExpression);
-        }
-
-        protected internal virtual SqlExpression VisitSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
-        {
-            return sqlDataSourceColumnExpression;
-        }
-
-        protected internal virtual SqlExpression VisitSqlDataSourceExpression(SqlDataSourceExpression sqlDataSourceExpression)
-        {
-            var dataSource = this.VisitAndConvert(sqlDataSourceExpression.QuerySource);
-            return sqlDataSourceExpression.Update(dataSource);
-        }
-
-        protected internal virtual SqlExpression VisitSqlExistsExpression(SqlExistsExpression sqlExistsExpression)
-        {
-            var subQuery = this.VisitAndConvert(sqlExistsExpression.SqlQuery);
-            return sqlExistsExpression.Update(subQuery);
-        }
-
-        protected internal virtual SqlExpression VisitSqlFunctionCallExpression(SqlFunctionCallExpression sqlFunctionCallExpression)
-        {
-            var arguments = new List<SqlExpression>();
-            foreach (var argument in sqlFunctionCallExpression.Arguments)
-            {
-                arguments.Add(this.Visit(argument));
-            }
-            return sqlFunctionCallExpression.Update(arguments);
-        }
-
-        protected internal virtual SqlExpression VisitSqlJoinExpression(SqlJoinExpression sqlJoinExpression)
-        {
-            var joinedSource = this.VisitAndConvert(sqlJoinExpression.JoinedSource);
-            var joinCondition = this.Visit(sqlJoinExpression.JoinCondition);
-            return sqlJoinExpression.Update(joinedSource, joinCondition);
-        }
-
-        protected internal virtual SqlExpression VisitSqlLiteralExpression(SqlLiteralExpression sqlLiteralExpression)
-        {
-            return sqlLiteralExpression;
-        }
-
-        protected internal virtual SqlExpression VisitSqlOrderByExpression(SqlOrderByExpression sqlOrderByExpression)
-        {
-            var expression = this.Visit(sqlOrderByExpression.Expression);
-            return sqlOrderByExpression.Update(expression);
-        }
-
-        protected internal virtual SqlExpression VisitSqlParameterExpression(SqlParameterExpression sqlParameterExpression)
-        {
-            return sqlParameterExpression;
-        }
-
-        protected internal virtual SqlExpression VisitSqlQueryExpression(SqlQueryExpression sqlQueryExpression)
-        {
-            var cteDataSources = new List<SqlDataSourceExpression>();
-            foreach (var cteDataSource in sqlQueryExpression.CteDataSources)
-            {
-                cteDataSources.Add(this.VisitAndConvert(cteDataSource));
-            }
-            if(cteDataSources.FirstOrDefault()?.NodeType != sqlQueryExpression.CteDataSources.FirstOrDefault()?.NodeType)
-            {
-                throw new InvalidOperationException("The CTE data sources must have the same node type.");
-            }
-            var initialDataSource = this.VisitAndConvert(sqlQueryExpression.InitialDataSource);
-            var joins = new List<SqlJoinExpression>();
-            foreach (var join in sqlQueryExpression.Joins)
-            {
-                joins.Add(this.VisitAndConvert(join));
-            }
-            var whereClause = new List<FilterPredicate>();
-            foreach(var where in sqlQueryExpression.WhereClause)
-            {
-                var predicate = this.Visit(where.Predicate);
-                whereClause.Add(new FilterPredicate { Predicate = predicate, UseOrOperator = where.UseOrOperator });
-            }
-            var havingClause = new List<FilterPredicate>();
-            var groupBy = this.Visit(sqlQueryExpression.GroupBy);
-            foreach (var having in sqlQueryExpression.HavingClause)
-            {
-                var predicate = this.Visit(having.Predicate);
-                havingClause.Add(new FilterPredicate { Predicate = predicate, UseOrOperator = having.UseOrOperator });
-            }
-            var projection = this.Visit(sqlQueryExpression.Projection);
-            var orderByClause = new List<SqlOrderByExpression>();
-            foreach(var orderBy in sqlQueryExpression.OrderBy)
-            {
-                orderByClause.Add(this.VisitAndConvert(orderBy));
-            }
-            var top = this.Visit(sqlQueryExpression.Top);
-            var unions = new List<SqlUnionExpression>();
-            foreach(var union in sqlQueryExpression.Unions)
-            {
-                unions.Add(this.VisitAndConvert(union));
-            }
-            return sqlQueryExpression.Update(initialDataSource, joins, whereClause, groupBy, projection, orderByClause, top, cteDataSources, havingClause, unions);
-        }
-
-        protected internal virtual SqlExpression VisitCustom(SqlExpression node)
+        protected virtual internal SqlExpression VisitCustom(SqlExpression node)
         {
             return node.VisitChildren(this);
         }
 
-        protected internal virtual SqlExpression VisitSqlTableExpression(SqlTableExpression sqlTableExpression)
+        protected virtual internal SqlExpression VisitSqlTable(SqlTableExpression node)
         {
-            return sqlTableExpression;
+            return node;
         }
 
-        //protected internal virtual SqlExpression VisitSqlFromSourceExpression(SqlFromSourceExpression sqlFromSourceExpression)
-        //{
-        //    var dataSource = this.VisitAndConvert(sqlFromSourceExpression.DataSource);
-        //    return sqlFromSourceExpression.Update(dataSource);
-        //}
-
-        protected internal virtual SqlExpression VisitSqlUnionExpression(SqlUnionExpression sqlUnionExpression)
+        protected virtual internal SqlExpression VisitSqlBinary(SqlBinaryExpression node)
         {
-            var updatedQuery = this.VisitAndConvert(sqlUnionExpression.Query);
-            return sqlUnionExpression.Update(updatedQuery);
+            var left = Visit(node.Left);
+            var right = Visit(node.Right);
+            return node.Update(left, right, node.NodeType);
         }
 
-        protected internal virtual SqlExpression VisitCteReferenceExpression(SqlCteReferenceExpression sqlCteReferenceExpression)
+        protected virtual internal SqlExpression VisitSqlDataSourceColumn(SqlDataSourceColumnExpression node)
         {
-            return sqlCteReferenceExpression;
+            return node;
         }
 
-        protected internal virtual SqlExpression VisitSqlConditionalExpression(SqlConditionalExpression sqlConditionalExpression)
+        protected virtual internal SqlExpression VisitSqlDerivedTable(SqlDerivedTableExpression node)
         {
-            var test = this.Visit(sqlConditionalExpression.Test);
-            var ifTrue = this.Visit(sqlConditionalExpression.IfTrue);
-            var ifFalse = this.Visit(sqlConditionalExpression.IfFalse);
-            return sqlConditionalExpression.Update(test, ifTrue, ifFalse);
-        }
-
-        protected internal virtual SqlExpression VisitUpdateSqlExpression(SqlUpdateExpression updateSqlExpression)
-        {
-            var sqlQuery = this.VisitAndConvert(updateSqlExpression.SqlQuery);
-            var updatingDataSource = this.VisitAndConvert(updateSqlExpression.UpdatingDataSource);
-            var values = updateSqlExpression.Values.Select(this.Visit).ToArray();
-            return updateSqlExpression.Update(sqlQuery, updatingDataSource, values);
-        }
-
-        protected internal virtual SqlExpression VisitDeleteSqlExpression(SqlDeleteExpression sqlDeleteExpression)
-        {
-            var sqlQuery = this.VisitAndConvert(sqlDeleteExpression.SqlQuery);
-            var deletingDataSource = this.VisitAndConvert(sqlDeleteExpression.DeletingDataSource);
-            return sqlDeleteExpression.Update(sqlQuery, deletingDataSource);
-        }
-
-        protected internal virtual SqlExpression VisitSqlNotExpression(SqlNotExpression sqlNotExpression)
-        {
-            var operand = this.Visit(sqlNotExpression.Operand);
-            return sqlNotExpression.Update(operand);
-        }
-
-        protected internal virtual SqlExpression VisitDataSourceReferenceExpression(SqlDataSourceReferenceExpression sqlDataSourceReferenceExpression)
-        {
-            return sqlDataSourceReferenceExpression;
-        }
-
-        protected internal virtual SqlExpression VisitSelectedCollectionExpression(SqlSelectedCollectionExpression sqlSelectedCollectionExpression)
-        {
-            return sqlSelectedCollectionExpression;
-        }
-
-        protected internal virtual SqlExpression VisitInValuesExpression(SqlInValuesExpression sqlInValuesExpression)
-        {
-            var expression = this.Visit(sqlInValuesExpression.Expression);
-            var values = sqlInValuesExpression.Values.Select(this.Visit).ToArray();
-            return sqlInValuesExpression.Update(expression, values);
-        }
-
-        protected internal virtual SqlExpression VisitKeywordExpression(SqlKeywordExpression sqlKeywordExpression)
-        {
-            return sqlKeywordExpression;
-        }
-
-        protected internal virtual SqlExpression VisitNegateExpression(SqlNegateExpression sqlNegateExpression)
-        {
-            var operand = this.Visit(sqlNegateExpression.Operand);
-            return sqlNegateExpression.Update(operand);
-        }
-
-        protected internal virtual SqlExpression VisitSqlCastExpression(SqlCastExpression sqlCastExpression)
-        {
-            var expression = this.Visit(sqlCastExpression.Expression);
-            return sqlCastExpression.Update(expression);
-        }
-
-        protected internal virtual SqlExpression VisitSqlDateAddExpression(SqlDateAddExpression sqlDateAddExpression)
-        {
-            var expression = this.Visit(sqlDateAddExpression.DateExpression);
-            var interval = this.Visit(sqlDateAddExpression.Interval);
-            return sqlDateAddExpression.Update(interval, expression);
-        }
-
-        protected internal virtual SqlExpression VisitSqlDatePartExpression(SqlDatePartExpression sqlDatePartExpression)
-        {
-            var dateExpression = this.Visit(sqlDatePartExpression.DateExpression);
-            return sqlDatePartExpression.Update(dateExpression);
-        }
-
-        protected internal virtual SqlExpression VisitSqlStringFunctionExpression(SqlStringFunctionExpression sqlStringFunctionExpression)
-        {
-            var stringExpression = this.Visit(sqlStringFunctionExpression.StringExpression);
-            var arguments = new List<SqlExpression>();
-            if (sqlStringFunctionExpression.Arguments != null)
+            var newCteDataSources = new List<SqlAliasedCteSourceExpression>();
+            if (node.CteDataSources != null)
             {
-                foreach (var argument in sqlStringFunctionExpression.Arguments)
+                foreach (var cteDataSource in node.CteDataSources)
                 {
-                    arguments.Add(this.Visit(argument));
+                    var newCteDataSource = VisitAndConvert(cteDataSource);
+                    if (newCteDataSource != cteDataSource)
+                    {
+                        newCteDataSources.Add(newCteDataSource);
+                    }
+                    else
+                    {
+                        newCteDataSources.Add(cteDataSource);
+                    }
                 }
             }
-            return sqlStringFunctionExpression.Update(stringExpression, arguments.ToArray());
+            var newFromSource = VisitAndConvert(node.FromSource);
+            var newJoins = new List<SqlAliasedJoinSourceExpression>();
+            if (node.Joins != null)
+            {
+                foreach (var join in node.Joins)
+                {
+                    var newJoin = VisitAndConvert(join);
+                    if (newJoin != join)
+                    {
+                        newJoins.Add(newJoin);
+                    }
+                    else
+                    {
+                        newJoins.Add(join);
+                    }
+                }
+            }
+            var newWhereClause = VisitAndConvert(node.WhereClause);
+            var newGroupByClause = new List<SqlExpression>();
+            if (node.GroupByClause != null)
+            {
+                foreach (var groupBy in node.GroupByClause)
+                {
+                    var newGroupBy = Visit(groupBy);
+                    if (newGroupBy != groupBy)
+                    {
+                        newGroupByClause.Add(newGroupBy);
+                    }
+                    else
+                    {
+                        newGroupByClause.Add(groupBy);
+                    }
+                }
+            }
+            var newHavingClause = VisitAndConvert(node.HavingClause);
+            var newOrderByClause = VisitAndConvert(node.OrderByClause);
+            var newSelectList = VisitAndConvert(node.SelectColumnCollection);
+            return node.Update(newCteDataSources.ToArray(), newFromSource, newJoins.ToArray(), newWhereClause, newGroupByClause.ToArray(), newHavingClause, newOrderByClause, newSelectList);
         }
 
-        protected internal virtual SqlExpression VisitSqlLikeExpression(SqlLikeExpression sqlLikeExpression)
+        protected virtual internal SqlExpression VisitSqlStandaloneSelect(SqlStandaloneSelectExpression node)
         {
-            var stringExpression = this.Visit(sqlLikeExpression.Expression);
-            var pattern = this.Visit(sqlLikeExpression.Pattern);
-            return sqlLikeExpression.Update(stringExpression, pattern);
+            var selectList = new List<SelectColumn>();
+            if (node.SelectList != null)
+            {
+                foreach (var selectColumn in node.SelectList)
+                {
+                    var newSelectColumn = Visit(selectColumn.ColumnExpression);
+                    if (newSelectColumn != selectColumn.ColumnExpression)
+                    {
+                        selectList.Add(new SelectColumn(newSelectColumn, selectColumn.Alias, selectColumn.ModelPath, selectColumn.ScalarColumn));
+                    }
+                    else
+                    {
+                        selectList.Add(selectColumn);
+                    }
+                }
+            }
+            return node.Update(selectList.ToArray());
         }
 
-        //protected internal SqlExpression VisitSqlSubQueryColumnExpression(SqlSubQueryColumnExpression sqlSubQueryColumnExpression)
-        //{
-        //    var columnExpression = this.VisitAndConvert(sqlSubQueryColumnExpression.ColumnExpression);
-        //    return sqlSubQueryColumnExpression.Update(columnExpression);
-        //}
+        protected virtual internal SqlExpression VisitSqlLiteral(SqlLiteralExpression node)
+        {
+            return node;
+        }
+
+        protected virtual internal SqlExpression VisitSqlParameter(SqlParameterExpression node)
+        {
+            return node;
+        }
+
+        protected virtual internal SqlExpression VisitSqlAlias(SqlAliasExpression node)
+        {
+            return node;
+        }
+
+        protected virtual internal SqlExpression VisitSqlCompositeBinding(SqlCompositeBindingExpression node)
+        {
+            var newBindings = new List<SqlExpressionBinding>();
+            for (var i = 0; i < node.Bindings.Length; i++)
+            {
+                var binding = node.Bindings[i];
+                var visitedSqlExpression = Visit(binding.SqlExpression);
+                if (visitedSqlExpression != binding.SqlExpression)
+                {
+                    newBindings.Add(new SqlExpressionBinding(visitedSqlExpression, binding.ModelPath));
+                }
+                else
+                {
+                    newBindings.Add(binding);
+                }
+            }
+            return node.Update(newBindings.ToArray());
+        }
+
+        protected virtual internal SqlExpression VisitSqlStringFunction(SqlStringFunctionExpression node)
+        {
+            var stringExpression = this.Visit(node.StringExpression);
+            var newArguments = new List<SqlExpression>();
+            if (node.Arguments != null)
+            {
+                foreach (var argument in node.Arguments)
+                {
+                    newArguments.Add(this.Visit(argument));
+                }
+            }
+            return node.Update(stringExpression, newArguments.ToArray());
+        }
+
+        protected virtual internal SqlExpression VisitSqlFunctionCall(SqlFunctionCallExpression node)
+        {
+            var arguments = new List<SqlExpression>();
+            foreach (var argument in node.Arguments)
+            {
+                arguments.Add(this.Visit(argument));
+            }
+            return node.Update(arguments);
+        }
+
+        protected virtual internal SqlExpression VisitSqlDefaultIfEmpty(SqlDefaultIfEmptyExpression node)
+        {
+            var derivedTable = this.VisitAndConvert(node.DerivedTable);
+            return node.Update(derivedTable);
+        }
+
+        protected virtual internal SqlExpression VisitSqlAliasedFromSource(SqlAliasedFromSourceExpression node)
+        {
+            var querySource = this.VisitAndConvert(node.QuerySource);
+            return node.Update(querySource);
+        }
+
+        protected virtual internal SqlExpression VisitSqlAliasedCteSource(SqlAliasedCteSourceExpression node)
+        {
+            var querySource = this.VisitAndConvert(node.CteBody);
+            return node.Update(querySource);
+        }
+
+        protected virtual internal SqlExpression VisitSqlAliasedJoinSource(SqlAliasedJoinSourceExpression node)
+        {
+            var tableSource = this.VisitAndConvert(node.QuerySource);
+            var joinCondition = this.Visit(node.JoinCondition);
+            return node.Update(tableSource, joinCondition);
+        }
+
+        protected virtual internal SqlExpression VisitSqlSelectList(SqlSelectListExpression node)
+        {
+            var newColumnList = new List<SelectColumn>();
+            foreach (var selectColumn in node.SelectColumns)
+            {
+                var newSelectColumn = Visit(selectColumn.ColumnExpression);
+                if (newSelectColumn != selectColumn.ColumnExpression)
+                {
+                    newColumnList.Add(new SelectColumn(newSelectColumn, selectColumn.Alias, selectColumn.ModelPath, selectColumn.ScalarColumn));
+                }
+                else
+                {
+                    newColumnList.Add(selectColumn);
+                }
+            }
+            return node.Update(newColumnList.ToArray());
+        }
+
+        protected virtual internal SqlExpression VisitFilterClause(SqlFilterClauseExpression node)
+        {
+            var newPredicateList = new List<FilterCondition>();
+            foreach(var filterCondition in node.FilterConditions)
+            {
+                var newPredicate = Visit(filterCondition.Predicate);
+                if (newPredicate != filterCondition.Predicate)
+                {
+                    newPredicateList.Add(new FilterCondition(newPredicate, filterCondition.UseOrOperator));
+                }
+                else
+                {
+                    newPredicateList.Add(filterCondition);
+                }
+            }
+            return node.Update(newPredicateList.ToArray());
+        }
+
+        protected virtual internal SqlExpression VisitSqlOrderByClause(SqlOrderByClauseExpression node)
+        {
+            var newOrderByColumns = new List<OrderByColumn>();
+            foreach (var orderByColumn in node.OrderByColumns)
+            {
+                var newOrderByColumn = Visit(orderByColumn.ColumnExpression);
+                if (newOrderByColumn != orderByColumn.ColumnExpression)
+                {
+                    newOrderByColumns.Add(new OrderByColumn(newOrderByColumn, orderByColumn.Direction));
+                }
+                else
+                {
+                    newOrderByColumns.Add(orderByColumn);
+                }
+            }
+            return node.Update(newOrderByColumns.ToArray());
+        }
+
+        protected virtual internal SqlExpression VisitUnionQuery(SqlUnionQueryExpression node)
+        {
+            var unionItems = new List<UnionItem>();
+            foreach (var unionItem in node.Unions)
+            {
+                var derivedTable = VisitAndConvert(unionItem.DerivedTable);
+                if (derivedTable != unionItem.DerivedTable)
+                {
+                    unionItems.Add(new UnionItem(derivedTable, unionItem.UnionType));
+                }
+                else
+                {
+                    unionItems.Add(unionItem);
+                }
+            }
+            return node.Update(unionItems.ToArray());
+        }
+
+        protected virtual internal SqlExpression VisitSqlConditional(SqlConditionalExpression node)
+        {
+            var test = Visit(node.Test);
+            var ifTrue = Visit(node.IfTrue);
+            var ifFalse = Visit(node.IfFalse);
+            return node.Update(test, ifTrue, ifFalse);
+        }
+
+        protected virtual internal SqlExpression VisitSqlExists(SqlExistsExpression node)
+        {
+            var subQuery = VisitAndConvert(node.SubQuery);
+            return node.Update(subQuery);
+        }
+
+        protected virtual internal SqlExpression VisitSqlLike(SqlLikeExpression node)
+        {
+            var sqlExpression = Visit(node.Expression);
+            var pattern = Visit(node.Pattern);
+            return node.Update(sqlExpression, pattern);
+        }
+
+        protected virtual internal SqlExpression VisitSqlCollection(SqlCollectionExpression node)
+        {
+            var items = new List<SqlExpression>();
+            foreach (var item in node.SqlExpressions)
+            {
+                items.Add(this.Visit(item));
+            }
+            return node.Update(items);
+        }
+
+        protected virtual internal SqlExpression VisitSqlDateAdd(SqlDateAddExpression node)
+        {
+            var interval = Visit(node.Interval);
+            var dateExpression = Visit(node.DateExpression);
+            return node.Update(interval, dateExpression);
+        }
+
+        protected virtual internal SqlExpression VisitSqlDateSubtract(SqlDateSubtractExpression node)
+        {
+            var startDate = Visit(node.StartDate);
+            var endDate = Visit(node.EndDate);
+            return node.Update(startDate, endDate);
+        }
+
+        protected virtual internal SqlExpression VisitSqlCast(SqlCastExpression node)
+        {
+            var expression = Visit(node.Expression);
+            return node.Update(expression);
+        }
+
+        protected virtual internal SqlExpression VisitSqlDatePart(SqlDatePartExpression node)
+        {
+            var dateExpression = Visit(node.DateExpression);
+            return node.Update(dateExpression);
+        }
+
+        protected virtual internal SqlExpression VisitInValues(SqlInValuesExpression node)
+        {
+            var expression = Visit(node.Expression);
+            var values = new List<SqlExpression>();
+            foreach (var value in node.Values)
+            {
+                values.Add(Visit(value));
+            }
+            return node.Update(expression, values.ToArray());
+        }
+
+        protected virtual internal SqlExpression VisitNegate(SqlNegateExpression node)
+        {
+            var operand = Visit(node.Operand);
+            return node.Update(operand);
+        }
+
+        protected virtual internal SqlExpression VisitSqlNot(SqlNotExpression node)
+        {
+            var operand = Visit(node.Operand);
+            return node.Update(operand);
+        }
+
+        protected virtual internal SqlExpression VisitSqlUpdate(SqlUpdateExpression node)
+        {
+            var newTable = VisitAndConvert(node.Source);
+            var newValues = new List<SqlExpression>();
+            foreach (var setClause in node.Values)
+            {
+                var newSetClauseItem = Visit(setClause);
+                if (newSetClauseItem != setClause)
+                {
+                    newValues.Add(newSetClauseItem);
+                }
+                else
+                {
+                    newValues.Add(setClause);
+                }
+            }
+            return node.Update(newTable, newValues.ToArray());
+        }
+
+        protected virtual internal SqlExpression VisitSqlDelete(SqlDeleteExpression node)
+        {
+            var source = VisitAndConvert(node.Source);
+            return node.Update(source);
+        }
+
+        protected virtual internal SqlExpression VisitSqlQueryable(SqlQueryableExpression node)
+        {
+            var query = this.VisitAndConvert(node.Query);
+            return node.Update(query);
+        }
+
+        protected virtual internal SqlExpression VisitSqlComment(SqlCommentExpression node)
+        {
+            return node;
+        }
     }
 }

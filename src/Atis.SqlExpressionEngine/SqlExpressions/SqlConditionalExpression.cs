@@ -61,7 +61,7 @@
         /// <returns>The result of visiting this expression.</returns>
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlConditionalExpression(this);
+            return sqlExpressionVisitor.VisitSqlConditional(this);
         }
 
         /// <summary>

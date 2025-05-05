@@ -44,7 +44,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for converting DataSet query method expressions to SQL expressions.
     ///     </para>
     /// </summary>
-    public class DataSetQueryMethodExpressionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression> 
+    public class DataSetQueryMethodExpressionConverter : LinqToSqlQueryConverterBase<MethodCallExpression>
     {
         private readonly IModel model;
         private readonly IReflectionService reflectionService;
@@ -83,9 +83,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var tableName = this.model.GetTableName(sourceType);
             var tableColumns = this.model.GetTableColumns(sourceType);
             var table = this.SqlFactory.CreateTable(tableName, tableColumns);
-            var tableDataSource = this.SqlFactory.CreateDataSourceForTable(table);
-            var result = this.SqlFactory.CreateQueryFromDataSource(tableDataSource);
+            var result = this.SqlFactory.CreateSelectQueryByTable(table);
             return result;
         }
+
+        /// <inheritdoc />
+        public override bool IsChainedQueryArgument(Expression childNode) => false;
     }
 }

@@ -31,7 +31,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlLikeExpression(this);
+            return sqlExpressionVisitor.VisitSqlLike(this);
         }
 
         public SqlLikeExpression Update(SqlExpression stringExpression, SqlExpression pattern)

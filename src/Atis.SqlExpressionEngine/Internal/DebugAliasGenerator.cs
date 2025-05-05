@@ -18,7 +18,7 @@ namespace Atis.SqlExpressionEngine.Internal
     /// </summary>
     public class DebugAliasGenerator
     {
-        private readonly Dictionary<Guid, int> aliases = new Dictionary<Guid, int>();
+        private readonly Dictionary<Guid, string> aliases = new Dictionary<Guid, string>();
 
         /// <summary>
         ///     <para>
@@ -27,17 +27,17 @@ namespace Atis.SqlExpressionEngine.Internal
         ///     </para>
         /// </summary>
         /// <param name="uniqueId">The GUID for which an alias is required.</param>
+        /// <param name="prefix"></param>
         /// <returns>A human-readable alias corresponding to the provided GUID.</returns>
         public string GetAliasName(Guid uniqueId, string prefix = "t")
         {
-            if (!this.aliases.TryGetValue(uniqueId, out var aliasNumber))
+            if (!this.aliases.TryGetValue(uniqueId, out var alias))
             {
                 this.aliasCount++;
-                aliasNumber = this.aliasCount;
-                this.aliases[uniqueId] = aliasNumber;   
+                alias = this.GenerateAlias(aliasCount, prefix);
+                this.aliases[uniqueId] = alias;   
             }
-            var aliasName = this.GenerateAlias(aliasNumber, prefix);
-            return aliasName;
+            return alias;
         }
 
         private int aliasCount = 0;
@@ -70,24 +70,16 @@ namespace Atis.SqlExpressionEngine.Internal
             return instance.GetAliasName(uniqueId, prefix);
         }
 
-        public static string GetAlias(SqlDataSourceExpression ds)
+        public static string GetAlias(SqlAliasedDataSourceExpression dataSource)
         {
-            return GetAlias(ds.DataSourceAlias, GetDataSourceType(ds));
-        }
-
-        private static string GetDataSourceType(SqlDataSourceExpression ds)
-        {
-            switch (ds.NodeType)
+            if (dataSource is null)
+                throw new ArgumentNullException(nameof(dataSource));
+            var prefix = "t";
+            if(dataSource is SqlAliasedJoinSourceExpression joinSource)
             {
-                case SqlExpressionType.DataSource:
-                    return "t";
-                case SqlExpressionType.CteDataSource:
-                    return "t_cte";
-                case SqlExpressionType.SubQueryDataSource:
-                    return "t_subquery";
-                default:
-                    return "t_ds";
+                prefix = joinSource.JoinName ?? prefix;
             }
+            return GetAlias(dataSource.Alias, prefix);
         }
     }
 

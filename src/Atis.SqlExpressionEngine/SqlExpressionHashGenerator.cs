@@ -1,8 +1,5 @@
 ﻿using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Text;
 
 namespace Atis.SqlExpressionEngine
 {
@@ -19,141 +16,192 @@ namespace Atis.SqlExpressionEngine
                 this.hashCode.Add(node.NodeType);
             return base.Visit(node);
         }
-        
-        public int GenerateHash(SqlExpression expression)
+
+        public static int GenerateHash(SqlExpression sqlExpression)
+        {
+            if (sqlExpression is null)
+                throw new ArgumentNullException(nameof(sqlExpression));
+            var hashGenerator = new SqlExpressionHashGenerator();
+            return hashGenerator.Generate(sqlExpression);
+        }
+
+        public int Generate(SqlExpression expression)
         {
             this.hashCode = new HashCode();
             Visit(expression);
             return hashCode.ToHashCode();
         }
 
-        protected internal override SqlExpression VisitSqlLiteralExpression(SqlLiteralExpression sqlLiteralExpression)
+        protected internal override SqlExpression VisitSqlLiteral(SqlLiteralExpression sqlLiteralExpression)
         {
             if (sqlLiteralExpression.LiteralValue == null)
                 this.hashCode.Add(0);
             else
                 this.hashCode.Add(sqlLiteralExpression.LiteralValue);
-            return base.VisitSqlLiteralExpression(sqlLiteralExpression);
+            return base.VisitSqlLiteral(sqlLiteralExpression);
         }
 
-        protected internal override SqlExpression VisitSqlParameterExpression(SqlParameterExpression sqlParameterExpression)
+        protected internal override SqlExpression VisitSqlParameter(SqlParameterExpression sqlParameterExpression)
         {
             // TODO: might need to add Type as well along with value in SqlParameterExpression
             if (sqlParameterExpression.Value == null)
                 this.hashCode.Add(0);
             else
                 this.hashCode.Add(sqlParameterExpression.Value.GetType());
-            return base.VisitSqlParameterExpression(sqlParameterExpression);
+            return base.VisitSqlParameter(sqlParameterExpression);
         }
 
-        protected internal override SqlExpression VisitCteReferenceExpression(SqlCteReferenceExpression sqlCteReferenceExpression)
+        protected internal override SqlExpression VisitSqlFunctionCall(SqlFunctionCallExpression node)
         {
-            this.hashCode.Add(sqlCteReferenceExpression.CteAlias);
-            this.hashCode.Add(sqlCteReferenceExpression.IsDefaultIfEmpty);
-            return base.VisitCteReferenceExpression(sqlCteReferenceExpression);
+            this.hashCode.Add(node.FunctionName);
+            return base.VisitSqlFunctionCall(node);
         }
 
-        protected internal override SqlExpression VisitSqlColumnExpression(SqlColumnExpression sqlColumnExpression)
+        protected internal override SqlExpression VisitSqlAlias(SqlAliasExpression node)
         {
-            this.hashCode.Add(sqlColumnExpression.ColumnAlias);
-            return base.VisitSqlColumnExpression(sqlColumnExpression);
+            this.hashCode.Add(node.ColumnAlias);
+            return base.VisitSqlAlias(node);
         }
 
-        protected internal override SqlExpression VisitSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
+        protected internal override SqlExpression VisitSqlDelete(SqlDeleteExpression node)
         {
-            this.hashCode.Add(sqlDataSourceColumnExpression.ColumnName);
-            this.hashCode.Add(sqlDataSourceColumnExpression.DataSource.DataSourceAlias);
-            return base.VisitSqlDataSourceColumnExpression(sqlDataSourceColumnExpression);
+            this.hashCode.Add(node.DataSourceAlias);
+            return base.VisitSqlDelete(node);
         }
 
-        //protected internal override SqlExpression VisitSqlFromSourceExpression(SqlFromSourceExpression sqlFromSourceExpression)
-        //{
-        //    this.hashCode.Add(sqlFromSourceExpression.DataSourceAlias);
-        //    return base.VisitSqlFromSourceExpression(sqlFromSourceExpression);
-        //}
-
-        protected internal override SqlExpression VisitSqlAliasExpression(SqlAliasExpression sqlAliasExpression)
+        protected internal override SqlExpression VisitSqlStandaloneSelect(SqlStandaloneSelectExpression node)
         {
-            this.hashCode.Add(sqlAliasExpression.ColumnAlias);
-            return base.VisitSqlAliasExpression(sqlAliasExpression);
+            foreach (var selectItem in node.SelectList)
+            {
+                this.hashCode.Add(selectItem.Alias);
+                this.hashCode.Add(selectItem.ScalarColumn);
+                this.hashCode.Add(selectItem.ModelPath);
+            }
+            return base.VisitSqlStandaloneSelect(node);
         }
 
-        protected internal override SqlExpression VisitSqlDataSourceExpression(SqlDataSourceExpression sqlDataSourceExpression)
+        protected internal override SqlExpression VisitSqlAliasedCteSource(SqlAliasedCteSourceExpression node)
         {
-            this.hashCode.Add(sqlDataSourceExpression.DataSourceAlias);
-            return base.VisitSqlDataSourceExpression(sqlDataSourceExpression);
+            this.hashCode.Add(node.CteAlias);
+            return base.VisitSqlAliasedCteSource(node);
         }
 
-        protected internal override SqlExpression VisitSqlFunctionCallExpression(SqlFunctionCallExpression sqlFunctionCallExpression)
+        protected internal override SqlExpression VisitSqlAliasedFromSource(SqlAliasedFromSourceExpression node)
         {
-            this.hashCode.Add(sqlFunctionCallExpression.FunctionName);
-            return base.VisitSqlFunctionCallExpression(sqlFunctionCallExpression);
+            this.hashCode.Add(node.Alias);
+            return base.VisitSqlAliasedFromSource(node);
         }
 
-        protected internal override SqlExpression VisitSqlJoinExpression(SqlJoinExpression sqlJoinExpression)
+        protected internal override SqlExpression VisitSqlAliasedJoinSource(SqlAliasedJoinSourceExpression node)
         {
-            this.hashCode.Add(sqlJoinExpression.JoinType);
-            return base.VisitSqlJoinExpression(sqlJoinExpression);
+            this.hashCode.Add(node.Alias);
+            this.hashCode.Add(node.JoinName);
+            this.hashCode.Add(node.JoinType);
+            this.hashCode.Add(node.IsNavigationJoin);
+            if (node.NavigationParent != null)
+                this.hashCode.Add(node.NavigationParent.Value);
+            else
+                this.hashCode.Add(0);
+            return base.VisitSqlAliasedJoinSource(node);
         }
 
-        protected internal override SqlExpression VisitSqlOrderByExpression(SqlOrderByExpression sqlOrderByExpression)
+        protected internal override SqlExpression VisitSqlCast(SqlCastExpression node)
         {
-            this.hashCode.Add(sqlOrderByExpression.Ascending);
-            return base.VisitSqlOrderByExpression(sqlOrderByExpression);
+            this.hashCode.Add(node.SqlDataType);
+            return base.VisitSqlCast(node);
         }
 
-        protected internal override SqlExpression VisitSqlTableExpression(SqlTableExpression sqlTableExpression)
+        protected internal override SqlExpression VisitSqlDataSourceColumn(SqlDataSourceColumnExpression node)
         {
-            this.hashCode.Add(sqlTableExpression.TableName);
-            this.hashCode.Add(sqlTableExpression.TableColumns);
-            this.hashCode.Add(sqlTableExpression.IsDefaultIfEmpty);
-            return base.VisitSqlTableExpression(sqlTableExpression);
+            this.hashCode.Add(node.DataSourceAlias);
+            this.hashCode.Add(node.ColumnName);
+            return base.VisitSqlDataSourceColumn(node);
         }
 
-        protected internal override SqlExpression VisitKeywordExpression(SqlKeywordExpression sqlKeywordExpression)
+        protected internal override SqlExpression VisitSqlCompositeBinding(SqlCompositeBindingExpression node)
         {
-            this.hashCode.Add(sqlKeywordExpression.Keyword);
-            return base.VisitKeywordExpression(sqlKeywordExpression);
+            foreach (var binding in node.Bindings)
+            {
+                this.hashCode.Add(binding.ModelPath);
+            }
+            return base.VisitSqlCompositeBinding(node);
         }
 
-        protected internal override SqlExpression VisitSqlQueryExpression(SqlQueryExpression sqlQueryExpression)
+        protected internal override SqlExpression VisitSqlDateAdd(SqlDateAddExpression node)
         {
-            this.hashCode.Add(sqlQueryExpression.IsCte);
-            this.hashCode.Add(sqlQueryExpression.RowOffset);
-            this.hashCode.Add(sqlQueryExpression.RowsPerPage);
-            this.hashCode.Add(sqlQueryExpression.IsDistinct);
-            this.hashCode.Add(sqlQueryExpression.IsDefaultIfEmpty);
-            return base.VisitSqlQueryExpression(sqlQueryExpression);
+            this.hashCode.Add(node.DatePart);
+            this.hashCode.Add(node.Interval);
+            return base.VisitSqlDateAdd(node);
         }
 
-        protected internal override SqlExpression VisitUpdateSqlExpression(SqlUpdateExpression updateSqlExpression)
+        protected internal override SqlExpression VisitSqlDatePart(SqlDatePartExpression node)
         {
-            this.hashCode.Add(updateSqlExpression.Columns);
-            return base.VisitUpdateSqlExpression(updateSqlExpression);
+            this.hashCode.Add(node.DatePart);
+            return base.VisitSqlDatePart(node);
         }
 
-        protected internal override SqlExpression VisitSqlCastExpression(SqlCastExpression sqlCastExpression)
+        protected internal override SqlExpression VisitSqlDateSubtract(SqlDateSubtractExpression node)
         {
-            this.hashCode.Add(sqlCastExpression.SqlDataType);
-            return base.VisitSqlCastExpression(sqlCastExpression);
+            this.hashCode.Add(node.DatePart);
+            this.hashCode.Add(node.StartDate);
+            this.hashCode.Add(node.EndDate);
+            return base.VisitSqlDateSubtract(node);
         }
 
-        protected internal override SqlExpression VisitSqlDateAddExpression(SqlDateAddExpression sqlDateAddExpression)
+        protected internal override SqlExpression VisitSqlDerivedTable(SqlDerivedTableExpression node)
         {
-            this.hashCode.Add(sqlDateAddExpression.DatePart);
-            return base.VisitSqlDateAddExpression(sqlDateAddExpression);
+            this.hashCode.Add(node.AutoProjection);
+            this.hashCode.Add(node.IsCte);
+            this.hashCode.Add(node.IsDistinct);
+            this.hashCode.Add(node.RowOffset);
+            this.hashCode.Add(node.RowsPerPage);
+            this.hashCode.Add(node.Tag);
+            this.hashCode.Add(node.Top);
+            return base.VisitSqlDerivedTable(node);
         }
 
-        protected internal override SqlExpression VisitSqlDatePartExpression(SqlDatePartExpression sqlDatePartExpression)
+        protected internal override SqlExpression VisitSqlSelectList(SqlSelectListExpression node)
         {
-            this.hashCode.Add(sqlDatePartExpression.DatePart);
-            return base.VisitSqlDatePartExpression(sqlDatePartExpression);
+            foreach (var selectItem in node.SelectColumns)
+            {
+                this.hashCode.Add(selectItem.Alias);
+                this.hashCode.Add(selectItem.ScalarColumn);
+                this.hashCode.Add(selectItem.ModelPath);
+            }
+            return base.VisitSqlSelectList(node);
         }
 
-        protected internal override SqlExpression VisitSqlStringFunctionExpression(SqlStringFunctionExpression sqlStringFunctionExpression)
+        protected internal override SqlExpression VisitSqlStringFunction(SqlStringFunctionExpression node)
         {
-            this.hashCode.Add(sqlStringFunctionExpression.StringFunction);
-            return base.VisitSqlStringFunctionExpression(sqlStringFunctionExpression);
+            this.hashCode.Add(node.StringFunction);
+            return base.VisitSqlStringFunction(node);
+        }
+
+        protected internal override SqlExpression VisitSqlTable(SqlTableExpression node)
+        {
+            this.hashCode.Add(node.TableName);
+            foreach (var column in node.TableColumns)
+            {
+                this.hashCode.Add(column.DatabaseColumnName);
+                this.hashCode.Add(column.ModelPropertyName);
+            }
+            return base.VisitSqlTable(node);
+        }
+
+        protected internal override SqlExpression VisitSqlUpdate(SqlUpdateExpression node)
+        {
+            foreach (var column in node.Columns)
+            {
+                this.hashCode.Add(column);
+            }
+            this.hashCode.Add(node.DataSource);
+            return base.VisitSqlUpdate(node);
+        }
+
+        protected internal override SqlExpression VisitSqlComment(SqlCommentExpression node)
+        {
+            this.hashCode.Add(node.Comment);
+            return base.VisitSqlComment(node);
         }
     }
 }

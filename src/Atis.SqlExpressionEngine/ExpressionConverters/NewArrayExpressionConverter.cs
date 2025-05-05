@@ -1,12 +1,7 @@
 ﻿using Atis.Expressions;
 using Atis.SqlExpressionEngine.Abstractions;
-using Atis.SqlExpressionEngine.ExpressionExtensions;
 using Atis.SqlExpressionEngine.SqlExpressions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
@@ -27,7 +22,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class NewArrayExpressionConverter : LinqToSqlExpressionConverterBase<NewArrayExpression>
+    public class NewArrayExpressionConverter : LinqToNonSqlQueryConverterBase<NewArrayExpression>
     {
         public NewArrayExpressionConverter(IConversionContext context, NewArrayExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)

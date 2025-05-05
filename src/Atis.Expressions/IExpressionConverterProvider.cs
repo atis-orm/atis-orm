@@ -1,4 +1,6 @@
-﻿namespace Atis.Expressions
+﻿using System;
+
+namespace Atis.Expressions
 {
     /// <summary>
     /// Defines the contract for a provider that manages the conversion of expressions

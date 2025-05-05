@@ -2,10 +2,7 @@
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
@@ -36,22 +33,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
         protected override int WherePredicateArgumentIndex => this.Expression.Arguments.Count == 3 ? 2 : 1;
 
-        protected override SqlExpression CreateDmSqlExpression(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource, SqlExpression[] arguments)
+        protected override SqlExpression CreateDmSqlExpression(SqlDerivedTableExpression source, Guid selectedDataSource, SqlExpression[] arguments)
         {
-            var deleteSqlExpression = this.SqlFactory.CreateDelete(sqlQuery, selectedDataSource);
+            var deleteSqlExpression = this.SqlFactory.CreateDelete(source, selectedDataSource);
             return deleteSqlExpression;
         }
-
-        //protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
-        //{
-        //    var predicate = arguments[0];
-        //    sqlQuery.ApplyWhere(predicate);
-
-        //    var deletingDataSource = sqlQuery.InitialDataSource;
-
-        //    var deleteSqlExpression = new SqlDeleteExpression(sqlQuery, deletingDataSource);
-
-        //    return deleteSqlExpression;
-        //}
     }
 }

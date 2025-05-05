@@ -40,7 +40,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter for handling <see cref="UnaryExpression"/> nodes with <see cref="ExpressionType.Quote"/>.
     ///     </para>
     /// </summary>
-    public class QuoteExpressionConverter : LinqToSqlExpressionConverterBase<UnaryExpression>
+    public class QuoteExpressionConverter : LinqToNonSqlQueryConverterBase<UnaryExpression>
     {
         /// <summary>
         ///     <para>

@@ -53,7 +53,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
         public override Expression<Func<ItemExtension, ItemPart, bool>>? JoinExpression => null;
         public override Expression<Func<ItemExtension, IQueryable<ItemPart>>>? FromParentToChild(IQueryProvider queryProvider)
         {
-            return parent => parent.NavParts.Top(1);
+            return parent => parent.NavParts.Take(1);
         }
     }
 
@@ -119,7 +119,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
         public override Expression<Func<Invoice, InvoiceDetail, bool>>? JoinExpression => null;
         public override Expression<Func<Invoice, IQueryable<InvoiceDetail>>>? FromParentToChild(IQueryProvider queryProvider)
         {
-            return parent => parent.NavLines.Top(1);
+            return parent => parent.NavLines.Take(1);
         }
     }
 
@@ -129,7 +129,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
         public override Expression<Func<Invoice, InvoiceDetail, bool>>? JoinExpression => null;
         public override Expression<Func<Invoice, IQueryable<InvoiceDetail>>>? FromParentToChild(IQueryProvider queryProvider)
         {
-            return parent => parent.NavLines.Top(2);
+            return parent => parent.NavLines.Take(2);
         }
     }
 
@@ -140,9 +140,9 @@ namespace Atis.SqlExpressionEngine.UnitTest
         public override Expression<Func<Employee, IQueryable<EmployeeWithTopManagerDto>>>? FromParentToChild(IQueryProvider queryProvider)
         {
             return parent => parent.NavSubOrdinates
-                                    .RecursiveUnion(anchorSource => anchorSource.SelectMany(manager => manager.NavSubOrdinates))
+                                    .RecursiveUnion(anchorSource => anchorSource.SelectMany(relationManager => relationManager.NavSubOrdinates))
                                     .Select(childGrandChild => new EmployeeWithTopManagerDto { EmployeeId = childGrandChild.EmployeeId, ImmediateManagerId = childGrandChild.ManagerId, TopManagerId = parent.EmployeeId });
-
+            //throw new NotImplementedException();
         }
     }
 

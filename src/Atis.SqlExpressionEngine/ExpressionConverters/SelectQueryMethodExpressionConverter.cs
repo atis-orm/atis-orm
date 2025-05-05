@@ -2,6 +2,7 @@
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.Internal;
 using Atis.SqlExpressionEngine.SqlExpressions;
+using System;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -61,18 +62,21 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
+            SqlCompositeBindingExpression bindings;
             var selector = arguments[0];
-            if (selector is SqlCollectionExpression sqlCollection && !sqlCollection.SqlExpressions.Any(x => x is SqlColumnExpression))
+            if (selector is SqlCompositeBindingExpression b)
             {
-                // if we are here, then it means user has directly selected the data source / column expression without
-                // doing a NewExpression
-                var projectionCreator = new ProjectionCreator(this.SqlFactory);
-                var sqlColumns = projectionCreator.Create(sqlCollection);
-                selector = this.SqlFactory.CreateCollection(sqlColumns);
+                bindings = b;
             }
-            sqlQuery.ApplyProjection(selector);
+            else
+            {
+                bindings = this.SqlFactory.CreateCompositeBindingForSingleExpression(selector, ModelPath.Empty);
+            }
+
+            sqlQuery.ApplyProjection(bindings);
+
             return sqlQuery;
         }
     }

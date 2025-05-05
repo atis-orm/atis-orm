@@ -19,18 +19,18 @@
                                                 .Select(newShape => new { newShape.recursive.EmployeeId, newShape.recursive.Name, newShape.recursive.ManagerId }))
                         ;
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
-	from	Employee as a_2	
-	where	(a_2.ManagerId is null)
-	union all	
-	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
-	from	Employee as a_3	
-		inner join cte_1 as a_4 on (a_4.EmployeeId = a_3.ManagerId)	
-)
-select	cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, cte_1.ManagerId as ManagerId
-from	cte_1 as cte_1
+   	with cte_1 as
+	(
+		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.ManagerId is null)
+		union all
+		select a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId
+		from Employee as a_3
+				inner join cte_1 as a_4 on (a_4.EmployeeId = a_3.ManagerId)
+	)
+	select a_5.EmployeeId as EmployeeId, a_5.Name as Name, a_5.ManagerId as ManagerId
+	from cte_1 as a_5
 ";
             Test("Recursive Anchor After Test", q.Expression, expectedResult);
         }
@@ -50,18 +50,18 @@ from	cte_1 as cte_1
                                                 .Select(newShape => new { newShape.recursive.EmployeeId, newShape.recursive.Name, newShape.recursive.ManagerId }))
                         ;
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
-	from	Employee as a_2	
-	where	(a_2.ManagerId is null)
-	union all	
-	select	a_4.EmployeeId as EmployeeId, a_4.Name as Name, a_4.ManagerId as ManagerId	
-	from	cte_1 as a_3	
-		inner join Employee as a_4 on (a_3.EmployeeId = a_4.ManagerId)	
+with cte_1 as
+(
+	select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
+	from Employee as a_2
+	where (a_2.ManagerId is null)
+	union all
+	select a_4.EmployeeId as EmployeeId, a_4.Name as Name, a_4.ManagerId as ManagerId
+	from cte_1 as a_3
+			inner join Employee as a_4 on (a_3.EmployeeId = a_4.ManagerId)
 )
-select	cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, cte_1.ManagerId as ManagerId
-from	cte_1 as cte_1
+select a_5.EmployeeId as EmployeeId, a_5.Name as Name, a_5.ManagerId as ManagerId
+from cte_1 as a_5
 ";
             Test("Recursive Before Test", q.Expression, expectedResult);
         }
@@ -79,22 +79,22 @@ from	cte_1 as cte_1
                                                 .Select(o2 => new { o2.EmployeeId, o2.Name, o2.ManagerId }))
                         ;
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
-	from	Employee as a_2	
-	where	(a_2.ManagerId is null)
-	union all	
-	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
-	from	Employee as a_3	
-	where	exists(	
-		select	1	
-		from	cte_1 as a_4	
-		where	(a_4.EmployeeId = a_3.ManagerId)	
-	)	
-)
-select	cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, cte_1.ManagerId as ManagerId
-from	cte_1 as cte_1
+   	with cte_1 as
+	(
+		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.ManagerId is null)
+		union all
+		select a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId
+		from Employee as a_3
+		where exists(
+				select 1 as Col1
+				from cte_1 as a_4
+				where (a_4.EmployeeId = a_3.ManagerId)
+			)
+	)
+	select a_5.EmployeeId as EmployeeId, a_5.Name as Name, a_5.ManagerId as ManagerId
+	from cte_1 as a_5
 ";
             Test("Recursive Anchor In Exists Test", q.Expression, expectedResult);
         }
@@ -129,35 +129,35 @@ from	cte_1 as cte_1
                         })
                         ;
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
-	from	Employee as a_2	
-	where	(a_2.ManagerId is null)
-	union all	
-	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
-	from	Employee as a_3	
-	where	exists(	
-		select	1	
-		from	cte_1 as a_4	
-		where	(a_4.EmployeeId = a_3.ManagerId)	
-	)	
-), cte_5 as 
-(	
-	select	a_6.EmployeeId as EmployeeId, a_6.ManagerId as ManagerId	
-	from	Employee as a_6	
-	where	(a_6.ManagerId is null)
-	union all	
-	select	a_7.EmployeeId as EmployeeId, a_7.ManagerId as ManagerId	
-	from	Employee as a_7	
-		inner join cte_5 as a_8 on (a_8.EmployeeId = a_7.ManagerId)	
-)
-select	cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, cte_1.ManagerId as ManagerId, a_9.Degree as Degree, a_9.University as University, (
-	select	top (1)	cte_5.ManagerId as Col1
-	from	cte_5 as cte_5
-) as f
-from	cte_1 as cte_1
-	inner join EmployeeDegree as a_9 on (cte_1.EmployeeId = a_9.EmployeeId)
+   	with cte_1 as
+	(
+		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.ManagerId is null)
+		union all
+		select a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId
+		from Employee as a_3
+		where exists(
+				select 1 as Col1
+				from cte_1 as a_4
+				where (a_4.EmployeeId = a_3.ManagerId)
+			)
+	), cte_5 as
+	(
+		select a_6.EmployeeId as EmployeeId, a_6.ManagerId as ManagerId
+		from Employee as a_6
+		where (a_6.ManagerId is null)
+		union all
+		select a_7.EmployeeId as EmployeeId, a_7.ManagerId as ManagerId
+		from Employee as a_7
+				inner join cte_5 as a_8 on (a_8.EmployeeId = a_7.ManagerId)
+	)
+	select a_9.EmployeeId as EmployeeId, a_9.Name as Name, a_9.ManagerId as ManagerId, a_10.Degree as Degree, a_10.University as University, (
+			select top (1) a_11.ManagerId as Col1
+			from cte_5 as a_11
+		) as f
+	from cte_1 as a_9
+			inner join EmployeeDegree as a_10 on (a_9.EmployeeId = a_10.EmployeeId)
 ";
             Test("Recursive Union With Sub Query Test", q.Expression, expectedResult);
         }
@@ -176,18 +176,18 @@ from	cte_1 as cte_1
                                                     select new { subOrdinate.EmployeeId, subOrdinate.Name, subOrdinate.ManagerId })
                     .Select(outer => new { outer.EmployeeId, outer.Name, outer.ManagerId });
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId	
-	from	Employee as a_2	
-	where	(a_2.ManagerId is null)
-	union all	
-	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
-	from	Employee as a_3	
-		inner join cte_1 as a_4 on (a_3.ManagerId = a_4.EmployeeId)	
-)
-select	cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, cte_1.ManagerId as ManagerId
-from	cte_1 as cte_1
+   	with cte_1 as
+	(
+		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.ManagerId is null)
+		union all
+		select a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId
+		from Employee as a_3
+				inner join cte_1 as a_4 on (a_3.ManagerId = a_4.EmployeeId)
+	)
+	select a_5.EmployeeId as EmployeeId, a_5.Name as Name, a_5.ManagerId as ManagerId
+	from cte_1 as a_5
 ";
             Test("Recursive Union With Query Syntax Test", q.Expression, expectedResult);
         }
@@ -216,26 +216,26 @@ from	cte_1 as cte_1
 
 
             string? expectedResult = @"
-with cte_2 as 
-(	
-	select	a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId	
-	from	Employee as a_3	
-	where	(a_3.ManagerId is null)
-	union all	
-	select	a_4.EmployeeId as EmployeeId, a_4.Name as Name, a_4.ManagerId as ManagerId	
-	from	Employee as a_4	
-		inner join cte_2 as a_5 on (a_4.ManagerId = a_5.EmployeeId)	
-)
-select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Degree as Degree, a_1.University as University
-from	EmployeeDegree as a_1
-where	exists(
-	select	1
-	from	(
-		select	cte_2.EmployeeId as EmployeeId, cte_2.Name as Name, cte_2.ManagerId as ManagerId
-		from	cte_2 as cte_2
-	) as a_6
-	where	(a_6.EmployeeId = a_1.EmployeeId)
-)
+with cte_1 as
+	(
+		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.ManagerId is null)
+		union all
+		select a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.ManagerId as ManagerId
+		from Employee as a_3
+				inner join cte_1 as a_4 on (a_3.ManagerId = a_4.EmployeeId)
+	)
+	select a_5.RowId as RowId, a_5.EmployeeId as EmployeeId, a_5.Degree as Degree, a_5.University as University
+	from EmployeeDegree as a_5
+	where exists(
+			select 1 as Col1
+			from (
+					select a_6.EmployeeId as EmployeeId, a_6.Name as Name, a_6.ManagerId as ManagerId
+					from cte_1 as a_6
+				) as a_7
+			where (a_7.EmployeeId = a_5.EmployeeId)
+		)
 ";
 
             Test("Recursive Union With Query Syntax on Sub-Query Level Test", q.Expression, expectedResult);
@@ -252,18 +252,18 @@ where	exists(
                         .Select(x => new { x.EmployeeId, x.Name, x.ManagerId });
 
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId	
-	from	Employee as a_2	
-	where	(a_2.ManagerId is null)
-	union all	
-	select	NavSubOrdinates_4.RowId as RowId, NavSubOrdinates_4.EmployeeId as EmployeeId, NavSubOrdinates_4.Name as Name, NavSubOrdinates_4.Department as Department, NavSubOrdinates_4.ManagerId as ManagerId	
-	from	cte_1 as a_3	
-		inner join Employee as NavSubOrdinates_4 on (a_3.EmployeeId = NavSubOrdinates_4.ManagerId)	
-)
-select	cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, cte_1.ManagerId as ManagerId
-from	cte_1 as cte_1
+    with cte_1 as
+	(
+		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.ManagerId is null)
+		union all
+		select NavSubOrdinates_4.RowId as RowId, NavSubOrdinates_4.EmployeeId as EmployeeId, NavSubOrdinates_4.Name as Name, NavSubOrdinates_4.Department as Department, NavSubOrdinates_4.ManagerId as ManagerId
+		from cte_1 as a_3
+				inner join Employee as NavSubOrdinates_4 on (a_3.EmployeeId = NavSubOrdinates_4.ManagerId)
+	)
+	select a_5.EmployeeId as EmployeeId, a_5.Name as Name, a_5.ManagerId as ManagerId
+	from cte_1 as a_5
 ";
             Test("Recursive Union With Navigation Test", q.Expression, expectedResult);
         }
@@ -293,31 +293,29 @@ from	cte_1 as cte_1
 
                     };
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a_2.University as University,
-            NavEmployee_3.RowId as RowId_1, NavEmployee_3.EmployeeId as EmployeeId_1, NavEmployee_3.Name as Name, 
-            NavEmployee_3.Department as Department, NavEmployee_3.ManagerId as ManagerId
-	from	EmployeeDegree as a_2	
-		    inner join Employee as NavEmployee_3 on (NavEmployee_3.EmployeeId = a_2.EmployeeId)	
-	where	(a_2.EmployeeId = '123')	
-), cte_4 as 
-(	
-	select	a_5.RowId as RowId, a_5.EmployeeId as EmployeeId, a_5.Name as Name, a_5.Department as Department, a_5.ManagerId as ManagerId	
-	from	Employee as a_5	
-            cross join cte_1 as cte_1
-	where	(a_5.EmployeeId = cte_1.EmployeeId_1)
-	union all	
-	select	a_6.RowId as RowId, a_6.EmployeeId as EmployeeId, a_6.Name as Name, a_6.Department as Department, a_6.ManagerId as ManagerId
-	from	Employee as a_6	
-		    inner join cte_4 as a_7 on (a_6.EmployeeId = a_7.ManagerId)	
-)
-select	cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, (
-	select	top (1)	cte_4.ManagerId as Col1
-	from	cte_4 as cte_4
-	where	(cte_4.Name like 'A' + '%')
-) as FirstManagerStartsWithA
-from	cte_1 as cte_1
+    with cte_1 as
+	(
+		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a_2.University as University, NavEmployee_3.RowId as RowId_1, NavEmployee_3.EmployeeId as EmployeeId_1, NavEmployee_3.Name as Name, NavEmployee_3.Department as Department, NavEmployee_3.ManagerId as ManagerId
+		from EmployeeDegree as a_2
+				inner join Employee as NavEmployee_3 on (NavEmployee_3.EmployeeId = a_2.EmployeeId)
+		where (a_2.EmployeeId = '123')
+	), cte_4 as
+	(
+		select a_5.RowId as RowId, a_5.EmployeeId as EmployeeId, a_5.Name as Name, a_5.Department as Department, a_5.ManagerId as ManagerId
+		from Employee as a_5
+				cross join cte_1 as a_6
+		where (a_5.EmployeeId = a_6.EmployeeId_1)
+		union all
+		select a_7.RowId as RowId, a_7.EmployeeId as EmployeeId, a_7.Name as Name, a_7.Department as Department, a_7.ManagerId as ManagerId
+		from Employee as a_7
+				inner join cte_4 as a_8 on (a_7.EmployeeId = a_8.ManagerId)
+	)
+	select a_6.EmployeeId as EmployeeId, a_6.Name as Name, (
+			select top (1) a_9.ManagerId as Col1
+			from cte_4 as a_9
+			where (a_9.Name like 'A' + '%')
+		) as FirstManagerStartsWithA
+	from cte_1 as a_6
 ";
             Test("Recursive Union With Sub Query Outer Data Source In Anchor Test", q.Expression, expectedResult);
         }
@@ -340,28 +338,27 @@ from	cte_1 as cte_1
 
 
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId	
-	from	Employee as a_2	
-	where	(a_2.EmployeeId = '123')	
-), cte_3 as 
-(	
-	select	a_4.RowId as RowId, a_4.EmployeeId as EmployeeId, a_4.Name as Name, a_4.Department as Department, a_4.ManagerId as ManagerId	
-	from	Employee as a_4	
-		    cross join cte_1 as cte_1	
-	where	(a_4.ManagerId = cte_1.EmployeeId)	
-	union all	
-	select	NavSubOrdinates_6.RowId as RowId, NavSubOrdinates_6.EmployeeId as EmployeeId, NavSubOrdinates_6.Name as Name, 
-            NavSubOrdinates_6.Department as Department, NavSubOrdinates_6.ManagerId as ManagerId	
-	from	cte_3 as a_5	
-		    inner join Employee as NavSubOrdinates_6 on (a_5.EmployeeId = NavSubOrdinates_6.ManagerId)	
-)
-select	cte_1.EmployeeId as ManagerId, cte_1.Name as ManagerName, (
-	select	Count(1) as Col1
-	from	cte_3 as cte_3
-) as NestedCount
-from	cte_1 as cte_1
+    with cte_1 as
+	(
+		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.EmployeeId = '123')
+	), cte_3 as
+	(
+		select a_4.RowId as RowId, a_4.EmployeeId as EmployeeId, a_4.Name as Name, a_4.Department as Department, a_4.ManagerId as ManagerId
+		from Employee as a_4
+				cross join cte_1 as a_5
+		where (a_4.ManagerId = a_5.EmployeeId)
+		union all
+		select NavSubOrdinates_7.RowId as RowId, NavSubOrdinates_7.EmployeeId as EmployeeId, NavSubOrdinates_7.Name as Name, NavSubOrdinates_7.Department as Department, NavSubOrdinates_7.ManagerId as ManagerId
+		from cte_3 as a_6
+				inner join Employee as NavSubOrdinates_7 on (a_6.EmployeeId = NavSubOrdinates_7.ManagerId)
+	)
+	select a_5.EmployeeId as ManagerId, a_5.Name as ManagerName, (
+			select Count(1) as Col1
+			from cte_3 as a_8
+		) as NestedCount
+	from cte_1 as a_5
 ";
             Test("Recursive Union In Sub Query Test", q.Expression, expectedResult);
         }
@@ -381,33 +378,33 @@ from	cte_1 as cte_1
 
 
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId	
-	from	Employee as a_2	
-	where	(a_2.EmployeeId = '123')	
-), cte_3 as 
-(	
-	select	a_4.RowId as RowId, a_4.EmployeeId as EmployeeId, a_4.Name as Name, a_4.Department as Department, a_4.ManagerId as ManagerId	
-	from	Employee as a_4	
-		    cross join cte_1 as cte_1	
-	where	(cte_1.EmployeeId = a_4.ManagerId)	
-	union all	
-	select	NavSubOrdinates_6.RowId as RowId, NavSubOrdinates_6.EmployeeId as EmployeeId, NavSubOrdinates_6.Name as Name, 
-            NavSubOrdinates_6.Department as Department, NavSubOrdinates_6.ManagerId as ManagerId	
-	from	cte_3 as a_5	
-		    inner join Employee as NavSubOrdinates_6 on (a_5.EmployeeId = NavSubOrdinates_6.ManagerId)	
-)
-select	cte_1.EmployeeId as ManagerId, cte_1.Name as ManagerName, (
-	select	Count(1) as Col1
-	from	(
-		select	cte_3.EmployeeId as EmployeeId, cte_3.ManagerId as ImmediateManagerId, cte_1.EmployeeId as TopManagerId
-		from	cte_3 as cte_3
-	) as a_7
-		inner join Employee as NavEmployee_8 on (NavEmployee_8.EmployeeId = a_7.EmployeeId)
-	where	(a_7.TopManagerId = a_7.TopManagerId) and (NavEmployee_8.Department = 'IT')
-) as FilteredNested
-from	cte_1 as cte_1
+    with cte_1 as
+	(
+		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.EmployeeId = '123')
+	), cte_3 as
+	(
+		select a_4.RowId as RowId, a_4.EmployeeId as EmployeeId, a_4.Name as Name, a_4.Department as Department, a_4.ManagerId as ManagerId
+		from Employee as a_4
+				cross join cte_1 as a_5
+		where (a_5.EmployeeId = a_4.ManagerId)
+		union all
+		select NavSubOrdinates_7.RowId as RowId, NavSubOrdinates_7.EmployeeId as EmployeeId, NavSubOrdinates_7.Name as Name, NavSubOrdinates_7.Department as Department, NavSubOrdinates_7.ManagerId as ManagerId
+		from cte_3 as a_6
+				inner join Employee as NavSubOrdinates_7 on (a_6.EmployeeId = NavSubOrdinates_7.ManagerId)
+	)
+	select a_5.EmployeeId as ManagerId, a_5.Name as ManagerName, (
+			select Count(1) as Col1
+			from (
+					select a_8.EmployeeId as EmployeeId, a_8.ManagerId as ImmediateManagerId, a_5.EmployeeId as TopManagerId
+					from cte_3 as a_8
+				) as a_9
+					inner join Employee as NavEmployee_10 on (NavEmployee_10.EmployeeId = a_9.EmployeeId)
+			where (a_9.TopManagerId = a_9.TopManagerId)
+				 and (NavEmployee_10.Department = 'IT')
+		) as FilteredNested
+	from cte_1 as a_5
 ";
             Test("Recursive Union With Sub Query Join Test", q.Expression, expectedResult);
         }
@@ -428,20 +425,48 @@ from	cte_1 as cte_1
                                                         .Select(newShape => newShape.recursive))
                         ;
             string? expectedResult = @"
-with cte_1 as 
-(	
-	select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId	
-	from	Employee as a_2	
-	where	(a_2.ManagerId is null)
-	union all	
-	select	a_3.RowId as RowId, a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.Department as Department, a_3.ManagerId as ManagerId	
-	from	Employee as a_3	
-		inner join cte_1 as a_4 on (a_4.EmployeeId = a_3.ManagerId)	
-)
-select	cte_1.RowId as RowId, cte_1.EmployeeId as EmployeeId, cte_1.Name as Name, cte_1.Department as Department, cte_1.ManagerId as ManagerId
-from	cte_1 as cte_1
+    with cte_1 as
+	(
+		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.ManagerId is null)
+		union all
+		select a_3.RowId as RowId, a_3.EmployeeId as EmployeeId, a_3.Name as Name, a_3.Department as Department, a_3.ManagerId as ManagerId
+		from Employee as a_3
+				inner join cte_1 as a_4 on (a_4.EmployeeId = a_3.ManagerId)
+	)
+	select a_5.RowId as RowId, a_5.EmployeeId as EmployeeId, a_5.Name as Name, a_5.Department as Department, a_5.ManagerId as ManagerId
+	from cte_1 as a_5
 ";
             Test("Recursive With No Selection Test", q.Expression, expectedResult);
+        }
+
+
+        [TestMethod]
+        public void Recursive_in_From_method()
+        {
+            var employees = new Queryable<Employee>(new QueryProvider());
+            var q = queryProvider.From(() => new
+            {
+                t1 = QueryExtensions.Table<EmployeeExtension>(),
+                t2 = employees.Where(m1 => m1.ManagerId == null).RecursiveUnion(anchor => anchor.SelectMany(m2 => m2.NavSubOrdinates)).Schema(),
+            });
+            string? expectedResult = @"
+    with cte_1 as
+	(
+		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
+		from Employee as a_2
+		where (a_2.ManagerId is null)
+		union all
+		select NavSubOrdinates_4.RowId as RowId, NavSubOrdinates_4.EmployeeId as EmployeeId, NavSubOrdinates_4.Name as Name, NavSubOrdinates_4.Department as Department, NavSubOrdinates_4.ManagerId as ManagerId
+		from cte_1 as a_3
+				inner join Employee as NavSubOrdinates_4 on (a_3.EmployeeId = NavSubOrdinates_4.ManagerId)
+	)
+	select a_5.Designation as Designation, a_5.RowId as RowId, a_5.EmployeeId as EmployeeId, a_5.Name as Name, a_5.Department as Department, a_5.ManagerId as ManagerId, a_6.RowId as RowId_1, a_6.EmployeeId as EmployeeId_1, a_6.Name as Name_1, a_6.Department as Department_1, a_6.ManagerId as ManagerId_1
+	from EmployeeExtension as a_5
+			cross join cte_1 as a_6
+";
+            Test("Recursive In From Method Test", q.Expression, expectedResult);
         }
     }
 }

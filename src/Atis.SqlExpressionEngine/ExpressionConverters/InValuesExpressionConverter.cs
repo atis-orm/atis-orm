@@ -5,6 +5,7 @@ using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -32,7 +33,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter for `InValuesExpression` that converts to SQL `IN (...)` clause.
     ///     </para>
     /// </summary>
-    public class InValuesExpressionConverter : LinqToSqlExpressionConverterBase<InValuesExpression>
+    public class InValuesExpressionConverter : LinqToNonSqlQueryConverterBase<InValuesExpression>
     {
         private readonly IReflectionService reflectionService;
 
@@ -48,7 +49,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             // child[1] = converted Values (e.g., variable array)
 
             var leftSide = convertedChildren[0];
-            var values = convertedChildren[1];
+            SqlExpression[] values;
+            if (convertedChildren[1] is SqlCollectionExpression collection)
+                values = collection.SqlExpressions.ToArray();
+            else
+                values = new[] { convertedChildren[1] };
 
             return this.SqlFactory.CreateInValuesExpression(leftSide, values);
         }

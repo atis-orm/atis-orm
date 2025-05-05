@@ -1,6 +1,7 @@
 ﻿using Atis.Expressions;
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.SqlExpressions;
+using System;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -68,11 +69,12 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
             var predicate = arguments[0];
             bool useOrOperator = this.Expression.Method.Name == nameof(QueryExtensions.WhereOr) || this.Expression.Method.Name == nameof(QueryExtensions.HavingOr);
-            if (this.Expression.Method.Name == nameof(QueryExtensions.Having) || this.Expression.Method.Name == nameof(QueryExtensions.HavingOr))
+            if (this.Expression.Method.Name == nameof(QueryExtensions.Having) || this.Expression.Method.Name == nameof(QueryExtensions.HavingOr)
+                   || (this.Expression.Arguments[0] is MethodCallExpression methodCall && methodCall.Method.Name == nameof(Queryable.GroupBy)))
                 sqlQuery.ApplyHaving(predicate, useOrOperator);
             else
                 sqlQuery.ApplyWhere(predicate, useOrOperator);

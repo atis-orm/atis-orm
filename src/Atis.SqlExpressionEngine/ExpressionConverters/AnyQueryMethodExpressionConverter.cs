@@ -57,14 +57,20 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
             if (arguments.Length > 0)
             {
                 var whereCondition = arguments[0];
-                sqlQuery.ApplyWhere(whereCondition);
+                sqlQuery.ApplyWhere(whereCondition, useOrOperator: false);
             }
-            var existsQuery = this.SqlFactory.CreateExists(sqlQuery);
+            if (!sqlQuery.HasProjectionApplied)
+            {
+                var selectOne = this.SqlFactory.CreateCompositeBindingForSingleExpression(this.SqlFactory.CreateLiteral(1), ModelPath.Empty);
+                sqlQuery.ApplyProjection(selectOne);
+            }
+            var derivedTable = this.SqlFactory.ConvertSelectQueryToDeriveTable(sqlQuery);
+            var existsQuery = this.SqlFactory.CreateExists(derivedTable);
             return existsQuery;
         }
     }

@@ -38,7 +38,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter for transforming constant expressions to SQL parameter expressions.
     ///     </para>
     /// </summary>
-    public class ConstantExpressionConverter : LinqToSqlExpressionConverterBase<ConstantExpression>
+    public class ConstantExpressionConverter : LinqToNonSqlQueryConverterBase<ConstantExpression>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ConstantExpressionConverter"/> class.

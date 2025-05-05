@@ -44,7 +44,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for handling <see cref="Queryable.DefaultIfEmpty{TSource}(IQueryable{TSource})"/> method calls.
     ///     </para>
     /// </summary>
-    public class DefaultIfEmptyExpressionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class DefaultIfEmptyExpressionConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         /// <summary>
         ///     <para>
@@ -62,33 +62,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var source = convertedChildren[0];
-
-            SqlExpression sourceExpression;
-
-            if (source is SqlSelectedCollectionExpression selectedColExpr)
-                sourceExpression = selectedColExpr.SourceExpression;
-            else
-                sourceExpression = source;
-
-            if (sourceExpression is SqlDataSourceReferenceExpression dsRef)
-            {
-                if (dsRef.DataSource is SqlDataSourceExpression ds)
-                    ds.QuerySource.IsDefaultIfEmpty = true;
-                else if (dsRef.DataSource is SqlQuerySourceExpression sqlQ)
-                    sqlQ.IsDefaultIfEmpty = true;
-                return sourceExpression;
-            }
-            else
-            {
-                var sqlQuery = sourceExpression as SqlQuerySourceExpression
+            var derivedTable = convertedChildren[0] as SqlDerivedTableExpression
                                 ??
-                                throw new InvalidOperationException($"sourceExpression is not a {nameof(SqlQuerySourceExpression)}");
-
-                sqlQuery.IsDefaultIfEmpty = true;
-
-                return sqlQuery;
-            }
+                                throw new InvalidOperationException($"The first child of DefaultIfEmpty must be a {nameof(SqlDerivedTableExpression)}.");
+            return this.SqlFactory.CreateDefaultIfEmpty(derivedTable);
         }
     }
 }

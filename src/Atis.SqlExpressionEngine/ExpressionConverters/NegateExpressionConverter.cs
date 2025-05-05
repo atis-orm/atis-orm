@@ -26,7 +26,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class NegateExpressionConverter : LinqToSqlExpressionConverterBase<UnaryExpression>
+    public class NegateExpressionConverter : LinqToNonSqlQueryConverterBase<UnaryExpression>
     {
         public NegateExpressionConverter(IConversionContext context, UnaryExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
         {

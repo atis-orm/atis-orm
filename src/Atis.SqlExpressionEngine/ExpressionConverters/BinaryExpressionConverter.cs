@@ -40,7 +40,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for transforming binary expressions into SQL expressions.
     ///     </para>
     /// </summary>
-    public class BinaryExpressionConverter : LinqToSqlExpressionConverterBase<BinaryExpression>
+    public class BinaryExpressionConverter : LinqToNonSqlQueryConverterBase<BinaryExpression>
     {
         /// <summary>
         ///     <para>

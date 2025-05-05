@@ -69,7 +69,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for converting GroupBy key expressions to SQL expressions.
     ///     </para>
     /// </summary>
-    public class GroupByKeyExpressionConverter : LinqToSqlExpressionConverterBase<MemberExpression>
+    public class GroupByKeyExpressionConverter : LinqToNonSqlQueryConverterBase<MemberExpression>
     {
         /// <summary>
         ///     <para>
@@ -88,11 +88,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             var child = convertedChildren[0];
-            if (child is SqlDataSourceReferenceExpression ds)
-                child = ds.DataSource;
-            var sqlQuery = child as SqlQueryExpression
+            var sqlQuery = child as SqlSelectExpression
                             ??
-                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
+                            throw new InvalidOperationException($"Expected {nameof(SqlSelectExpression)} on the stack, given type is '{child.GetType()}'.");
             // Case-1: x.Key
             // Case-2: x.Key.Name
             // if we are here it means either of the 2 cases are true
@@ -104,9 +102,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 //  it means, user has done scalar grouping
                 if (isLeafNode)
                 {
-                    return sqlQuery.GetGroupByScalarExpression()
-                            ??
-                            throw new InvalidOperationException($"Expression '{this.Expression}' is a GroupBy Expression which should return the scalar value, but no scalar value was returned.");
+                    return sqlQuery.ResolveGroupBy(ModelPath.Empty);
                 }
                 else
                     return sqlQuery;
@@ -115,8 +111,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             {
                 if (parentOfMemberExpr.Member.Name == "Key")
                 {
+                    // removing "Key"
+                    var modelPath = this.Expression.GetModelPath().RemoveElementsFromLeft(1);
                     // x.Key.Field
-                    return sqlQuery.GetGroupByExpression(this.Expression.Member.Name)
+                    return sqlQuery.ResolveGroupBy(modelPath)
                             ??
                             throw new InvalidOperationException($"Expression '{this.Expression}' is a GroupBy Expression which should return an expression for Key '{this.Expression.Member.Name}', but no value was returned.");
                 }

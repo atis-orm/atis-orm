@@ -131,7 +131,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         [NavigationProperty(NavigationType.ToChildren, typeof(EmployeeWithEmployeeOnManagerIdRelation))]
         public IQueryable<Employee> NavSubOrdinates { get; set; }
-        [NavigationLink(NavigationType.ToParent, nameof(Employee.RowId), nameof(Employee.ManagerId))]
+        [NavigationLink(NavigationType.ToParent, nameof(Employee.EmployeeId), nameof(Employee.ManagerId))]
         public Func<Employee> NavManager { get; set; }
         [NavigationProperty(NavigationType.ToChildren, typeof(EmployeeWithEmployeeOnChildrenGrandchildRecursiveRelation))]
         public IQueryable<EmployeeWithTopManagerDto> NavNestedChildren { get; set; }
@@ -407,4 +407,13 @@ namespace Atis.SqlExpressionEngine.UnitTest
         public System.String LU_Description { get; set; }
         public System.String LU_ShortDesc { get; set; }
     }
+
+
+    class PlanTable
+    {
+        public int ID { get; set; }
+        public DateTime Date_Time { get; set; }
+        public string ID_Plan { get; set; }
+    }
+
 }

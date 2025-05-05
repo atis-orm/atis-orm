@@ -55,7 +55,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for handling variable member expressions.
     ///     </para>
     /// </summary>
-    public class VariableMemberExpressionConverter : LinqToSqlExpressionConverterBase<MemberExpression>
+    public class VariableMemberExpressionConverter : LinqToNonSqlQueryConverterBase<MemberExpression>
     {
         private readonly IReflectionService reflectionService;
 

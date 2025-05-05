@@ -118,7 +118,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
         public void Full_query_selected_using_LambdaParameter_in_Select_then_navigation_used_later_in_another_Select_should_translate_to_sub_query_and_then_inner_join_on_sub_query()
         {
             var assets = new Queryable<Asset>(new QueryProvider());
-            var q = assets.Where(x => x.NavItem().ItemId == "333" || x.NavItem().ItemId == "111").Select(x => x).Select(x => new { x.NavItem().ItemId, x.NavItem().ItemDescription });
+            var q = assets.Where(p1 => p1.NavItem().ItemId == "333" || p1.NavItem().ItemId == "111").Select(p2 => p2).Select(p3 => new { p3.NavItem().ItemId, p3.NavItem().ItemDescription });
             string? expectedResult = @"
 select	NavItem_4.ItemId as ItemId, NavItem_4.ItemDescription as ItemDescription
 	from	(
@@ -130,6 +130,29 @@ select	NavItem_4.ItemId as ItemId, NavItem_4.ItemDescription as ItemDescription
 		inner join ItemBase as NavItem_4 on (NavItem_4.ItemId = a_3.ItemId)
 ";
             Test("Navigation Full Selection Test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Single_sub_query_selected_as_column_should_not_select_the_whole_query_in_outer_query()
+        {
+            var employees = new Queryable<Employee>(new QueryProvider());
+            var employeeDegrees = new Queryable<EmployeeDegree>(new QueryProvider());
+            var q = employees.Select(x => new { C1 = employeeDegrees.Count() })
+                            .Where(x => x.C1 > 5)
+                            .Select(x => new { x.C1 })
+                            ;
+            string? expectedResult = @"
+select	a_3.C1 as C1
+    	from	(
+    		select	(
+    			select	Count(1) as Col1
+    			from	EmployeeDegree as a_2
+    		) as C1
+    		from	Employee as a_1
+    	) as a_3
+    	where	(a_3.C1 > 5)
+";
+            Test("Sub Query Selection Test", q.Expression, expectedResult);
         }
     }
 }

@@ -21,7 +21,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlStringFunctionExpression(this);
+            return sqlExpressionVisitor.VisitSqlStringFunction(this);
         }
 
         public SqlStringFunctionExpression Update(SqlExpression stringExpression, SqlExpression[] arguments)

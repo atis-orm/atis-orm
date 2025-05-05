@@ -42,7 +42,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for handling string length expressions.
     ///     </para>
     /// </summary>
-    public class StringLengthConverter : LinqToSqlExpressionConverterBase<MemberExpression>
+    public class StringLengthConverter : LinqToNonSqlQueryConverterBase<MemberExpression>
     {
         /// <summary>
         ///     <para>

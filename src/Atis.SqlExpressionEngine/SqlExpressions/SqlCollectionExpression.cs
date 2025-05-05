@@ -80,7 +80,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <returns>The result of visiting this expression.</returns>
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlCollectionExpression(this);
+            return sqlExpressionVisitor.VisitSqlCollection(this);
         }
 
         /// <summary>

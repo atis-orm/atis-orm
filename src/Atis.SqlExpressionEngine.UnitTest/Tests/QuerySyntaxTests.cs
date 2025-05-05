@@ -134,9 +134,9 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
             string? expectedResult = @"
-select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, child_join_2.Degree as Degree, child_join_2.University as University
-	from	Employee as a_1
-		inner join EmployeeDegree as child_join_2 on (child_join_2.EmployeeId = a_1.EmployeeId)
+    	select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
+	from Employee as a_1
+			inner join EmployeeDegree as a_2 on (a_2.EmployeeId = a_1.EmployeeId)
 ";
             Test("Query Syntax From with Where Converted to Join Test", q.Expression, expectedResult);
         }
@@ -151,13 +151,13 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, child_join_2.Degree as De
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
             string? expectedResult = @"
-select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3.University as University
-	from	Employee as a_1
-		cross apply (
-			select	top (5)	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a_2.University as University
-			from	EmployeeDegree as a_2
-			where	(a_2.EmployeeId = a_1.EmployeeId)
-		) as a_3
+    	select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
+	from Employee as a_1
+			cross apply (
+				select top (5) a_3.RowId as RowId, a_3.EmployeeId as EmployeeId, a_3.Degree as Degree, a_3.University as University
+				from EmployeeDegree as a_3
+				where (a_3.EmployeeId = a_1.EmployeeId)
+			) as a_2
 ";
             Test("Query Syntax From with Where But 'Take' at End Convert to Cross Apply Test", q.Expression, expectedResult);
         }
@@ -190,13 +190,13 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
             string? expectedResult = @"
-select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3.University as University
-	from	Employee as a_1
-		cross join (
-			select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a_2.University as University
-			from	EmployeeDegree as a_2
-			where	(a_2.Degree = '123')
-		) as a_3
+select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
+	from Employee as a_1
+			cross join (
+				select a_3.RowId as RowId, a_3.EmployeeId as EmployeeId, a_3.Degree as Degree, a_3.University as University
+				from EmployeeDegree as a_3
+				where (a_3.Degree = '123')
+			) as a_2
 ";
             Test("Query Syntax Multi From Sub Query to Cross Join Test", q.Expression, expectedResult);
         }
@@ -211,13 +211,13 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
             string? expectedResult = @"
-select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3.University as University
-	from	Employee as a_1
-		cross apply (
-			select	a_2.Degree as Degree, a_2.University as University, a_1.Department as Department
-			from	EmployeeDegree as a_2
-			where	(a_2.Degree = '123')
-		) as a_3
+select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
+	from Employee as a_1
+			cross apply (
+				select a_3.Degree as Degree, a_3.University as University, a_1.Department as Department
+				from EmployeeDegree as a_3
+				where (a_3.Degree = '123')
+			) as a_2
 ";
             Test("Query Syntax Multi From Sub Query to Cross Apply Test", q.Expression, expectedResult);
         }
@@ -232,13 +232,13 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
             string? expectedResult = @"
-select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree, a_3.University as University
-	from	Employee as a_1
-		outer apply (
-			select	a_2.Degree as Degree, a_2.University as University, a_1.Department as Department
-			from	EmployeeDegree as a_2
-			where	(a_2.Degree = '123')
-		) as a_3
+select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
+	from Employee as a_1
+			outer apply (
+				select a_3.Degree as Degree, a_3.University as University, a_1.Department as Department
+				from EmployeeDegree as a_3
+				where (a_3.Degree = '123')
+			) as a_2
 ";
             Test("Query Syntax Multi From Sub Query to Cross Apply Default If Empty Test", q.Expression, expectedResult);
         }
@@ -283,17 +283,14 @@ select	a_3.Col1 as Col1, a_3.Col2 as Col2
                     select new { y = next.z.n1.ManagerId }
                     ;
             string? expectedResult = @"
-select	a_6.ManagerId as y
-	from	(
-		select	a_5.RowId as RowId, a_5.EmployeeId_1 as EmployeeId_1, a_5.Name_1 as Name_1, a_5.Department as Department, a_5.ManagerId as ManagerId
-		from	(
-			select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as Degree, NavSubOrdinates_3.RowId as RowId, NavSubOrdinates_3.EmployeeId as EmployeeId_1, NavSubOrdinates_3.Name as Name_1, NavSubOrdinates_3.Department as Department, NavSubOrdinates_3.ManagerId as ManagerId, NavSubOrdinates_3.EmployeeId as f2, NavDegrees_4.Degree as SubOrdinateDegree
-			from	Employee as a_1
-				inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
-				inner join Employee as NavSubOrdinates_3 on (a_1.EmployeeId = NavSubOrdinates_3.ManagerId)
-				inner join EmployeeDegree as NavDegrees_4 on (NavSubOrdinates_3.EmployeeId = NavDegrees_4.EmployeeId)
+select a_5.ManagerId as y
+	from (
+			select NavSubOrdinates_3.RowId as RowId, NavSubOrdinates_3.EmployeeId as EmployeeId, NavSubOrdinates_3.Name as Name, NavSubOrdinates_3.Department as Department, NavSubOrdinates_3.ManagerId as ManagerId
+			from Employee as a_1
+					inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
+					inner join Employee as NavSubOrdinates_3 on (a_1.EmployeeId = NavSubOrdinates_3.ManagerId)
+					inner join EmployeeDegree as NavDegrees_4 on (NavSubOrdinates_3.EmployeeId = NavDegrees_4.EmployeeId)
 		) as a_5
-	) as a_6
 ";
             Test("Query Syntax with Multiple Data Sources having Navigation Test", q.Expression, expectedResult);
         }
@@ -337,8 +334,8 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
             string? expectedResult = @"
 select	a_1.OrderID as OrderID, a_1.OrderDate as OrderDate, a_2.Quantity as Quantity, a_2.UnitPrice as UnitPrice, (
 		select	Count(1) as Col1
-		from	Customer as a_3
-		where	(a_1.CustomerId = a_3.CustomerId) and (a_3.CustomerName like 'TT' + '%')
+		from	Customer as a_4
+		where	(a_1.CustomerId = a_4.CustomerId) and (a_4.CustomerName like 'TT' + '%')
 	) as Count
 	from	Order as a_1
 		inner join OrderDetail as a_2 on (a_1.OrderID = a_2.OrderID)
@@ -370,28 +367,25 @@ select	a_1.OrderID as OrderID, a_1.OrderDate as OrderDate, a_2.Quantity as Quant
                     select new { t.o.OrderID, t.o.OrderDate, t.od.Quantity, t.od.UnitPrice, Count = t.g.Where(y => y.CustomerName.StartsWith("TT")).Count() };
 
             string? expectedResult = @"
-select	a_5.OrderID as OrderID, a_5.OrderDate as OrderDate, a_5.Quantity as Quantity, a_5.UnitPrice as UnitPrice, (
-		select	Count(1) as Col1
-		from	Customer as a_3
-		where	(a_5.CustomerId = a_3.CustomerId) and (a_3.CustomerId = '123') and (a_3.CustomerName like 'TT' + '%')
-	) as Count
-	from	(
-		select	a_1.OrderID as OrderID, a_1.CustomerId as CustomerId, a_1.OrderDate as OrderDate, a_2.OrderID as OrderID_1, 
-                a_2.Quantity as Quantity, a_2.UnitPrice as UnitPrice, 
-                a_4.RowId as RowId, a_4.CustomerId as CustomerId_1, a_4.CustomerName as CustomerName, a_4.Address as Address, a_4.Status as Status
-		from	Order as a_1
-			inner join OrderDetail as a_2 on (a_1.OrderID = a_2.OrderID)
-			outer apply (
-				select	a_3.RowId as RowId, a_3.CustomerId as CustomerId, a_3.CustomerName as CustomerName, a_3.Address as Address, a_3.Status as Status
-				from	Customer as a_3
-				where	(a_1.CustomerId = a_3.CustomerId) and (a_3.CustomerId = '123')
-			) as a_4
-	) as a_5
-	where	((
-		select	Count(1) as Col1
-		from	Customer as a_3
-		where	(a_5.CustomerId = a_3.CustomerId) and (a_3.CustomerId = '123') and (a_3.CustomerName like '%' + 'abc' + '%')
-	) > 0)
+    	select a_3.OrderID as OrderID, a_3.OrderDate as OrderDate, a_3.Quantity as Quantity, a_3.UnitPrice as UnitPrice, (
+			select Count(1) as Col1
+			from Customer as a_5
+			where (a_3.CustomerId = a_5.CustomerId)
+				 and (a_5.CustomerId = '123')
+				 and (a_5.CustomerName like 'TT' + '%')
+		) as Count
+	from (
+			select a_1.OrderID as OrderID, a_1.CustomerId as CustomerId, a_1.OrderDate as OrderDate, a_2.OrderID as OrderID_1, a_2.Quantity as Quantity, a_2.UnitPrice as UnitPrice
+			from Order as a_1
+					inner join OrderDetail as a_2 on (a_1.OrderID = a_2.OrderID)
+		) as a_3
+	where ((
+			select Count(1) as Col1
+			from Customer as a_4
+			where (a_3.CustomerId = a_4.CustomerId)
+				 and (a_4.CustomerId = '123')
+				 and (a_4.CustomerName like '%' + 'abc' + '%')
+		) > 0)
 ";
             Test("GroupJoin sub-query selected in projection", q.Expression, expectedResult);
         }
@@ -410,27 +404,12 @@ select	a_5.OrderID as OrderID, a_5.OrderDate as OrderDate, a_5.Quantity as Quant
                 orderby result.EmpName
                 select result;
 
-            // the `let` keyword above will include `e` and `d` is transparent anonymous type along with `result`
-            // which will be rendered as Select in the final expression over Join, so the `let` part is basically
-            // going to be Select something like this
-            //      Select(
-            //          Join(...),
-            //          transparentType => new { transparentType, result = new { EmpName = transparentType.e.Name, DegreeName = transparentType.d.Degree } }
-            //      )                                /
-            //      ________________________________/
-            //     /
-            //  this `transparentType` selected in `new` is causing all the columns selected from Employee and EmployeeDegree
-
             string? expectedResult = @"
-    select	a_3.EmpName as EmpName, a_3.DegreeName as DegreeName
-	from	(
-		select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId, a_2.RowId as RowId_1, 
-                a_2.EmployeeId as EmployeeId_1, a_2.Degree as Degree, a_2.University as University, a_1.Name as EmpName, a_2.Degree as DegreeName
-		from	Employee as a_1
-			    inner join EmployeeDegree as a_2 on (a_1.EmployeeId = a_2.EmployeeId)
-	) as a_3
-	where	(a_3.Degree like 'H' + '%')
-	order by a_3.EmpName asc
+    select a_1.Name as EmpName, a_2.Degree as DegreeName
+	from Employee as a_1
+			inner join EmployeeDegree as a_2 on (a_1.EmployeeId = a_2.EmployeeId)
+	where (a_2.Degree like 'H' + '%')
+	order by a_1.Name asc
 ";
 
             Test("Join followed by Select, Where, and OrderBy (query syntax) should wrap correctly", q.Expression, expectedResult);

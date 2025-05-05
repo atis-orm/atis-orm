@@ -1,4 +1,6 @@
-﻿using Atis.SqlExpressionEngine.SqlExpressions;
+﻿using Atis.SqlExpressionEngine.Internal;
+using Atis.SqlExpressionEngine.SqlExpressions;
+using Newtonsoft.Json.Linq;
 using System.Text;
 
 namespace Atis.SqlExpressionEngine.UnitTest
@@ -18,26 +20,23 @@ namespace Atis.SqlExpressionEngine.UnitTest
             return alias;
         }
 
-        private string GetExpressionId(Guid expressionId)
-        {
-            return string.Empty;
-            //if (!this.expressionIdCache.TryGetValue(expressionId, out var id))
-            //{
-            //    id = this.expressionIdCache.Count + 1;
-            //    this.expressionIdCache.Add(expressionId, id);
-            //}
-            //return $" /*{id}*/ ";
-        }
-
         public string Translate(SqlExpression sqlExpression)
         {
-            if (sqlExpression is SqlBinaryExpression sqlBinaryExpression)
+            if (sqlExpression is SqlDerivedTableExpression sqlDerivedTableExpression)
+            {
+                return this.TranslateSqlDerivedTableExpression(sqlDerivedTableExpression);
+            }
+            else if (sqlExpression is SqlAliasedJoinSourceExpression sqlAliasedJoinSourceExpression)
+            {
+                return this.TranslateSqlAliasedJoinSourceExpression(sqlAliasedJoinSourceExpression);
+            }
+            else if (sqlExpression is SqlAliasedFromSourceExpression sqlAliasedFromSourceExpression)
+            {
+                return this.TranslateSqlAliasedFromSourceExpression(sqlAliasedFromSourceExpression);
+            }
+            else if (sqlExpression is SqlBinaryExpression sqlBinaryExpression)
             {
                 return this.TranslateSqlBinaryExpression(sqlBinaryExpression);
-            }
-            else if (sqlExpression is SqlColumnExpression sqlColumnExpression)
-            {
-                return this.TranslateSqlColumnExpression(sqlColumnExpression);
             }
             else if (sqlExpression is SqlLiteralExpression sqlLiteralExpression)
             {
@@ -55,29 +54,13 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlDataSourceColumnExpression(sqlDataSourceColumnExpression);
             }
-            else if (sqlExpression is SqlDataSourceExpression sqlDataSourceExpression)
-            {
-                return this.TranslateSqlDataSourceExpression(sqlDataSourceExpression);
-            }
             else if (sqlExpression is SqlFunctionCallExpression sqlFunctionCallExpression)
             {
                 return this.TranslateSqlFunctionCallExpression(sqlFunctionCallExpression);
             }
-            else if (sqlExpression is SqlJoinExpression sqlJoinExpression)
-            {
-                return this.TranslateSqlJoinExpression(sqlJoinExpression);
-            }
-            else if (sqlExpression is SqlOrderByExpression sqlOrderByExpression)
-            {
-                return this.TranslateSqlOrderByExpression(sqlOrderByExpression);
-            }
             else if (sqlExpression is SqlParameterExpression sqlParameterExpression)
             {
                 return this.TranslateSqlParameterExpression(sqlParameterExpression);
-            }
-            else if (sqlExpression is SqlQueryExpression sqlQueryExpression)
-            {
-                return this.TranslateSqlQueryExpression(sqlQueryExpression);
             }
             else if (sqlExpression is SqlTableExpression sqlTableExpression)
             {
@@ -111,10 +94,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlInValuesExpression(sqlInValuesExpression);
             }
-            else if (sqlExpression is SqlKeywordExpression sqlKeywordExpression)
-            {
-                return this.TranslateSqlKeywordExpression(sqlKeywordExpression);
-            }
+            //else if (sqlExpression is SqlKeywordExpression sqlKeywordExpression)
+            //{
+            //    return this.TranslateSqlKeywordExpression(sqlKeywordExpression);
+            //}
             else if (sqlExpression is SqlNegateExpression sqlNegateExpression)
             {
                 return this.TranslateSqlNegateExpression(sqlNegateExpression);
@@ -131,6 +114,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlDatePartExpression(sqlDatePartExpression);
             }
+            else if (sqlExpression is SqlDateSubtractExpression sqlDateSubtractExpression)
+            {
+                return this.TranslateSqlSubtractExpression(sqlDateSubtractExpression);
+            }
             else if (sqlExpression is SqlStringFunctionExpression sqlStringFunction)
             {
                 return this.TranslateSqlStringFunctionExpression(sqlStringFunction);
@@ -139,10 +126,242 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlLikeExpression(sqlLikeExpression);
             }
+            else if (sqlExpression is SqlUnionQueryExpression sqlUnionQueryExpression)
+            {
+                return this.TranslateSqlUnionQueryExpression(sqlUnionQueryExpression);
+            }
+            else if (sqlExpression is SqlStandaloneSelectExpression sqlStandaloneSelectExpression)
+            {
+                return this.TranslateSqlStandaloneSelectExpression(sqlStandaloneSelectExpression);
+            }
+            else if (sqlExpression is SqlQueryableExpression sqlQueryableExpression)
+            {
+                return this.TranslateSqlQueryableExpression(sqlQueryableExpression);
+            }
+            else if (sqlExpression is SqlCommentExpression sqlComment)
+            {
+                return this.TranslateSqlCommentExpression(sqlComment);
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
             }
+        }
+
+        private string TranslateSqlCommentExpression(SqlCommentExpression sqlComment)
+        {
+            return $"/*{sqlComment.Comment}*/";
+        }
+
+        private string TranslateSqlQueryableExpression(SqlQueryableExpression sqlQueryableExpression)
+        {
+            return $"Queryable: {{\r\n{Indent(this.Translate(sqlQueryableExpression.Query))}\r\n}}";
+        }
+
+        private string TranslateSqlCollectionExpression(SqlCollectionExpression sqlCollectionExpression)
+        {
+            return string.Join(", ", sqlCollectionExpression.SqlExpressions.Select(this.Translate));
+        }
+
+        private string TranslateSqlStandaloneSelectExpression(SqlStandaloneSelectExpression node)
+        {
+            var selectColumnToString = string.Join(", ", node.SelectList.Select(x => this.TranslateSelectColumn(x)));
+            return $"(select {selectColumnToString})";
+        }
+
+        private string TranslateSqlAliasedFromSourceExpression(SqlAliasedFromSourceExpression node)
+        {
+            return $"{this.Translate(node.QuerySource)} as {this.GetSimpleAlias(node.Alias)}";
+        }
+
+        private string TranslateSqlAliasedJoinSourceExpression(SqlAliasedJoinSourceExpression node)
+        {
+            var alias = this.GetSimpleAlias(node.Alias, node.JoinName);
+            var joinCondition = node.JoinCondition != null ? $" on {this.TranslateLogicalExpression(node.JoinCondition)}" : string.Empty;
+            return $"{GetSqlJoinType(node.JoinType)} {this.Translate(node.QuerySource)} as {alias}{joinCondition}";
+        }
+
+        private static string GetSqlJoinType(SqlJoinType joinType)
+        {
+            switch (joinType)
+            {
+                case SqlJoinType.Inner:
+                    return "inner join";
+                case SqlJoinType.Left:
+                    return "left join";
+                case SqlJoinType.Right:
+                    return "right join";
+                case SqlJoinType.Cross:
+                    return "cross join";
+                case SqlJoinType.OuterApply:
+                    return "outer apply";
+                case SqlJoinType.CrossApply:
+                    return "cross apply";
+                case SqlJoinType.FullOuter:
+                    return "full outer join";
+                default:
+                    return joinType.ToString();
+            }
+        }
+
+        private string ConvertUnionItemToString(UnionItem unionItem, bool prependUnionKeyword)
+        {
+            string unionKeyword;
+            if (prependUnionKeyword)
+            {
+                if (unionItem.UnionType == SqlUnionType.UnionAll)
+                    unionKeyword = "\tunion all\r\n";
+                else
+                    unionKeyword = "\tunion\r\n";
+            }
+            else
+                unionKeyword = string.Empty;
+            var derivedTable = this.Translate(unionItem.DerivedTable);
+            if (derivedTable.StartsWith("("))
+                derivedTable = derivedTable.Substring(1, derivedTable.Length - 2).Trim();
+            return $"{unionKeyword}\t{derivedTable}";
+        }
+
+        private string TranslateSqlUnionQueryExpression(SqlUnionQueryExpression node)
+        {
+            var unions = node.Unions.Select((x, i) => this.ConvertUnionItemToString(x, i > 0));
+            return $"(\r\n{string.Join("\r\n", unions)}\r\n)";
+        }
+
+        private string Indent(string value, string indentText = "\r\n\t")
+        {
+            return value.Replace("\r\n", indentText);
+        }
+
+        private string JoinInNewLine(IEnumerable<SqlAliasedJoinSourceExpression> joins, string separator = "\r\n\t\t")
+        {
+            var result = string.Join("\r\n\t\t", joins.Select(x => Indent(this.Translate(x), "\r\n\t\t")));
+            if (result.Length > 0)
+                result = $"{separator}{result}";
+            return result;
+        }
+
+        private string JoinPredicate(SqlFilterClauseExpression filterClause, string method)
+        {
+            if (filterClause is null || filterClause.FilterConditions.Length == 0)
+                return string.Empty;
+
+            var predicateString = new StringBuilder();
+
+            for (var i = 0; i < filterClause.FilterConditions.Length; i++)
+            {
+                var isLastCondition = i == filterClause.FilterConditions.Length - 1;
+                var condition = filterClause.FilterConditions[i];
+
+                var translated = Indent(this.TranslateLogicalExpression(condition.Predicate));
+
+                var hasOrOperatorInThis = condition.UseOrOperator;
+                var hasOrOperatorInNext = !isLastCondition && filterClause.FilterConditions[i + 1].UseOrOperator;
+
+                if (i == 0)
+                {
+                    if (hasOrOperatorInNext)                                // 0 == 1 or orCondition1
+                        predicateString.Append('(');
+                    predicateString.Append(translated);
+                }
+                else
+                {
+                    predicateString.Append(condition.UseOrOperator ? " or " : Indent("\r\n and "));
+
+                    // e.g.  condition1 and 0 == 1 or orCondition1 or orCondition2 or orCondition3 and condition2 and condition3
+
+                    if (!hasOrOperatorInThis && hasOrOperatorInNext)        // and 0 == 1
+                        predicateString.Append('(');
+
+                    predicateString.Append(translated);
+
+                    if (hasOrOperatorInThis && !hasOrOperatorInNext)        // or orCondition3
+                        predicateString.Append(')');
+                }
+            }
+
+            return $"\r\n{method} {predicateString}";
+        }
+
+
+        private string CommaJoinMoveNextLine<T>(IEnumerable<T> values, string method, Func<T, string> translateMethod)
+        {
+            var valuesToString = string.Join(", ", values.Select(x => Indent(translateMethod(x))));
+            if (valuesToString.Length > 0)
+                valuesToString = $"\r\n{method} {valuesToString}";
+            return valuesToString;
+        }
+
+        private string TranslateOrderByColumn(OrderByColumn orderByColumn)
+        {
+            return $"{this.Translate(orderByColumn.ColumnExpression)} {(orderByColumn.Direction == SortDirection.Ascending ? "asc" : "desc")}";
+        }
+
+        private string TranslateSelectColumn(SelectColumn selectColumn)
+        {
+            return $"{this.TranslateNonLogicalExpression(selectColumn.ColumnExpression)} as {selectColumn.Alias}";
+        }
+
+        private string TranslateSelectColumns(SelectColumn[] selectColumns)
+        {
+            var result = new StringBuilder();
+            for(var i = 0; i < selectColumns.Length; i++)
+            {
+                var selectColumn = selectColumns[i];
+                var comment = selectColumn.ColumnExpression as SqlCommentExpression;
+                if (comment != null)
+                    result.Append(" /*");
+                if (i > 0)
+                    result.Append(", ");
+
+                if (comment is null)
+                    result.Append(Indent(this.TranslateSelectColumn(selectColumn)));
+                else
+                    result.Append(comment.Comment).Append(" as ").Append(selectColumn.Alias);
+
+                if (comment != null)
+                    result.Append("*/");
+            }
+            return result.ToString();
+        }
+
+
+        private string TranslateSqlDerivedTableExpression(SqlDerivedTableExpression node)
+        {
+            var cteDataSourceToString = string.Join(", ", node.CteDataSources.Select(x => $"{this.GetSimpleAlias(x.CteAlias, "cte")} as\r\n{this.Translate(x.CteBody)}"));
+            if (cteDataSourceToString.Length > 0)
+                cteDataSourceToString = $"\twith {cteDataSourceToString}\r\n";
+            else
+                cteDataSourceToString = "\t";
+
+            var fromString = $"\r\nfrom {Indent(this.Translate(node.FromSource))}";
+            var joins = JoinInNewLine(node.Joins);
+            var whereClause = JoinPredicate(node.WhereClause, "where");
+            var groupByClause = CommaJoinMoveNextLine(node.GroupByClause, "group by", this.Translate);
+            var havingClause = JoinPredicate(node.HavingClause, "having");
+            var top = node.Top > 0 ? $" top ({node.Top})" : string.Empty;
+            var distinct = node.IsDistinct ? " distinct " : string.Empty;
+            string? selectList = null;
+            if (node.SelectColumnCollection != null)
+                selectList = this.TranslateSelectColumns(node.SelectColumnCollection.SelectColumns);
+            string orderByClause;
+            if (node.OrderByClause != null)
+                orderByClause = CommaJoinMoveNextLine(node.OrderByClause.OrderByColumns, "order by", this.TranslateOrderByColumn);
+            else
+                orderByClause = string.Empty;
+            string paging = string.Empty;
+            if (node.RowOffset != null && node.RowsPerPage != null)
+            {
+                paging = $"\r\noffset {node.RowOffset} rows fetch next {node.RowsPerPage} rows only";
+            }
+            string selectClause = string.Empty;
+            if (!string.IsNullOrWhiteSpace(selectList))
+            {
+                selectClause = $"select{distinct}{top} {selectList}";
+            }
+            var query = $"{cteDataSourceToString}{selectClause}{fromString}{joins}{whereClause}{groupByClause}{havingClause}{orderByClause}{paging}";
+            query = $"(\r\n{Indent(query)}\r\n)";
+            return query;
         }
 
         private string TranslateSqlLikeExpression(SqlLikeExpression sqlLikeExpression)
@@ -176,6 +395,11 @@ namespace Atis.SqlExpressionEngine.UnitTest
             return $"dateAdd({sqlDateAddExpression.DatePart}, {this.Translate(sqlDateAddExpression.Interval)}, {this.Translate(sqlDateAddExpression.DateExpression)})";
         }
 
+        private string TranslateSqlSubtractExpression(SqlDateSubtractExpression sqlDateSubtractExpression)
+        {
+            return $"dateSubtract({sqlDateSubtractExpression.DatePart}, {this.Translate(sqlDateSubtractExpression.StartDate)}, {this.Translate(sqlDateSubtractExpression.EndDate)})";
+        }
+
         private string TranslateSqlCastExpression(SqlCastExpression sqlCastExpression)
         {
             return $"cast({this.Translate(sqlCastExpression.Expression)} as {this.TranslateSqlDataType(sqlCastExpression.SqlDataType)})";
@@ -207,10 +431,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
             return $"not {operand}";
         }
 
-        private string TranslateSqlKeywordExpression(SqlKeywordExpression sqlKeywordExpression)
-        {
-            return sqlKeywordExpression.Keyword;
-        }
+        //private string TranslateSqlKeywordExpression(SqlKeywordExpression sqlKeywordExpression)
+        //{
+        //    return sqlKeywordExpression.Keyword;
+        //}
 
         private string TranslateSqlInValuesExpression(SqlInValuesExpression sqlInValuesExpression)
         {
@@ -222,13 +446,17 @@ namespace Atis.SqlExpressionEngine.UnitTest
         private string TranslateSqlUpdateExpression(SqlUpdateExpression sqlUpdateExpression)
         {
             var updateColumns = sqlUpdateExpression.Columns.Zip(sqlUpdateExpression.Values, (c, v) => $"{c} = {this.Translate(v)}");
-            var query = $"update {this.GetSimpleAlias(sqlUpdateExpression.UpdatingDataSource.DataSourceAlias, sqlUpdateExpression.UpdatingDataSource.Tag)}\r\n\tset {string.Join(",\r\n\t\t", updateColumns)}\r\n{this.Translate(sqlUpdateExpression.SqlQuery)}";
+            var sqlQuery = this.Translate(sqlUpdateExpression.Source);
+            sqlQuery = this.RemoveParenthesis(sqlQuery);
+            var query = $"update {this.GetSimpleAlias(sqlUpdateExpression.DataSource)}\r\n\tset {string.Join(",\r\n\t\t", updateColumns)}\r\n{sqlQuery}";
             return query;
         }
 
         private string TranslateSqlDeleteExpression(SqlDeleteExpression sqlDeleteExpression)
         {
-            var query = $"delete {this.GetSimpleAlias(sqlDeleteExpression.DeletingDataSource.DataSourceAlias, sqlDeleteExpression.DeletingDataSource.Tag)}\r\n{this.Translate(sqlDeleteExpression.SqlQuery)}";
+            var sqlQuery = this.Translate(sqlDeleteExpression.Source);
+            sqlQuery = this.RemoveParenthesis(sqlQuery);
+            var query = $"delete {this.GetSimpleAlias(sqlDeleteExpression.DataSourceAlias)}\r\n{sqlQuery}";
             return query;
         }
 
@@ -253,194 +481,6 @@ namespace Atis.SqlExpressionEngine.UnitTest
         private string TranslateSqlTableExpression(SqlTableExpression sqlTableExpression)
         {
             return sqlTableExpression.TableName;
-        }
-
-        private readonly HashSet<SqlQueryExpression> sqlQueryExpressions = new HashSet<SqlQueryExpression>();
-
-        //public string TranslateSqlCteExpression(SqlCteExpression sqlCteExpression)
-        //{
-        //    //var cteQuery = this.Translate(sqlCteExpression.CteQuery);
-        //    //return $"with {sqlCteExpression.CteAlias} as (\r\n\t{cteQuery.Replace("\r\n", "\r\n\t")}\r\n)";
-        //}
-
-
-        // Helper method to process the WhereClause and group OR conditions
-        private string ProcessWhereOrClauses(IEnumerable<FilterPredicate> predicates)
-        {
-            StringBuilder result = new StringBuilder();
-            bool isOrGroupOpen = false;
-            var predicateArray = predicates.ToArray();
-
-            for(var i = 0; i < predicateArray.Length; i++)
-            {
-                var predicate = predicateArray[i];
-                var nextEntry = i < predicateArray.Length - 1 ? predicateArray[i + 1] : null;
-                if (i > 0)
-                {
-                    result.Append(predicate.UseOrOperator ? " or " : " and ");
-                }
-                if (!isOrGroupOpen)
-                {
-                    if (nextEntry?.UseOrOperator == true)
-                    {
-                        result.Append("(");
-                        isOrGroupOpen = true;
-                    }
-                }
-                var translatedPredicate = this.TranslateLogicalExpression(predicate.Predicate);
-                result.Append(translatedPredicate);
-                if (isOrGroupOpen)
-                {
-                    if ((nextEntry?.UseOrOperator ?? false) == false)
-                    {
-                        result.Append(")");
-                        isOrGroupOpen = false;
-                    }
-                }
-            }
-
-            return result.ToString();
-        }
-
-        private string TranslateSqlQueryExpression(SqlQueryExpression sqlQueryExpression)
-        {
-            if (this.sqlQueryExpressions.Contains(sqlQueryExpression))
-            {
-                throw new InvalidOperationException($"Sql Query already exists");
-            }
-            //if (sqlQueryExpression.IsTableOnly())
-            //{
-            //    return this.Translate(sqlQueryExpression.DataSources.First().DataSource);
-            //}
-            this.sqlQueryExpressions.Add(sqlQueryExpression);
-            // WhereClause conversion with dynamic AND/OR based on UseOrOperator, grouping OR conditions in parentheses
-
-            string? initialDataSource = null;
-            string[] dataSourceToString = Array.Empty<string>();
-            string? fromString = null;
-            if (sqlQueryExpression.IsCte)
-            {
-                if (sqlQueryExpression.CteDataSources.Count > 0)
-                {
-                    initialDataSource = this.Translate(sqlQueryExpression.InitialDataSource);
-                    dataSourceToString = sqlQueryExpression.CteDataSources.Select(x => $"{this.GetSimpleAlias(x.DataSourceAlias, "cte")} as \r\n{this.Translate(x.QuerySource).Replace("\r\n", "\t\r\n")}").ToArray();
-                    fromString = initialDataSource;
-                }
-                else
-                {
-                    dataSourceToString = sqlQueryExpression.DataSources.Take(1).Select(x => $"{this.GetSimpleAlias(x.DataSourceAlias, x.Tag)} as \r\n{this.Translate(x.QuerySource).Replace("\r\n", "\t\r\n")}").ToArray();
-                    fromString = this.GetSimpleAlias(sqlQueryExpression.InitialDataSource.DataSourceAlias, sqlQueryExpression.InitialDataSource.Tag);
-                }
-            }
-            else if (sqlQueryExpression.InitialDataSource != null)
-            {
-                initialDataSource = this.Translate(sqlQueryExpression.InitialDataSource);
-            }
-                
-
-            string joins;
-            if (sqlQueryExpression.IsCte)
-            {
-                if (sqlQueryExpression.CteDataSources.Count > 0)
-                {
-                    joins = sqlQueryExpression.Joins.Count > 0 ? "\r\n\t" + string.Join("\r\n\t", sqlQueryExpression.Joins.Select(this.Translate).Select(x => x.Replace("\r\n", "\r\n\t"))) : string.Empty;
-                }
-                else
-                {
-                    joins = sqlQueryExpression.Joins.Count > 0 ? "\r\n\t" + string.Join("\r\n\t", sqlQueryExpression.Joins.Select(this.TranslateCteJoin).Select(x => x.Replace("\r\n", "\r\n\t"))) : string.Empty;
-                }
-            }
-            else
-            {
-                joins = sqlQueryExpression.Joins.Count > 0 ? "\r\n\t" + string.Join("\r\n\t", sqlQueryExpression.Joins.Select(this.Translate).Select(x => x.Replace("\r\n", "\r\n\t"))) : string.Empty;
-            }
-
-            var wherePart = sqlQueryExpression.WhereClause.Count > 0
-                ? $"\r\nwhere\t{ProcessWhereOrClauses(sqlQueryExpression.WhereClause)}"
-                : string.Empty;
-
-            // HavingClause conversion with dynamic AND/OR based on UseOrOperator, with proper spacing for operators
-            var havingPart = sqlQueryExpression.HavingClause.Count > 0
-                ? $"\r\nhaving\t{ProcessWhereOrClauses(sqlQueryExpression.HavingClause)}"
-                : string.Empty;
-
-
-            //var joinsMissing = sqlQueryExpression.DataSources.Skip(1)
-            //                        .Where(x => !sqlQueryExpression.Joins.Any(y => y.JoinedSource == x))
-            //                        .Select(x => new SqlJoinExpression(SqlJoinType.Cross, x, null))
-            //                        .ToList();
-            //var finalList = sqlQueryExpression.Joins.Concat(joinsMissing).ToArray();
-            // sort finaList using the order by sqlQueryExpression.DataSources
-            //var dataSourcesWithIndex = sqlQueryExpression.DataSources.Select((x, i) => (x, i)).ToDictionary(x => x.x, x => x.i);
-            //finalList = finalList.OrderBy(x => dataSourcesWithIndex[x.JoinedSource]).ToArray();
-            var topPart = sqlQueryExpression.Top != null ? $"\ttop ({this.Translate(sqlQueryExpression.Top)})" : string.Empty;
-            string groupByPart = string.Empty;
-            if (sqlQueryExpression.GroupBy != null)
-            {
-                if (sqlQueryExpression.GroupBy is SqlCollectionExpression sqlCollection)
-                {
-                    var colExpressions = sqlCollection.SqlExpressions.Select(x => x is SqlColumnExpression colExpr ? colExpr.ColumnExpression : x).ToArray();
-                    groupByPart = $"\r\ngroup by {string.Join(", ", colExpressions.Select(this.Translate))}";
-                }
-                else
-                {
-                    groupByPart = $"\r\ngroup by {this.Translate(sqlQueryExpression.GroupBy)}";
-                }
-            }
-            var orderByPart = sqlQueryExpression.OrderBy.Count > 0 ? $"\r\norder by {string.Join(", ", sqlQueryExpression.OrderBy.Select(this.Translate))}" : string.Empty;
-            string? projectionPart = null;
-            if (sqlQueryExpression.Projection != null)
-            {
-                projectionPart = this.Translate(sqlQueryExpression.Projection);
-            }
-            var pagingPart = string.Empty;
-            if (sqlQueryExpression.RowsPerPage != null && sqlQueryExpression.RowOffset != null)
-            {
-                var rowOffset = this.Translate(new SqlLiteralExpression(sqlQueryExpression.RowOffset));
-                var rowsPerPage = this.Translate(new SqlLiteralExpression(sqlQueryExpression.RowsPerPage));
-                pagingPart = $"\r\noffset {rowOffset} rows fetch next {rowsPerPage} rows only";
-            }
-            var unions = string.Empty;
-            if (sqlQueryExpression.Unions.Count > 0)
-            {
-                unions = "\r\n" + string.Join("\r\n", sqlQueryExpression.Unions.Select(x => $"{(x.NodeType == SqlExpressionType.UnionAll ? "union all" : "union")}\r\n{this.RemoveParenthesis(this.Translate(x.Query).Replace("\r\n\t", "\r\n"))}"));
-            }
-            var distinct = sqlQueryExpression.IsDistinct ? "\tdistinct" : string.Empty;
-            string query;
-            if (sqlQueryExpression.IsCte)
-            {
-                //string[] dataSourceToString;
-                //string fromString;
-                //if (sqlQueryExpression.CteDataSources.Count > 0)
-                //{
-                //    dataSourceToString = sqlQueryExpression.CteDataSources.Select(x => $"{this.GetSimpleAlias(x.DataSourceAlias, x.Tag)} as \r\n{this.Translate(x.DataSource).Replace("\r\n", "\t\r\n")}").ToArray();
-                //    fromString = initialDataSource;
-                //}
-                //else
-                //{
-                //    dataSourceToString = sqlQueryExpression.DataSources.Take(1).Select(x => $"{this.GetSimpleAlias(x.DataSourceAlias, x.Tag)} as \r\n{this.Translate(x.DataSource).Replace("\r\n", "\t\r\n")}").ToArray();
-                //    fromString = this.GetSimpleAlias(sqlQueryExpression.InitialDataSource.DataSourceAlias, sqlQueryExpression.InitialDataSource.Tag);
-                //}
-                query = $"{this.GetExpressionId(sqlQueryExpression.Id)}with {string.Join(", ", dataSourceToString)}\r\nselect{distinct}{topPart}\t{projectionPart}\r\nfrom\t{fromString}{joins}{wherePart}{groupByPart}{havingPart}{orderByPart}{pagingPart}{unions}";
-            }
-            else
-            {
-                string selectPart = string.Empty;
-                if (projectionPart != null)
-                    selectPart = $"select{distinct}{topPart}\t{projectionPart}\r\n";
-                string fromPart = initialDataSource != null ? $"from\t{initialDataSource}" : string.Empty;
-                query = $"{this.GetExpressionId(sqlQueryExpression.Id)}{selectPart}{fromPart}{joins}{wherePart}{groupByPart}{havingPart}{orderByPart}{pagingPart}{unions}";
-                if (projectionPart != null)
-                    query = $"(\r\n\t{query.Replace("\r\n", "\r\n\t")}\r\n)";
-            }
-            this.sqlQueryExpressions.Remove(sqlQueryExpression);
-            return query;
-        }
-
-        private string TranslateCteJoin(SqlJoinExpression join)
-        {
-            var condition = join.JoinCondition != null ? $" on {this.TranslateLogicalExpression(join.JoinCondition)}" : "";
-            return $"{JoinTypeToString(join.JoinType)} {this.GetSimpleAlias(join.JoinedSource.DataSourceAlias, join.JoinedSource.Tag)}{condition}";
         }
 
         private string TranslateLogicalExpression(SqlExpression sqlExpression)
@@ -469,19 +509,6 @@ namespace Atis.SqlExpressionEngine.UnitTest
             return SqlParameterExpression.ConvertObjectToString(sqlParameterExpression.Value);
         }
 
-        private string TranslateSqlOrderByExpression(SqlOrderByExpression sqlOrderByExpression)
-        {
-            return $"{this.Translate(sqlOrderByExpression.Expression)} {(sqlOrderByExpression.Ascending ? "asc" : "desc")}";
-        }
-
-        private string TranslateSqlJoinExpression(SqlJoinExpression sqlJoinExpression)
-        {
-            var dataSource = this.Translate(sqlJoinExpression.JoinedSource);
-            var condition = sqlJoinExpression.JoinCondition != null ? $" on {this.TranslateLogicalExpression(sqlJoinExpression.JoinCondition)}" : "";
-            string joinType = JoinTypeToString(sqlJoinExpression.JoinType);
-            return $"{joinType} {dataSource}{condition}";
-        }
-
         private string JoinTypeToString(SqlJoinType joinType)
         {
             string joinTypeString;
@@ -505,7 +532,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 case SqlJoinType.CrossApply:
                     joinTypeString = "cross apply";
                     break;
-                    case SqlJoinType.FullOuter:
+                case SqlJoinType.FullOuter:
                     joinTypeString = "full outer join";
                     break;
                 default:
@@ -541,40 +568,21 @@ namespace Atis.SqlExpressionEngine.UnitTest
             return translation.ToString();
         }
 
-        private string TranslateSqlDataSourceExpression(SqlDataSourceExpression sqlDataSourceExpression)
-        {
-            var dataSourceTranslated = this.Translate(sqlDataSourceExpression.QuerySource);
-            //if (sqlDataSourceExpression.DataSource is SqlQueryExpression)
-            //{
-            //    dataSourceTranslated = $"(\r\n\t{dataSourceTranslated.Replace("\r\n", "\r\n\t")}\r\n)";
-            //}
-            return $"{dataSourceTranslated} as {this.GetSimpleAlias(sqlDataSourceExpression.DataSourceAlias, sqlDataSourceExpression.Tag)}{this.GetExpressionId(sqlDataSourceExpression.Id)}";
-        }
 
         private string TranslateSqlDataSourceColumnExpression(SqlDataSourceColumnExpression sqlDataSourceColumnExpression)
         {
-            return $"{this.GetSimpleAlias(sqlDataSourceColumnExpression.DataSource.DataSourceAlias)}.{sqlDataSourceColumnExpression.ColumnName}";
+            return $"{this.GetSimpleAlias(sqlDataSourceColumnExpression.DataSourceAlias)}.{sqlDataSourceColumnExpression.ColumnName}";
         }
 
         private string TranslateSqlExistsExpression(SqlExistsExpression sqlExistsExpression)
         {
-            var sqlQuery = this.Translate(sqlExistsExpression.SqlQuery);
+            var sqlQuery = this.Translate(sqlExistsExpression.SubQuery);
             return $"exists{sqlQuery}";
-        }
-
-        private string TranslateSqlCollectionExpression(SqlCollectionExpression sqlCollectionExpression)
-        {
-            return string.Join(", ", sqlCollectionExpression.SqlExpressions.Select(this.Translate));
         }
 
         private string TranslateSqlLiteralExpression(SqlLiteralExpression sqlLiteralExpression)
         {
             return SqlParameterExpression.ConvertObjectToString(sqlLiteralExpression.LiteralValue);
-        }
-
-        private string TranslateSqlColumnExpression(SqlColumnExpression sqlColumnExpression)
-        {
-            return $"{this.TranslateNonLogicalExpression(sqlColumnExpression.ColumnExpression)} as {sqlColumnExpression.ColumnAlias}";
         }
 
         private bool IsNull(SqlExpression sqlExpression)
@@ -634,47 +642,15 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
                 var op = GetOperator(sqlBinaryExpression.NodeType);
 
-                //if (this.CanBeNull(sqlBinaryExpression.Left) && this.CanBeNull(sqlBinaryExpression.Right)
-                //    &&
-                //    (sqlBinaryExpression.NodeType == SqlExpressionType.Equal
-                //    ||
-                //    sqlBinaryExpression.NodeType == SqlExpressionType.NotEqual)
-                //    )
-                //{
-                //    if (sqlBinaryExpression.NodeType == SqlExpressionType.Equal)
-                //    {
-                //        return $"(({left} {op} {right}) or ({left} is null and {right} is null))";
-                //    }
-                //    else
-                //    {
-                //        return $"(({left} {op} {right}) or ({left} is null and {right} is not null) or ({left} is not null and {right} is null))";
-                //    }
-                //}
-                //else
-                //{
-                    return $"({left} {op} {right})";
-                //}
+                return $"({left} {op} {right})";
             }
             else
             {
                 var left = this.TranslateNonLogicalExpression(sqlBinaryExpression.Left);
                 var right = this.TranslateNonLogicalExpression(sqlBinaryExpression.Right);
-                return $"isnull({left}, {right})";
+                return $"isNull({left}, {right})";
             }
         }
-
-        //private bool CanBeNull(SqlExpression sqlExpression) 
-        //{
-        //    if (sqlExpression is SqlDataSourceColumnExpression ||
-        //        (sqlExpression is SqlLiteralExpression sqlLiteral && sqlLiteral.LiteralValue == null) ||
-        //        (sqlExpression is SqlParameterExpression sqlParameter && 
-        //            (sqlParameter.Value == null || sqlParameter.Value is string || sqlParameter.Value is System.Collections.IEnumerable || 
-        //                Nullable.GetUnderlyingType(sqlParameter.Value.GetType()) != null)))
-        //    {
-        //        return true;
-        //    }
-        //    return false;
-        //}
 
         private bool IsLogicalExpression(SqlExpression sqlExpression)
         {
@@ -684,10 +660,11 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 nt == SqlExpressionType.LessThan || nt == SqlExpressionType.LessThanOrEqual ||
                 nt == SqlExpressionType.Equal || nt == SqlExpressionType.NotEqual ||
                 nt == SqlExpressionType.Like || nt == SqlExpressionType.LikeStartsWith || nt == SqlExpressionType.LikeEndsWith ||
-                nt == SqlExpressionType.In ||
-                nt == SqlExpressionType.Not || nt == SqlExpressionType.Exists)
+                nt == SqlExpressionType.InValues ||
+                nt == SqlExpressionType.Not || nt == SqlExpressionType.Exists
+                )
                 return true;
-            
+
             return false;
         }
 
@@ -730,8 +707,8 @@ namespace Atis.SqlExpressionEngine.UnitTest
                     return "and";
                 case SqlExpressionType.OrElse:
                     return "or";
-                case SqlExpressionType.Like:
-                    return "like";
+                //case SqlExpressionType.Like:
+                //    return "like";
                 default:
                     return "<opr>";
             }

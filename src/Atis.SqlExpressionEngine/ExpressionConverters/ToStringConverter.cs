@@ -13,6 +13,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public ToStringConverterFactory(IConversionContext context) : base(context)
         {
         }
+
+        /// <inheritdoc/>
         public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
         {
             if (expression is MethodCallExpression methodCall &&
@@ -27,7 +29,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class ToStringConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class ToStringConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         private readonly ISqlDataTypeFactory sqlDataTypeFactory;
 
@@ -36,6 +38,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             this.sqlDataTypeFactory = this.Context.GetExtensionRequired<ISqlDataTypeFactory>();
         }
 
+        /// <inheritdoc/>
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             if (convertedChildren.Length == 0)

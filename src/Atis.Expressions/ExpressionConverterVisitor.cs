@@ -54,8 +54,6 @@ namespace Atis.Expressions
         /// <returns>The most recently converted expression.</returns>
         public TDestinationExpression GetConvertedExpression() => this.ConvertedExpressionStack.Pop();
 
-        public TDestinationExpression LastConversion => this.ConvertedExpressionStack.Count > 0 ? this.ConvertedExpressionStack.Peek() : null;
-
         /// <summary>
         /// Clears the stack.
         /// </summary>

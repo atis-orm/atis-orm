@@ -16,7 +16,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlNotExpression(this);
+            return sqlExpressionVisitor.VisitSqlNot(this);
         }
 
         public override string ToString()

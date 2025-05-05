@@ -47,7 +47,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 this.Append("SubQueryNavigation(");
                 this.AppendLine();
                 this.Indent();
-                this.Append(subQueryNav.NavigationProperty);
+                this.Append($"\"{subQueryNav.NavigationProperty}\"");
                 this.Append(", ");
                 this.Visit(subQueryNav.Query);
                 this.Unindent();
@@ -70,26 +70,6 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 this.Append(", ");
                 this.AppendLine();
                 this.Visit(nav.JoinCondition);
-                this.AppendLine();
-                this.Unindent();
-                this.Append(")");
-                return node;
-            }
-            else if (node is ChildJoinExpression childJoin)
-            {
-                this.Append("ChildJoin(");
-                this.AppendLine();
-                this.Indent();
-                this.Append($"\"{childJoin.NavigationName}\"");
-                this.Append(", ");
-                this.AppendLine();
-                this.Visit(childJoin.Query);
-                this.Append(", ");
-                this.AppendLine();
-                this.Visit(childJoin.Parent);
-                this.Append(", ");
-                this.AppendLine();
-                this.Visit(childJoin.JoinCondition);
                 this.AppendLine();
                 this.Unindent();
                 this.Append(")");
@@ -150,6 +130,36 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 this.Append(" = ");
                 this.Visit(arg);
                 if (i < node.Arguments.Count - 1)
+                    this.Append(",");
+                this.AppendLine();
+            }
+            this.Unindent();
+            this.Append("}");
+            return node;
+        }
+
+        protected override Expression VisitMemberInit(MemberInitExpression node)
+        {
+            this.Append("new ");
+            this.Append(node.NewExpression.Type.Name);
+            this.Append(" {");
+            this.AppendLine();
+            this.Indent();
+            for (var i = 0; i < node.Bindings.Count; i++)
+            {
+                var binding = node.Bindings[i];
+                if (binding is MemberAssignment memberAssignment)
+                {
+                    this.Append(binding.Member.Name);
+                    this.Append(" = ");
+                    this.Visit(memberAssignment.Expression);
+                }
+                else
+                {
+                    this.Append(binding.Member.Name);
+                    this.Append(" = n/a");
+                }
+                if (i < node.Bindings.Count - 1)
                     this.Append(",");
                 this.AppendLine();
             }

@@ -12,7 +12,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Factory class for creating converters for Union query methods.
     ///     </para>
     /// </summary>
-    public class UnionQueryMethodExpressionConverterFactory : QueryMethodExpressionConverterFactoryBase
+    public class UnionQueryMethodExpressionConverterFactory : LinqToSqlExpressionConverterFactoryBase<MethodCallExpression>
     {
         /// <summary>
         ///     <para>
@@ -25,17 +25,25 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
 
         /// <inheritdoc />
-        protected override bool IsQueryMethodCall(MethodCallExpression methodCallExpression)
+        public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
         {
-            return methodCallExpression.Method.Name == nameof(Queryable.Union) ||
+            if (
+                expression is MethodCallExpression methodCallExpression &&
+                (
+                    (methodCallExpression.Method.Name == nameof(Queryable.Union) &&
+                    (methodCallExpression.Method.DeclaringType == typeof(Queryable) ||
+                    methodCallExpression.Method.DeclaringType == typeof(Enumerable)))
+                    ||
                     (methodCallExpression.Method.Name == nameof(QueryExtensions.UnionAll) &&
-                        methodCallExpression.Method.DeclaringType == typeof(QueryExtensions));
-        }
-
-        /// <inheritdoc />
-        protected override ExpressionConverterBase<Expression, SqlExpression> CreateConverter(MethodCallExpression methodCallExpression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
-        {
-            return new UnionQueryMethodExpressionConverter(this.Context, methodCallExpression, converterStack);
+                    methodCallExpression.Method.DeclaringType == typeof(QueryExtensions))
+                )
+            )
+            {
+                converter = new UnionQueryMethodExpressionConverter(this.Context, methodCallExpression, converterStack);
+                return true;
+            }
+            converter = null;
+            return false;
         }
     }
 
@@ -44,7 +52,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for Union query method expressions.
     ///     </para>
     /// </summary>
-    public class UnionQueryMethodExpressionConverter : QueryMethodExpressionConverterBase
+    public class UnionQueryMethodExpressionConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         /// <summary>
         ///     <para>
@@ -59,17 +67,46 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
         }
 
-
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var query = arguments[0] as SqlQueryExpression
-                        ??
-                        throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
+            if (convertedChildren.Length != 2)
+                throw new ArgumentException("Union method must have exactly two arguments.");
 
-            var unionAll = this.Expression.Method.Name == nameof(QueryExtensions.UnionAll);
-            sqlQuery.ApplyUnion(query, unionAll);
-            return sqlQuery;
+            var firstUnionItems = GetUnionItems(convertedChildren[0], "first");
+            var secondUnionItems = GetUnionItems(convertedChildren[1], "second");
+
+            return this.SqlFactory.CreateUnionQuery(firstUnionItems.Concat(secondUnionItems).ToArray());
+        }
+
+        private UnionItem[] GetUnionItems(SqlExpression convertedExpression, string argumentNumber)
+        {
+            var unionType = this.Expression.Method.Name == nameof(QueryExtensions.UnionAll) ? SqlUnionType.UnionAll : SqlUnionType.Union;
+
+            UnionItem[] unionItems;
+            if (convertedExpression is SqlDerivedTableExpression derivedTable)
+            {
+                var secondUnionItem = new UnionItem(derivedTable, unionType);
+                unionItems = new[] { secondUnionItem };
+            }
+            else if (convertedExpression is SqlUnionQueryExpression unionQuery)
+            {
+                unionItems = unionQuery.Unions;
+                // The unions coming from a union query might have a different union type
+                // than the first union. When combining both in this union, we need to
+                // ensure the union type provided in this method is applied consistently.
+                unionItems[0] = new UnionItem(unionItems[0].DerivedTable, unionType);
+            }
+            else
+            {
+                string furtherMessage;
+                if (convertedExpression is SqlSelectExpression)
+                    furtherMessage = $" This could happen because the {nameof(SqlSelectExpression)} is not being closed and converted to {nameof(SqlDerivedTableExpression)}.";
+                else
+                    furtherMessage = string.Empty;
+                throw new InvalidOperationException($"Expected type of {argumentNumber} argument of union is either '{nameof(SqlDerivedTableExpression)}' or '{nameof(SqlUnionQueryExpression)}' while we received '{convertedExpression.GetType()}' type.{furtherMessage}");
+            }
+            return unionItems;
         }
     }
 }

@@ -49,14 +49,14 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             .LeftJoin(queryProvider.DataSet<StudentGradeDetail>().Where(x => x.TotalMarks > 50).Select(x => new { SGRID = x.StudentGradeRowId, TM = x.TotalMarks }), (ps, gd) => new { ps, gd }, j2 => j2.ps.sg.RowId == j2.gd.SGRID)
             ;
             var expectedResult = @"
-select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship, a_2.RowId as RowId, a_2.StudentId as StudentId_1, a_2.Grade as Grade, a_4.SGRID as SGRID, a_4.TM as TM
-	from	Student as a_1
-		left join StudentGrade as a_2 on (a_1.StudentId = a_2.StudentId)
-		left join (
-			select	a_3.StudentGradeRowId as SGRID, a_3.TotalMarks as TM
-			from	StudentGradeDetail as a_3
-			where	(a_3.TotalMarks > 50)
-		) as a_4 on (a_2.RowId = a_4.SGRID)
+   	select a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship, a_2.RowId as RowId, a_2.StudentId as StudentId_1, a_2.Grade as Grade, a_3.SGRID as SGRID, a_3.TM as TM
+	from Student as a_1
+			left join StudentGrade as a_2 on (a_1.StudentId = a_2.StudentId)
+			left join (
+				select a_4.StudentGradeRowId as SGRID, a_4.TotalMarks as TM
+				from StudentGradeDetail as a_4
+				where (a_4.TotalMarks > 50)
+			) as a_3 on (a_2.RowId = a_3.SGRID)
 ";
             Test("Join With Sub Query Test", queryExpression.Body, expectedResult);
         }
@@ -71,17 +71,17 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             .LeftJoin(queryProvider.DataSet<StudentGradeDetail>().Where(x => x.TotalMarks > 50).Select(x => new { SGRID = x.StudentGradeRowId, TM = x.TotalMarks }), (ps, gd) => new { ps, gd }, j2 => j2.ps.StudentGradeRowId == j2.gd.SGRID)
             ;
             var expectedResult = @"
-select	a_3.StudentId as StudentId, a_3.Name as Name, a_3.StudentGradeRowId as StudentGradeRowId, a_3.Grade as Grade, a_5.SGRID as SGRID, a_5.TM as TM
-	from	(
-		select	a_1.StudentId as StudentId, a_1.Name as Name, a_2.RowId as StudentGradeRowId, a_2.Grade as Grade
-		from	Student as a_1
-			left join StudentGrade as a_2 on (a_1.StudentId = a_2.StudentId)
-	) as a_3
-		left join (
-			select	a_4.StudentGradeRowId as SGRID, a_4.TotalMarks as TM
-			from	StudentGradeDetail as a_4
-			where	(a_4.TotalMarks > 50)
-		) as a_5 on (a_3.StudentGradeRowId = a_5.SGRID)
+   	select a_3.StudentId as StudentId, a_3.Name as Name, a_3.StudentGradeRowId as StudentGradeRowId, a_3.Grade as Grade, a_4.SGRID as SGRID, a_4.TM as TM
+	from (
+			select a_1.StudentId as StudentId, a_1.Name as Name, a_2.RowId as StudentGradeRowId, a_2.Grade as Grade
+			from Student as a_1
+					left join StudentGrade as a_2 on (a_1.StudentId = a_2.StudentId)
+		) as a_3
+			left join (
+				select a_5.StudentGradeRowId as SGRID, a_5.TotalMarks as TM
+				from StudentGradeDetail as a_5
+				where (a_5.TotalMarks > 50)
+			) as a_4 on (a_3.StudentGradeRowId = a_4.SGRID)
 ";
             Test("Wrap on Join Test", queryExpression.Body, expectedResult);
         }
@@ -118,13 +118,13 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             ;
 
             string? expectedResult = @"
-select  a_1.EquipId as EquipId, a_3.ItemDescription as ItemDescription
-from    Equipment as a_1
-        cross apply (
-                select  top (1) a_2.ItemId as ItemId, a_2.ItemDescription as ItemDescription
-                from    ItemBase as a_2
-                where   (a_2.ItemId = a_1.ItemId)
-        ) as a_3
+    select a_1.EquipId as EquipId, a_2.ItemDescription as ItemDescription
+	from Equipment as a_1
+			cross apply (
+				select top (1) a_3.ItemId as ItemId, a_3.ItemDescription as ItemDescription
+				from ItemBase as a_3
+				where (a_3.ItemId = a_1.ItemId)
+			) as a_2
 ";
             Test("Cross Apply Test", temp.Body, expectedResult);
         }
@@ -139,13 +139,13 @@ from    Equipment as a_1
             ;
 
             string? expectedResult = @"
-select  a_1.EquipId as EquipId, a_3.ItemDescription as ItemDescription
-from    Equipment as a_1
-        outer apply (
-                select  top (1) a_2.ItemId as ItemId, a_2.ItemDescription as ItemDescription
-                from    ItemBase as a_2
-                where   (a_2.ItemId = a_1.ItemId)
-        ) as a_3
+   	select a_1.EquipId as EquipId, a_2.ItemDescription as ItemDescription
+	from Equipment as a_1
+			outer apply (
+				select top (1) a_3.ItemId as ItemId, a_3.ItemDescription as ItemDescription
+				from ItemBase as a_3
+				where (a_3.ItemId = a_1.ItemId)
+			) as a_2
 ";
             Test("Outer Apply Test", temp.Body, expectedResult);
         }

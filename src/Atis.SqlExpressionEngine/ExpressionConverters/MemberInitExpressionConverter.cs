@@ -2,6 +2,7 @@
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -42,7 +43,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for converting <see cref="MemberInitExpression"/> to SQL expressions.
     ///     </para>
     /// </summary>
-    public class MemberInitExpressionConverter : CollectiveColumnExpressionConverterBase<MemberInitExpression>
+    public class MemberInitExpressionConverter : CompositeBindingExpressionConverterBase<MemberInitExpression>
     {
         /// <summary>
         ///     <para>
@@ -88,6 +89,12 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 skipCount = 1;
             var expressions = convertedChildren.Skip(skipCount).Take(this.Expression.Bindings.Count).ToArray();
             return expressions;
+        }
+
+        protected override Type GetExpressionType(int i)
+        {
+            return (this.Expression.Bindings[i] as MemberAssignment)?.Expression.Type
+                     ?? throw new InvalidOperationException($"Bindings of the MemberInitExpression '{this.Expression}' are not set.");
         }
     }
 }
