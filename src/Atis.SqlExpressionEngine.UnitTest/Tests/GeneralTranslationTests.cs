@@ -751,7 +751,64 @@ where exists(
                 .Where(x => x.DegreeGroups.Where(z => z.TotalDegrees == 10).Where(z => z.University == "123").Any())
                 .Where(x => x.DegreeGroups.Where(z => z.University == "56").Any());
 
-            string? expectedResult = null;
+            string? expectedResult = @"
+  	select a_6.Name as Name, a_6.EmployeeId as EmployeeId, a_6.SubQueryCol1 as SubQueryCol1, Queryable: {
+		(
+				select a_3.University as University, Count(1) as TotalDegrees
+				from EmployeeDegree as a_3
+				where (a_6.SubQueryCol1 = a_3.EmployeeId)
+				group by a_3.University
+			)
+		} as DegreeGroups
+	from (
+			select top (50) a_2.Name as Name, a_2.EmployeeId as EmployeeId, a_2.SubQueryCol1 as SubQueryCol1
+			from (
+					select a_1.Name as Name, 'abc' as EmployeeId, a_1.EmployeeId as SubQueryCol1
+					from Employee as a_1
+				) as a_2
+			where exists(
+					select 1 as Col1
+					from (
+							select a_3.University as University, Count(1) as TotalDegrees
+							from EmployeeDegree as a_3
+							where (a_2.SubQueryCol1 = a_3.EmployeeId)
+							group by a_3.University
+						) as a_4
+					where (a_4.TotalDegrees > 0)
+				)
+				 and exists(
+					select 1 as Col1
+					from (
+							select a_3.University as University, Count(1) as TotalDegrees
+							from EmployeeDegree as a_3
+							where (a_2.SubQueryCol1 = a_3.EmployeeId)
+							group by a_3.University
+						) as a_5
+					where (a_5.University = '123')
+				)
+		) as a_6
+	where exists(
+			select 1 as Col1
+			from (
+					select a_3.University as University, Count(1) as TotalDegrees
+					from EmployeeDegree as a_3
+					where (a_6.SubQueryCol1 = a_3.EmployeeId)
+					group by a_3.University
+				) as a_7
+			where (a_7.TotalDegrees = 10)
+				 and (a_7.University = '123')
+		)
+		 and exists(
+			select 1 as Col1
+			from (
+					select a_3.University as University, Count(1) as TotalDegrees
+					from EmployeeDegree as a_3
+					where (a_6.SubQueryCol1 = a_3.EmployeeId)
+					group by a_3.University
+				) as a_8
+			where (a_8.University = '56')
+		)
+";
 
             Test("Select with nested GroupBy inside projection should produce correlated subquery", q.Expression, expectedResult);
         }
