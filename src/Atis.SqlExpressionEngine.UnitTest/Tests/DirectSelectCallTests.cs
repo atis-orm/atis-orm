@@ -81,19 +81,17 @@ where	(a_2.InvoiceCount > 5)
                                             .Select(anchorMember => new { n = anchorMember.n + 1 })
                             );
             string? expectedResult = @"
-with cte_1 as 
-(	
-    select  a_2.n as n
-    from (
-	    select	1 as n	
-    ) as a_2
-	union all	
-	select	(a_2.n + 1) as n	
-	from	cte_1 as a_2	
-	where	(a_2.n < 10)	
+with cte_1 as
+(
+	select a_2.n as n
+	from (select 1 as n) as a_2
+	union all
+	select (a_3.n + 1) as n
+	from cte_1 as a_3
+	where (a_3.n < 10)
 )
-select	cte_1.n as n
-from	cte_1 as cte_1
+select a_4.n as n
+from cte_1 as a_4
 ";
             Test("Direct Select with recursive query to generate sequence", q.Expression, expectedResult);
         }
@@ -119,33 +117,29 @@ from	cte_1 as cte_1
                     select new { date.Date, InvoiceCount = invoiceGroup.Count(), TotalSales = invoiceGroup.SelectMany(x => x.NavLines).Sum(y => y.LineTotal) };
 
             string? expectedResult = @"
-with cte_1 as 
-(	
-    select	a_3.DayOffset as DayOffset	
-    from	(
-            select	0 as DayOffset	
-    ) as a_3
-    union all	
-    select	(a_3.DayOffset + 1) as DayOffset	
-    from	cte_1 as a_3	
-    where	(a_3.DayOffset < 30)	
-)
-select	a_2.Date as Date, 
-        (
-    	    select	Count(1) as Col1
-    	    from	Invoice as a_4
-    	    where	(a_2.Date = a_4.InvoiceDate)
-        ) as InvoiceCount, 
-        (
-    	    select	Sum(NavLines_5.LineTotal) as Col1
-    	    from	Invoice as a_4
-    		    inner join InvoiceDetail as NavLines_5 on (a_4.RowId = NavLines_5.InvoiceId)
-    	    where	(a_2.Date = a_4.InvoiceDate)
-        ) as TotalSales
-from	(
-    select	dateAdd(Day, cte_1.DayOffset, '2024-01-01 00:00:00') as Date
-    from	cte_1 as cte_1
-) as a_2
+with cte_1 as
+	(
+		select a_2.DayOffset as DayOffset
+		from (select 0 as DayOffset) as a_2
+		union all
+		select (a_3.DayOffset + 1) as DayOffset
+		from cte_1 as a_3
+		where (a_3.DayOffset < 30)
+	)
+	select a_5.Date as Date, (
+			select Count(1) as Col1
+			from Invoice as a_6
+			where (a_5.Date = a_6.InvoiceDate)
+		) as InvoiceCount, (
+			select Sum(NavLines_8.LineTotal) as Col1
+			from Invoice as a_7
+					inner join InvoiceDetail as NavLines_8 on (a_7.RowId = NavLines_8.InvoiceId)
+			where (a_5.Date = a_7.InvoiceDate)
+		) as TotalSales
+	from (
+			select dateAdd(Day, a_4.DayOffset, '2024-01-01 00:00:00') as Date
+			from cte_1 as a_4
+		) as a_5
 ";
             Test("Direct Select with recursive query to generate missing dates", q.Expression, expectedResult);
         }

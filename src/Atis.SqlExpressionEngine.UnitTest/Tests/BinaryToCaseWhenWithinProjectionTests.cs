@@ -160,7 +160,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, case when (case when (a_1.N
             var q = students.Select(x => new { x.StudentId, Flag = studentAttendance.Where(y => y.StudentId == x.StudentId).Any() == x.IsDeleted });
             string? expectedResult = @"
 select	a_1.StudentId as StudentId, case when (case when exists(
-		select	1
+		select	1 as Col1
 		from	StudentAttendance as a_2
 		where	(a_2.StudentId = a_1.StudentId)
 	) then 1 else 0 end = a_1.IsDeleted) then 1 else 0 end as Flag

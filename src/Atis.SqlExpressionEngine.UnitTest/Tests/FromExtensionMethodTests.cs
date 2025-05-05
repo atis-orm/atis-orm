@@ -25,17 +25,18 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
                 sg = queryProvider.DataSet<StudentGrade>().Where(x => x.Grade == "5").Schema(),
             });
             var expectedResult = @$"
-select	a_2.StudentId as StudentId, a_2.Name as Name, a_2.Address as Address, a_2.Age as Age, a_2.AdmissionDate as AdmissionDate, a_2.RecordCreateDate as RecordCreateDate, a_2.RecordUpdateDate as RecordUpdateDate, a_2.StudentType as StudentType, a_2.CountryID as CountryID, a_2.HasScholarship as HasScholarship, a_4.RowId as RowId, a_4.StudentId as StudentId_1, a_4.Grade as Grade
-	from	(
-		select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
-		from	Student as a_1
-		where	(a_1.Address like '%' + 'KHI' + '%')
-	) as a_2
-		cross join (
-			select	a_3.RowId as RowId, a_3.StudentId as StudentId, a_3.Grade as Grade
-			from	StudentGrade as a_3
-			where	(a_3.Grade = '5')
-		) as a_4";
+    select a_2.StudentId as StudentId, a_2.Name as Name, a_2.Address as Address, a_2.Age as Age, a_2.AdmissionDate as AdmissionDate, a_2.RecordCreateDate as RecordCreateDate, a_2.RecordUpdateDate as RecordUpdateDate, a_2.StudentType as StudentType, a_2.CountryID as CountryID, a_2.HasScholarship as HasScholarship, a_3.RowId as RowId, a_3.StudentId as StudentId_1, a_3.Grade as Grade
+	from (
+			select a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
+			from Student as a_1
+			where (a_1.Address like '%' + 'KHI' + '%')
+		) as a_2
+			cross join (
+				select a_4.RowId as RowId, a_4.StudentId as StudentId, a_4.Grade as Grade
+				from StudentGrade as a_4
+				where (a_4.Grade = '5')
+			) as a_3
+";
             Test("Multiple Sub Query Data Sources Test", q.Expression, expectedResult);
         }
 

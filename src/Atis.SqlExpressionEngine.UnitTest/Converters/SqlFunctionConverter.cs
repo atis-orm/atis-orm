@@ -28,7 +28,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Converters
         }
     }
 
-    public class SqlFunctionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class SqlFunctionConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         private readonly ILambdaParameterToDataSourceMapper parameterMapper;
 
@@ -37,31 +37,26 @@ namespace Atis.SqlExpressionEngine.UnitTest.Converters
             this.parameterMapper = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
 
-        private SqlQueryExpression sqlQuerySource;
+        private SqlSelectExpression sqlQuerySource;
 
         public override void OnConversionCompletedByChild(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression childNode, SqlExpression convertedExpression)
         {
             if (childNode == this.Expression.Arguments.FirstOrDefault())
             {
-                if (convertedExpression is SqlQueryReferenceExpression queryRef)
+                if (convertedExpression is SqlSelectExpression sqlQuery)
                 {
-                    var sqlQuery = queryRef.Reference;
                     // first argument might be the query argument
-                    // if that's the case, we might need to the lambda parameter with
+                    // if that's the case, we might need to map the lambda parameter with
                     // this query
                     for (var i = 1; i < this.Expression.Arguments.Count; i++)
                     {
-                        var argument = this.Expression.Arguments[i];
-                        if (argument is UnaryExpression unaryExpression)
-                            argument = unaryExpression.Operand;
-                        if (argument is LambdaExpression lambda)
+                        if (this.Expression.TryGetArgLambdaParameter(i, 0, out var parameterExpression))
                         {
-                            var parameter = lambda.Parameters.FirstOrDefault();
-                            if (parameter != null)
-                            {
-                                sqlQuerySource = sqlQuery;
-                                this.parameterMapper.TrySetParameterMap(parameter, sqlQuery);
-                            }
+                            // we have a lambda expression
+                            // we need to map the parameter with the query
+                            // and set the sqlQuerySource
+                            this.sqlQuerySource = sqlQuery;
+                            this.parameterMapper.TrySetParameterMap(parameterExpression, sqlQuery);
                         }
                     }
                 }

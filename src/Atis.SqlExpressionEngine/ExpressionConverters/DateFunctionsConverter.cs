@@ -45,7 +45,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converts supported DateTime instance methods like AddDays, AddMonths, AddYears into SQL DATEADD function calls.
     ///     </para>
     /// </summary>
-    public class DateFunctionsConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class DateFunctionsConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         public DateFunctionsConverter(
             IConversionContext context,

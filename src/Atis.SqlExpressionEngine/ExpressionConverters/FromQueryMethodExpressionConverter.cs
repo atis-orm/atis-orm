@@ -45,9 +45,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter for the From query method.
     ///     </para>
     /// </summary>
-    public class FromQueryMethodExpressionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class FromQueryMethodExpressionConverter : LinqToSqlQueryConverterBase<MethodCallExpression>
     {
-
         /// <summary>
         /// Initializes a new instance of the <see cref="FromQueryMethodExpressionConverter"/> class.
         /// </summary>
@@ -72,98 +71,19 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return false;
         }
 
-        private Expression _fromSourceExpression;
-        private Expression FromSourceExpression
-        {
-            get
-            {
-                if (this._fromSourceExpression is null)
-                {
-                    this._fromSourceExpression = this.Expression.Arguments.Skip(1).FirstOrDefault();
-                    if (this._fromSourceExpression is UnaryExpression unaryExpression)
-                        this._fromSourceExpression = unaryExpression.Operand;
-                    if (this._fromSourceExpression is LambdaExpression lambdaExpression)
-                        this._fromSourceExpression = lambdaExpression.Body;
-                }
-                return this._fromSourceExpression;
-            }
-        }
-
-        /// <inheritdoc />
-        public override bool TryCreateChildConverter(Expression childNode, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> childConverter)
-        {
-            // childNode can be direct child or grandchild
-
-            if (childNode == this.FromSourceExpression)
-            {
-                if (childNode is NewExpression newExpression)
-                {
-                    childConverter = new FromNewExpressionConverter(this.Context, newExpression, converterStack);
-                    return true;
-                }
-                else if (childNode is MemberInitExpression memberInitExpression)
-                {
-                    childConverter = new FromMemberInitExpressionConverter(this.Context, memberInitExpression, converterStack);
-                    return true;
-                }
-            }
-            return base.TryCreateChildConverter(childNode, converterStack, out childConverter);
-        }
-
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            SqlQueryExpression result;
-
             // convertedChildren[0] will be dummy (for IQueryProvider)
-            var dataSources = convertedChildren[1];
+            var dataSources = convertedChildren[1] as SqlCompositeBindingExpression
+                                ??
+                                throw new InvalidOperationException($"Expected {nameof(SqlCompositeBindingExpression)} but got {convertedChildren[1].GetType()}");
 
-            if (dataSources is SqlCollectionExpression sqlExpressionCollection)
-            {
-                var dataSourceList = this.GetDataSources(sqlExpressionCollection);
-                result = this.SqlFactory.CreateQueryFromDataSources(dataSourceList);
-            }
-            else if (dataSources is SqlQueryExpression subQuery)
-            {
-                var dataSource = this.GetDataSource(subQuery);
-                result = this.SqlFactory.CreateQueryFromDataSource(dataSource);
-            }
-            else
-                throw new InvalidOperationException($"From method only supports NewExpression/MemberInitExpression or 'From' MethodCallExpression as argument");
-
-            return result;
+            var selectQuery = this.SqlFactory.CreateSelectQueryByFrom(dataSources);
+            return selectQuery;
         }
 
-        private IEnumerable<SqlDataSourceExpression> GetDataSources(SqlCollectionExpression sqlExpressionCollection)
-        {
-            var result = new List<SqlDataSourceExpression>();
-            foreach (var sqlExpression in sqlExpressionCollection.SqlExpressions)
-            {
-                var sqlColumnExpr = sqlExpression as SqlDataSourceExpression
-                                       ??
-                                       throw new InvalidOperationException($"sqlExpression is not {nameof(SqlDataSourceExpression)}");
-                var dataSource = this.GetDataSource(sqlColumnExpr);
-                result.Add(dataSource);
-            }
-            return result;
-        }
-
-        private SqlDataSourceExpression GetDataSource(SqlExpression source)
-        {
-            SqlDataSourceExpression fromSource = source as SqlDataSourceExpression;
-            SqlQueryExpression sqlQuery = fromSource?.QuerySource as SqlQueryExpression
-                                            ??
-                                            source as SqlQueryExpression;
-            if (sqlQuery != null && sqlQuery.IsTableOnly())
-            {
-                var firstDataSource = sqlQuery.DataSources.First();
-                return this.SqlFactory.CreateFromSource(firstDataSource.QuerySource, fromSource?.ModelPath ?? ModelPath.Empty);
-            }
-            else if (fromSource != null)
-            {
-                return this.SqlFactory.CreateFromSource(fromSource.QuerySource, fromSource.ModelPath);
-            }
-            throw new InvalidOperationException($"source is of type {source.GetType().Name}, which is not supported");
-        }
+        /// <inheritdoc />
+        public override bool IsChainedQueryArgument(Expression childNode) => false;
     }
 }

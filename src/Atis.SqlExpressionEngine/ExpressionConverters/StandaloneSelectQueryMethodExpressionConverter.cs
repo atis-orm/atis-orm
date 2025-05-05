@@ -3,6 +3,7 @@ using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -27,7 +28,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class StandaloneSelectQueryMethodExpressionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class StandaloneSelectQueryMethodExpressionConverter : LinqToSqlQueryConverterBase<MethodCallExpression>
     {
         public StandaloneSelectQueryMethodExpressionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
@@ -50,13 +51,22 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             // convertedChildren[0] is dummy (for IQueryProvider)
-            var projection = convertedChildren[1];
-            if (!(projection is SqlCollectionExpression || projection is SqlColumnExpression))
-                projection = this.SqlFactory.CreateScalarColumn(projection, "Col1", ModelPath.Empty);
-            var sqlQuery = this.SqlFactory.CreateQueryFromSelect(projection);
-            sqlQuery.WrapInSubQuery();
-            sqlQuery.ApplyAutoProjection();
+            var convertedExpression = convertedChildren[1];
+            SelectColumn[] selectColumns;
+            if (convertedExpression is SqlCompositeBindingExpression compositeBinding)
+            {
+                selectColumns = compositeBinding.Bindings.Select(x => new SelectColumn(x.SqlExpression, x.ModelPath.GetLastElementRequired(), x.ModelPath, scalarColumn: false)).ToArray();
+            }
+            else
+            {
+                selectColumns = new[] { new SelectColumn(convertedExpression, "Col1", ModelPath.Empty, scalarColumn: true) };
+            }
+            
+            var sqlQuery = this.SqlFactory.CreateSelectQueryFromStandaloneSelect(selectColumns);
             return sqlQuery;
         }
+
+        /// <inheritdoc />
+        public override bool IsChainedQueryArgument(Expression childNode) => false;
     }
 }

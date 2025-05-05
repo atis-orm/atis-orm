@@ -63,18 +63,17 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
             var orderByPart = arguments[0];
-            bool ascending;
+            SortDirection direction;
             if (this.Expression.Method.Name == nameof(Queryable.OrderByDescending) ||
                  this.Expression.Method.Name == nameof(Queryable.ThenByDescending) ||
                  this.Expression.Method.Name == nameof(QueryExtensions.OrderByDesc))
-                ascending = false;      // descending
+                direction = SortDirection.Descending;
             else
-                ascending = true;
-            SqlOrderByExpression orderByExpression = this.SqlFactory.CreateOrderBy(orderByPart, ascending);
-            sqlQuery.ApplyOrderBy(orderByExpression);
+                direction = SortDirection.Ascending;
+            sqlQuery.ApplyOrderBy(orderByPart, direction);
             return sqlQuery;
         }
     }

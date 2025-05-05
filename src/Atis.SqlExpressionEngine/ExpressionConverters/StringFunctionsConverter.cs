@@ -115,7 +115,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for handling string functions in LINQ to SQL expressions.
     ///     </para>
     /// </summary>
-    public class StringFunctionsConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class StringFunctionsConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         /// <summary>
         ///     <para>
@@ -135,7 +135,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return this.SqlFactory.CreateBinary(left, right, operation);
         }
 
-        private static string[] likeMethods = new[] { nameof(string.Contains), nameof(string.StartsWith), nameof(string.EndsWith) };
+        private readonly static string[] likeMethods = new[] { nameof(string.Contains), nameof(string.StartsWith), nameof(string.EndsWith) };
 
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)

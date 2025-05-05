@@ -20,7 +20,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlDateSubtractExpression(this);
+            return sqlExpressionVisitor.VisitSqlDateSubtract(this);
         }
 
         public SqlDateSubtractExpression Update(SqlExpression startDate, SqlExpression endDate)

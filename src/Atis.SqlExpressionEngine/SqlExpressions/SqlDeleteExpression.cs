@@ -5,38 +5,41 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 {
     public class SqlDeleteExpression : SqlExpression
     {
-        public SqlDeleteExpression(SqlQueryExpression sqlQuery, SqlDataSourceExpression deletingDataSource)
+        public SqlDeleteExpression(SqlDerivedTableExpression source, Guid dataSourceAlias)
         {
-            this.SqlQuery = sqlQuery ?? throw new ArgumentNullException(nameof(sqlQuery));
-            this.DeletingDataSource = deletingDataSource ?? throw new ArgumentNullException(nameof(deletingDataSource));
-            if (!this.SqlQuery.AllQuerySources.Where(x => x == deletingDataSource).Any())
-                throw new ArgumentException("The deleting data source must be part of the query.", nameof(deletingDataSource));
-            if (!(deletingDataSource.QuerySource is SqlTableExpression))
-                throw new ArgumentException("The deleting data source must be a table.", nameof(deletingDataSource));
+            this.Source = source ?? throw new ArgumentNullException(nameof(source));
+            this.DataSourceAlias = dataSourceAlias;
+            var ds = this.Source.AllDataSources.Where(x => x.Alias == dataSourceAlias).FirstOrDefault()
+                ??
+                throw new ArgumentException("The deleting data source must be part of the query.", nameof(dataSourceAlias));
+            if (!(ds.QuerySource is SqlTableExpression))
+                throw new ArgumentException("The deleting data source must be a table.", nameof(dataSourceAlias));
         }
 
-        public SqlQueryExpression SqlQuery { get; }
-        public SqlDataSourceExpression DeletingDataSource { get; }
-
+        public SqlDerivedTableExpression Source { get; }
+        public Guid DataSourceAlias { get; }
+        /// <inheritdoc />
         public override SqlExpressionType NodeType => SqlExpressionType.Delete;
 
+        /// <inheritdoc />
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitDeleteSqlExpression(this);
+            return sqlExpressionVisitor.VisitSqlDelete(this);
         }
 
-        public SqlExpression Update(SqlQueryExpression sqlQuery, SqlDataSourceExpression updatingDataSource)
+        public SqlExpression Update(SqlDerivedTableExpression source)
         {
-            if (this.SqlQuery == SqlQuery && this.DeletingDataSource == updatingDataSource)
+            if (this.Source == source)
             {
                 return this;
             }
-            return new SqlDeleteExpression(sqlQuery, updatingDataSource);
+            return new SqlDeleteExpression(source, this.DataSourceAlias);
         }
 
+        /// <inheritdoc />
         public override string ToString()
         {
-            return $"delete {this.DeletingDataSource}\r\n{this.SqlQuery}";
+            return $"delete {this.DataSourceAlias}\r\n{this.Source}";
         }
     }
 }

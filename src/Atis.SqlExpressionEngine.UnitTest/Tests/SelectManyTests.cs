@@ -29,13 +29,13 @@ select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a
                     .SelectMany(e => employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId).Select(x => new { x.EmployeeId, x.Degree }))
                     ;
             string? expectedResult = $@"
-select	a_3.EmployeeId as EmployeeId, a_3.Degree as Degree
-	from	Employee as a_1
-		cross apply (
-			select	a_2.EmployeeId as EmployeeId, a_2.Degree as Degree
-			from	EmployeeDegree as a_2
-			where	(a_2.EmployeeId = a_1.EmployeeId)
-		) as a_3
+select a_2.EmployeeId as EmployeeId, a_2.Degree as Degree
+	from Employee as a_1
+			cross apply (
+				select a_3.EmployeeId as EmployeeId, a_3.Degree as Degree
+				from EmployeeDegree as a_3
+				where (a_3.EmployeeId = a_1.EmployeeId)
+			) as a_2
 ";
             Test("Query Select Many With Where and Select Test", q.Expression, expectedResult);
         }
@@ -100,9 +100,9 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
                     .SelectMany(e => employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId), (e, ed) => new { e.EmployeeId, e.Name, ed.Degree, ed.University })
                     ;
             string? expectedResult = @"
-select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, child_join_2.Degree as Degree, child_join_2.University as University
-	from	Employee as a_1
-		inner join EmployeeDegree as child_join_2 on (child_join_2.EmployeeId = a_1.EmployeeId)
+select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
+	from Employee as a_1
+			inner join EmployeeDegree as a_2 on (a_2.EmployeeId = a_1.EmployeeId)
 ";
             Test("Query Select Many With Select Test", q.Expression, expectedResult);
         }

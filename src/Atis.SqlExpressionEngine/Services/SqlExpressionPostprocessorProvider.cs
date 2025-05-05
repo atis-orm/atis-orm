@@ -1,7 +1,6 @@
 ﻿using Atis.Expressions;
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.Exceptions;
-using Atis.SqlExpressionEngine.Postprocessors;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System.Collections.Generic;
 
@@ -11,12 +10,12 @@ namespace Atis.SqlExpressionEngine.Services
     {
         private readonly int maxIterations;
         protected List<ISqlExpressionPostprocessor> PostProcessors { get; } = new List<ISqlExpressionPostprocessor>();
-        public SqlExpressionPostprocessorProvider(ISqlExpressionFactory sqlFactory, IEnumerable<ISqlExpressionPostprocessor> postprocessors, int maxIterations = 50)
+        public SqlExpressionPostprocessorProvider(IEnumerable<ISqlExpressionPostprocessor> postprocessors, int maxIterations = 50)
         {
             if (postprocessors != null)
                 this.PostProcessors.AddRange(postprocessors);
-            this.PostProcessors.Add(new CteFixPostprocessor(sqlFactory));
-            this.PostProcessors.Add(new CteCrossJoinPostprocessor(sqlFactory));
+            //this.PostProcessors.Add(new CteFixPostprocessor());
+            //this.PostProcessors.Add(new CteCrossJoinPostprocessor(sqlFactory));
             this.maxIterations = maxIterations;
         }
 

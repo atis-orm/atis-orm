@@ -2,6 +2,7 @@
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -42,7 +43,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter for <see cref="NewExpression"/> instances to SQL expressions.
     ///     </para>
     /// </summary>
-    public class NewExpressionConverter : CollectiveColumnExpressionConverterBase<NewExpression>
+    public class NewExpressionConverter : CompositeBindingExpressionConverterBase<NewExpression>
     {
         /// <summary>
         ///     <para>
@@ -57,7 +58,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
         }
 
-        /// <inheritdoc />
         protected override string[] GetMemberNames()
         {
             return this.Expression.Members?.Select(x => x.Name).ToArray()
@@ -65,10 +65,14 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                                     throw new InvalidOperationException($"Members of the new expression '{this.Expression}' are not set.");
         }
 
-        /// <inheritdoc />
         protected override SqlExpression[] GetSqlExpressions(SqlExpression[] convertedChildren)
         {
             return convertedChildren.Take(this.Expression.Arguments.Count).ToArray();
+        }
+
+        protected override Type GetExpressionType(int i)
+        {
+            return this.Expression.Arguments[i].Type;
         }
     }
 }

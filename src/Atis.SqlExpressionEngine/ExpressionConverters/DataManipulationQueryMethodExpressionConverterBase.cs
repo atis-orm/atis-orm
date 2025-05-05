@@ -4,7 +4,6 @@ using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
@@ -18,7 +17,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         protected virtual Expression TableSelectionArgument => this.Expression.Arguments[this.TableSelectionArgumentIndex];
         protected virtual int TableSelectionArgumentIndex => 1;
         protected abstract int WherePredicateArgumentIndex { get; }
-        protected abstract SqlExpression CreateDmSqlExpression(SqlQueryExpression sqlQuery, SqlDataSourceExpression selectedDataSource, SqlExpression[] arguments);
+        protected abstract SqlExpression CreateDmSqlExpression(SqlDerivedTableExpression sqlQuery, Guid selectedDataSource, SqlExpression[] arguments);
 
         /// <inheritdoc />
         public override bool TryOverrideChildConversion(Expression sourceExpression, out SqlExpression convertedExpression)
@@ -29,7 +28,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             {
                 if (sourceExpression == this.TableSelectionArgument)       // tableSelection argument
                 {
-                    if (this.SourceQuery.Projection != null)                // projection has been applied
+                    if (this.SourceQuery.HasProjectionApplied)                // projection has been applied
                     {
                         /* usually this can happen if two data sources are directly selected in projection
                          * e.g.                       
@@ -52,12 +51,12 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                             // we will be here for example in the above case for `ms.item`
                             var path = memberExpression.GetModelPath();
 
-                            var projections = this.SourceQuery.Projection.GetProjections();
+                            var projections = this.SourceQuery.SelectList;
                             var matchedColumns = projections.Where(x => x.ModelPath.StartsWith(path)).ToArray();
-                            var columnDataSources = ExtensionMethods.GetColumnExpressionDataSources(matchedColumns);
+                            var columnDataSources = GetColumnExpressionDataSources(matchedColumns);
                             if (columnDataSources.Length == 1)
                             {
-                                convertedExpression = new SqlDataSourceReferenceExpression(columnDataSources[0]);
+                                convertedExpression = new SqlDataSourceExpression(this.SourceQuery, columnDataSources[0]);
                                 return true;
                             }
                         }
@@ -67,40 +66,40 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return base.TryOverrideChildConversion(sourceExpression, out convertedExpression);
         }
 
-        /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
-            SqlDataSourceExpression selectedDataSource;
-            if (HasTableSelection)
+            Guid? dataSourceToUpdate = null;
+            if (this.HasTableSelection)
             {
-                var sqlExpressionArgIndex = this.TableSelectionArgumentIndex - 1;
-                
-                selectedDataSource = (arguments[sqlExpressionArgIndex] as SqlDataSourceReferenceExpression)?.Reference
+                dataSourceToUpdate = (arguments[0] as SqlDataSourceExpression)?.DataSourceAlias
                                         ??
-                                        throw new InvalidOperationException($"The arg-{sqlExpressionArgIndex} of the {nameof(QueryExtensions.Update)} method must be a data source. Make sure arg-{sqlExpressionArgIndex} is a {nameof(SqlDataSourceReferenceExpression)}. Current type is '{arguments[sqlExpressionArgIndex].GetType()}'.");
+                                        throw new InvalidOperationException($"Arg-1 of '{this.Expression.Method.Name}' is not a {nameof(SqlDataSourceExpression)}.");
             }
             else
-                selectedDataSource = sqlQuery.InitialDataSource;
-
-            if (sqlQuery.Projection != null)
             {
-                // E.g., From(t1 , t2).Join(t1 and t2).Where(filter applied on t1 or t2).Select(new {t1,t2}).Update(t2, t2 fields, filter on t1)
-                // In above example, in `Update` method we'll receive `t2` as table to update, but since we have `Select` method applied before
-                // that therefore, `t2` will not be converted as Data Source, but it's already been handled in above `TryOverrideChildConversion` method.
-                // However, we have `Where` getting applied below, that's the problematic part,
-                // since `Select` has already been applied, therefore, this `Where` application 
-                // will cause the wrapping of the query which pushes down the `t2` data source and it will
-                // become invalid data source. 
-                // That's why we are Undoing Projection here so that `Where` does not wrap the query
-                // and `t2` remains as a valid data source.
-
-                sqlQuery.UndoProjection();
+                dataSourceToUpdate = sqlQuery.DataSources.First().Alias;
             }
 
-            var predicate = arguments[this.WherePredicateArgumentIndex - 1];
-            sqlQuery.ApplyWhere(predicate);
+            // undoing the projection so that query should not wrap when applying where
+            if (sqlQuery.HasProjectionApplied)
+                sqlQuery.UndoProjection();
 
-            return this.CreateDmSqlExpression(sqlQuery, selectedDataSource, arguments);
+            var predicate = arguments[this.WherePredicateArgumentIndex - 1];
+            sqlQuery.ApplyWhere(predicate, useOrOperator: false);
+
+            var derivedTable = this.SqlFactory.ConvertSelectQueryToDataManipulationDerivedTable(sqlQuery);
+            
+            return this.CreateDmSqlExpression(derivedTable, dataSourceToUpdate.Value, arguments);
+        }
+
+        private static Guid[] GetColumnExpressionDataSources(SelectColumn[] columnExpressions)
+        {
+            if (columnExpressions?.Length > 0 &&
+                    columnExpressions.All(x => x.ColumnExpression is SqlDataSourceColumnExpression))
+            {
+                return columnExpressions.GroupBy(x => ((SqlDataSourceColumnExpression)x.ColumnExpression).DataSourceAlias).Select(x => x.Key).ToArray();
+            }
+            return Array.Empty<Guid>();
         }
     }
 }

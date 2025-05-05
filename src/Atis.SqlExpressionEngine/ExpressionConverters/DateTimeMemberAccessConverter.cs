@@ -46,7 +46,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converts DateTime properties like Year, Month, Day, Hour, etc., into SQL DATEPART function calls.
     ///     </para>
     /// </summary>
-    public class DateTimeMemberAccessConverter : LinqToSqlExpressionConverterBase<MemberExpression>
+    public class DateTimeMemberAccessConverter : LinqToNonSqlQueryConverterBase<MemberExpression>
     {
         private static readonly Dictionary<string, SqlDatePart> PropertyToDatePart = new Dictionary<string, SqlDatePart>()
         {

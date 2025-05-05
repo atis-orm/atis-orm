@@ -119,15 +119,14 @@ select	a_1.IsDeleted as IsDeleted, a_1.StudentId as StudentId, a_1.Name as Name,
                                 .Select(x => x.NavManager().EmployeeId)
                                 ;
             string? expectedResult = @"
-select	a_3.EmployeeId_1 as Col1
-	from	(
-		select	top (5)	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, 
-                a_1.ManagerId as ManagerId, NavManager_2.RowId as RowId_1, NavManager_2.EmployeeId as EmployeeId_1, 
-                NavManager_2.Name as Name_1, NavManager_2.Department as Department_1, NavManager_2.ManagerId as ManagerId_1
-		from	Employee as a_1
-			inner join Employee as NavManager_2 on (NavManager_2.EmployeeId = a_1.ManagerId)
-		where	(NavManager_2.Name = '123')
+select NavManager_4.EmployeeId as Col1
+from (
+		select top (5) a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
+		from Employee as a_1
+				inner join Employee as NavManager_2 on (NavManager_2.EmployeeId = a_1.ManagerId)
+		where (NavManager_2.Name = '123')
 	) as a_3
+		inner join Employee as NavManager_4 on (NavManager_4.EmployeeId = a_3.ManagerId)
 ";
 
             Test("Auto joined source made sub query then column selected from joined source", q.Expression, expectedResult);

@@ -33,7 +33,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
             sqlQuery.ApplyDistinct();
             return sqlQuery;

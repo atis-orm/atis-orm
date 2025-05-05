@@ -40,7 +40,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter for transforming conditional expressions from LINQ to SQL.
     ///     </para>
     /// </summary>
-    public class ConditionalExpressionConverter : LinqToSqlExpressionConverterBase<ConditionalExpression>
+    public class ConditionalExpressionConverter : LinqToNonSqlQueryConverterBase<ConditionalExpression>
     {
         /// <summary>
         ///     <para>

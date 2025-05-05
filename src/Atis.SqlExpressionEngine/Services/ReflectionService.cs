@@ -103,46 +103,32 @@ namespace Atis.SqlExpressionEngine.Services
 
         public virtual bool IsQueryableType(Type type)
         {
-            return typeof(IQueryable).IsAssignableFrom(type);
-        }
+            if (type == typeof(string))
+                return false;
 
-        public virtual bool IsQuerySource(Expression node)
-        {
-            return 
-                    node is MethodCallExpression methodCallExpression &&
-                            (
-                                methodCallExpression.Method.Name == nameof(QueryExtensions.From) &&
-                                methodCallExpression.Method.DeclaringType == typeof(QueryExtensions)
-                                ||
-                                methodCallExpression.Method.Name == nameof(QueryExtensions.DataSet) &&
-                                methodCallExpression.Method.DeclaringType == typeof(QueryExtensions)
-                            )
-                     ||
-                    node is ConstantExpression constExpression && constExpression.Value is IQueryable;
-        }
-
-        public virtual bool IsChainedQueryMethod(Expression currentNode, Expression parentNode)
-        {
-            if (IsQueryMethod(currentNode) && IsQueryMethod(parentNode))
-            {
-                if (parentNode is MethodCallExpression methodCallExpression &&
-                    methodCallExpression.Arguments.FirstOrDefault() == currentNode)
-                    return true;
-                else if (parentNode is ChainedQueryExpression chainedQueryExpression &&
-                    chainedQueryExpression.Query == currentNode)
-                    return true;
-            }
-            return false;
+            return type.GetInterfaces()
+                       .Append(type) // also check the type itself
+                       .Any(x => x.IsGenericType &&
+                                 x.GetGenericTypeDefinition() == typeof(IEnumerable<>));
         }
 
         public virtual bool IsQueryMethod(Expression node)
         {
             return 
-                    node is MethodCallExpression methodCallExpression &&
-                    (methodCallExpression.Method.DeclaringType == typeof(Queryable) ||
-                    methodCallExpression.Method.DeclaringType == typeof(Enumerable) ||
-                    this.IsQueryExtensionMethod(methodCallExpression))
-                    
+                    (
+                        node is MethodCallExpression methodCallExpression &&
+                        (
+                            (
+                                (methodCallExpression.Method.DeclaringType == typeof(Queryable) ||
+                                methodCallExpression.Method.DeclaringType == typeof(Enumerable))
+                                &&
+                                // union is not a chain method it will close the query
+                                methodCallExpression.Method.Name != nameof(Queryable.Union)
+                            )
+                            ||
+                            this.IsQueryExtensionMethod(methodCallExpression)
+                        )
+                    )
                     ||
                     node is ChainedQueryExpression;
         }
@@ -151,7 +137,8 @@ namespace Atis.SqlExpressionEngine.Services
         {
             return methodCallExpression.Method.DeclaringType == typeof(QueryExtensions)
                     &&
-                    !(methodCallExpression.Method.Name == nameof(QueryExtensions.Schema))
+                    !(methodCallExpression.Method.Name == nameof(QueryExtensions.Schema) || 
+                        methodCallExpression.Method.Name == nameof(QueryExtensions.UnionAll))
                     ;
         }
 

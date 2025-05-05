@@ -44,9 +44,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for handling aggregate method expressions.
     ///     </para>
     /// </summary>
-    public class AggregateMethodExpressionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class AggregateMethodExpressionConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         private readonly ILambdaParameterToDataSourceMapper parameterMap;
+        private ParameterExpression lambdaParameterMapped;
 
         /// <summary>
         ///     <para>
@@ -62,50 +63,41 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             this.parameterMap = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
 
+        private SqlSelectExpression sourceQuery;
+        private bool applyProjection;
+
         /// <inheritdoc />
         public override void OnConversionCompletedByChild(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression childNode, SqlExpression convertedExpression)
         {
             if (this.Expression.Arguments.FirstOrDefault() == childNode)    // if 1st arg was converted
             {
-                var sqlQuery = (convertedExpression as SqlQueryReferenceExpression)?.Reference 
-                                ?? 
-                                convertedExpression as SqlQueryExpression
-                                ??
-                                throw new InvalidOperationException($"Expected SqlQueryReferenceExpression or SqlQueryExpression, but got {convertedExpression.GetType().Name}.");
+                if (convertedExpression is SqlSelectExpression q)
+                {
+                    this.sourceQuery = q;
+                    applyProjection = false;
+                }
+                else if (convertedExpression is SqlDerivedTableExpression d)
+                {
+                    this.sourceQuery = this.SqlFactory.CreateSelectQueryFromQuerySource(d);
+                    applyProjection = true;
+                }
+                else
+                    throw new InvalidOperationException($"Expected a {nameof(SqlSelectExpression)} or {nameof(SqlDerivedTableExpression)} but got {convertedExpression.GetType().Name}.");
 
                 // mapping given query with next Lambda Parameter (if available)
-                var arg1LambdaParameter = GetArg1LambdaParameter();
-                if (arg1LambdaParameter != null)
+                if(this.Expression.TryGetArgLambdaParameter(argIndex: 1, paramIndex: 0, out this.lambdaParameterMapped))
                 {
-                    this.parameterMap.TrySetParameterMap(arg1LambdaParameter, sqlQuery);
+                    this.parameterMap.TrySetParameterMap(this.lambdaParameterMapped, this.sourceQuery);
                 }
             }
-        }
-
-        private ParameterExpression GetArg1LambdaParameter()
-        {
-            if (this.Expression.Arguments.Count > 1)        // at-least 2 arguments
-            {
-                var childNode = this.Expression.Arguments[1];
-                var nextLambda = (childNode as UnaryExpression)?.Operand as LambdaExpression
-                                ??
-                                childNode as LambdaExpression;
-                if (nextLambda != null && nextLambda.Parameters.Count > 0)
-                {
-                    var nextLambdaParameter = nextLambda.Parameters.First();
-                    return nextLambdaParameter;
-                }
-            }
-            return null;
         }
 
         /// <inheritdoc/>
         public override void OnAfterVisit()
         {
-            var arg1LambdaParameter = GetArg1LambdaParameter();
-            if (arg1LambdaParameter != null)
+            if (this.lambdaParameterMapped != null)
             {
-                this.parameterMap.RemoveParameterMap(arg1LambdaParameter);
+                this.parameterMap.RemoveParameterMap(this.lambdaParameterMapped);
             }
         }
 
@@ -116,16 +108,15 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             // e.g.  x.Max(y => y.Field)
             // this will be Max(x, y => y.Field)
             // so we'll skip the 1st argument
-            var allArguments = convertedChildren.Take(this.Expression.Arguments.Count).ToArray();
-            var firstArg = allArguments.First();
-            var methodArguments = allArguments.Skip(1).ToArray();
+            var methodArguments = convertedChildren.Skip(1).ToArray();
 
             SqlExpression result;
             var functionCallExpression = this.SqlFactory.CreateFunctionCall(this.Expression.Method.Name, methodArguments);
-            if (firstArg is SqlQueryExpression sqlQuery)
+            if (applyProjection)
             {
-                sqlQuery.ApplyProjection(functionCallExpression);
-                result = sqlQuery;
+                var compositeBinding = this.SqlFactory.CreateCompositeBindingForSingleExpression(functionCallExpression, ModelPath.Empty);
+                this.sourceQuery.ApplyProjection(compositeBinding);
+                result = this.SqlFactory.ConvertSelectQueryToDeriveTable(sourceQuery);
             }
             else
             {

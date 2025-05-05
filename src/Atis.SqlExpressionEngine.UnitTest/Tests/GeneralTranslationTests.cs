@@ -16,6 +16,7 @@
  */
 
 using System.Linq.Expressions;
+using Atis.SqlExpressionEngine.UnitTest.Metadata;
 
 namespace Atis.SqlExpressionEngine.UnitTest.Tests
 {
@@ -206,7 +207,7 @@ from	(
 	from	Student as a_1
 ) as a_3
 where	exists(
-	select	1
+	select	1 as Col1
 	from	StudentGrade as a_4
 	where	(a_4.StudentId = a_3.Id)
 )";
@@ -283,7 +284,7 @@ from    Student as a_1
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
 	where	(a_1.Name like '%' + 'Abc' + '%') and exists(
-		select	1
+		select	1 as Col1
 		from	StudentGrade as a_2
 		where	(a_2.Grade = '5') and (a_2.StudentId = a_1.StudentId)
 	)
@@ -303,7 +304,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
 	where	exists(
-		select	1
+		select	1 as Col1
 		from	StudentGrade as a_2
 		where	(a_2.StudentId = a_1.StudentId)
 		having	(Count(1) > 1)
@@ -420,7 +421,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
 select	a_1.EquipId as EquipId, a_1.Model as Model, a_1.ItemId as ItemId
 	from	Equipment as a_1
 	where	exists(
-		select	1
+		select	1 as Col1
 		from	Asset as a_2
 			inner join ItemBase as NavItem_3 on (NavItem_3.ItemId = a_2.ItemId)
 		where	(a_1.ItemId = NavItem_3.ItemId) and (NavItem_3.ItemDescription like '%' + 'Abc' + '%')
@@ -564,7 +565,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	not exists(
-		select	1
+		select	1 as Col1
 		from	EmployeeDegree as a_2
 		where	(a_1.EmployeeId = a_2.EmployeeId) and not (a_2.University = 'MIT')
 	)
@@ -584,13 +585,13 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
                         .Select(x => new { x.e.EmployeeId, x.e.Name, x.ed.Degree });
 
             string? expectedResult = @"
-select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_3.Degree as Degree
-	from	Employee as a_1
-		outer apply (
-			select	top (1)	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a_2.University as University
-			from	EmployeeDegree as a_2
-			where	(a_2.EmployeeId = a_1.EmployeeId)
-		) as a_3
+    select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree
+	from Employee as a_1
+			outer apply (
+				select top (1) a_3.RowId as RowId, a_3.EmployeeId as EmployeeId, a_3.Degree as Degree, a_3.University as University
+				from EmployeeDegree as a_3
+				where (a_3.EmployeeId = a_1.EmployeeId)
+			) as a_2
 ";
 
             Test("Explicit Outer Apply Test", q.Expression, expectedResult);
@@ -671,7 +672,7 @@ select	a_1.Designation as Designation, a_1.RowId as RowId, a_1.EmployeeId as Emp
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	(case when exists(
-		select	1
+		select	1 as Col1
 		from	EmployeeDegree as a_2
 		where	(a_1.EmployeeId = a_2.EmployeeId)
 	) then 1 else 0 end = 0)
@@ -695,36 +696,65 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
                         .Where(x => studentGrades.Select(y => y.StudentId).Where(y => y == x).Any())
                         ;
             string? expectedResult = @"
-select	a_7.Col1 as Col1
-from	(
-	select	a_6.Col1 as Col1
-	from	(
-		select	a_5.Student_StudentID as Col1
-		from	(
-			select	a_2.Col1 as Student_StudentID, a_4.Col1 as StudentAttendance_StudentID
-			from	(
-				select	a_1.StudentId as Col1
-				from	Student as a_1
-			) as a_2
-				inner join (
-					select	a_3.StudentId as Col1
-					from	StudentAttendance as a_3
-					group by a_3.StudentId
-				) as a_4 on (a_2.Col1 = a_4.Col1)
-		) as a_5
-	) as a_6
-) as a_7
-where	exists(
-	select	1
-	from	(
-		select	a_8.StudentId as Col1
-		from	StudentGrade as a_8
-	) as a_9
-	where	(a_9.Col1 = a_7.Col1)
-)
+select a_7.Col1 as Col1
+from (
+		select a_6.Col1 as Col1
+		from (
+				select a_5.Student_StudentID as Col1
+				from (
+						select a_2.Col1 as Student_StudentID, a_3.Col1 as StudentAttendance_StudentID
+						from (
+								select a_1.StudentId as Col1
+								from Student as a_1
+							) as a_2
+								inner join (
+									select a_4.StudentId as Col1
+									from StudentAttendance as a_4
+									group by a_4.StudentId
+								) as a_3 on (a_2.Col1 = a_3.Col1)
+					) as a_5
+			) as a_6
+	) as a_7
+where exists(
+		select 1 as Col1
+		from (
+				select a_8.StudentId as Col1
+				from StudentGrade as a_8
+			) as a_9
+		where (a_9.Col1 = a_7.Col1)
+	)
 ";
             
             Test("Sub Query Join with Lambda Parameter as Scalar Result Test", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void Queryable_selected_in_projection_then_query_wrapped_and_queryable_used_in_Where()
+        {
+            var employees = new Queryable<Employee>(queryProvider);
+            var employeeDegrees = new Queryable<EmployeeDegree>(queryProvider);
+
+            var q = employees
+                .Select(e => new
+                {
+                    e.Name,
+                    EmployeeId = "abc"
+                    ,
+                    DegreeGroups = e.NavDegrees                                     // this sub-query will be translated to outer-apply
+                        .GroupBy(d => d.University)
+                        .Select(g => new { University = g.Key, TotalDegrees = g.Count() })
+
+                })
+                .Where(x => x.DegreeGroups.Any(y => y.TotalDegrees > 0))
+                .Where(x => x.DegreeGroups.Any(y => y.University == "123"))
+                .Top(50)
+                .Where(x => x.DegreeGroups.Where(z => z.TotalDegrees == 10).Where(z => z.University == "123").Any())
+                .Where(x => x.DegreeGroups.Where(z => z.University == "56").Any());
+
+            string? expectedResult = null;
+
+            Test("Select with nested GroupBy inside projection should produce correlated subquery", q.Expression, expectedResult);
+        }
+
     }
 }

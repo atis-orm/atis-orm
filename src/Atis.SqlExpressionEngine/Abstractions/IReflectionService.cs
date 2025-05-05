@@ -111,10 +111,6 @@ namespace Atis.SqlExpressionEngine.Abstractions
 
         bool IsQueryMethod(Expression node);
 
-        bool IsQuerySource(Expression node);
-        
-        bool IsChainedQueryMethod(Expression currentNode, Expression parentNode);
-
         bool CanEvaluate(Expression expression);
 
         bool IsVariable(MemberExpression expression);

@@ -75,7 +75,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class AggregateStringFunctionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class AggregateStringFunctionConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         public AggregateStringFunctionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack) : base(context, expression, converterStack)
         {

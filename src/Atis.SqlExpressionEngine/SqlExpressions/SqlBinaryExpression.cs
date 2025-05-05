@@ -4,12 +4,7 @@ using System.Collections.Generic;
 namespace Atis.SqlExpressionEngine.SqlExpressions
 {
     /// <summary>
-    ///     <para>
-    ///         Represents a binary SQL expression.
-    ///     </para>
-    ///     <para>
-    ///         This class is used to define binary operations in SQL queries.
-    ///     </para>
+    /// 
     /// </summary>
     public class SqlBinaryExpression : SqlExpression
     {
@@ -19,6 +14,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 SqlExpressionType.Subtract,
                 SqlExpressionType.Multiply,
                 SqlExpressionType.Divide,
+                SqlExpressionType.Modulus,
                 SqlExpressionType.AndAlso,
                 SqlExpressionType.OrElse,
                 SqlExpressionType.LessThan,
@@ -34,21 +30,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 ? nodeType
                 : throw new InvalidOperationException($"SqlExpressionType '{nodeType}' is not a valid Binary Operator");
 
-        /// <summary>
-        ///     <para>  
-        ///         Gets the left operand of the binary operation.
-        ///     </para>
-        /// </summary>
-        public SqlExpression Left { get; }
-        /// <summary>
-        ///     <para>
-        ///         Gets the right operand of the binary operation.
-        ///     </para>
-        /// </summary>
-        public SqlExpression Right { get; }
-
-        /// <inheritdoc />
-        public override SqlExpressionType NodeType { get; }
 
         /// <summary>
         ///     <para>
@@ -68,6 +49,37 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.NodeType = ValidateNodeType(sqlExpressionType);
         }
 
+        /// <inheritdoc />
+        public override SqlExpressionType NodeType { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public SqlExpression Left { get; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public SqlExpression Right { get; }
+
+        /// <inheritdoc />
+        protected internal override SqlExpression Accept(SqlExpressionVisitor visitor)
+        {
+            return visitor.VisitSqlBinary(this);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="left"></param>
+        /// <param name="right"></param>
+        /// <param name="nodeType"></param>
+        /// <returns></returns>
+        public SqlBinaryExpression Update(SqlExpression left, SqlExpression right, SqlExpressionType nodeType)
+        {
+            if (left == this.Left && right == this.Right && nodeType == this.NodeType)
+                return this;
+            return new SqlBinaryExpression(left, right, nodeType);
+        }
+
         /// <summary>
         ///     <para>
         ///         Returns a string representation of the binary expression.
@@ -76,7 +88,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <returns>A string representation of the binary expression.</returns>
         public override string ToString()
         {
-            return $"({this.Left?.ToString()} {GetOperator(this.NodeType)} {this.Right?.ToString()})";
+            return $"({this.Left} {GetOperator(this.NodeType)} {this.Right})";
         }
 
         private static string GetOperator(SqlExpressionType exprType)
@@ -109,8 +121,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                     return "and";
                 case SqlExpressionType.OrElse:
                     return "or";
-                case SqlExpressionType.Like:
-                    return "like";
                 case SqlExpressionType.Coalesce:
                     return "??";
                 default:
@@ -118,32 +128,5 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             }
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Updates the binary expression with new operands and node type.
-        ///     </para>
-        /// </summary>
-        /// <param name="left">The new left operand.</param>
-        /// <param name="right">The new right operand.</param>
-        /// <param name="nodeType">The new node type.</param>
-        /// <returns>A new <see cref="SqlBinaryExpression"/> instance with the updated operands and node type, or the current instance if unchanged.</returns>
-        public SqlBinaryExpression Update(SqlExpression left, SqlExpression right, SqlExpressionType nodeType)
-        {
-            if (left == this.Left && right == this.Right && nodeType == this.NodeType)
-                return this;
-            return new SqlBinaryExpression(left, right, nodeType);
-        }
-
-        /// <summary>
-        ///     <para>
-        ///         Accepts a visitor to visit this SQL binary expression.
-        ///     </para>
-        /// </summary>
-        /// <param name="sqlExpressionVisitor">The visitor to accept.</param>
-        /// <returns>The result of visiting this expression.</returns>
-        protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
-        {
-            return sqlExpressionVisitor.VisitSqlBinaryExpression(this);
-        }
     }
 }

@@ -37,7 +37,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class GroupBySelectMethodCallConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class GroupBySelectMethodCallConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         private readonly ILambdaParameterToDataSourceMapper parameterMapper;
 
@@ -53,9 +53,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
             if (childNode == this.Expression.Arguments[0])      // childNode = x
             {
-                SqlQueryExpression sqlQuery = (convertedExpression as SqlQueryReferenceExpression)?.Reference
+                var sqlQuery = convertedExpression as SqlSelectExpression
                                                 ??
-                                                throw new InvalidOperationException($"The first argument of the Select method must be a SqlQueryExpression. The provided argument is of type {convertedExpression.GetType()}.");
+                                                throw new InvalidOperationException($"The first argument of the Select method must be a {nameof(SqlSelectExpression)}. The provided argument is of type {convertedExpression.GetType()}.");
 
                 var selector = this.Expression.Arguments[1];    // selector = y => y.NonGroupingField
                 if (selector is UnaryExpression ue)

@@ -21,7 +21,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlDateAddExpression(this);
+            return sqlExpressionVisitor.VisitSqlDateAdd(this);
         }
 
         public SqlDateAddExpression Update(SqlExpression interval, SqlExpression expression)

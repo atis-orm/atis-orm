@@ -42,7 +42,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class GetValueOrDefaultConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class GetValueOrDefaultConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         public GetValueOrDefaultConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)

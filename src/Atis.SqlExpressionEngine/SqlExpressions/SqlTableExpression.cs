@@ -5,30 +5,18 @@ using System.Linq;
 namespace Atis.SqlExpressionEngine.SqlExpressions
 {
     /// <summary>
-    ///     <para>
-    ///         Represents a SQL table expression.
-    ///     </para>
-    ///     <para>
-    ///         This class is used to define a table in a SQL query.
-    ///     </para>
+    /// Represents a table in the SQL query.
     /// </summary>
     public class SqlTableExpression : SqlQuerySourceExpression
     {
+        private readonly Dictionary<string, string> propertyMap;
+
         /// <summary>
-        ///     <para>
-        ///         Initializes a new instance of the <see cref="SqlTableExpression"/> class.
-        ///     </para>
-        ///     <para>
-        ///         Sets the table name and columns.
-        ///     </para>
+        /// 
         /// </summary>
-        /// <param name="tableName">The name of the table.</param>
-        /// <param name="tableColumns">The columns of the table.</param>
-        /// <exception cref="ArgumentNullException">
-        ///     <para>
-        ///         Thrown when the <paramref name="tableName"/> or <paramref name="tableColumns"/> is null.
-        ///     </para>
-        /// </exception>
+        /// <param name="tableName"></param>
+        /// <param name="tableColumns"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         public SqlTableExpression(string tableName, TableColumn[] tableColumns)
         {
             this.TableName = tableName ?? throw new ArgumentNullException(nameof(tableName));
@@ -37,43 +25,32 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         }
 
         /// <summary>
-        ///     <para>
-        ///         Gets the type of the SQL expression node.
-        ///     </para>
-        ///     <para>
-        ///         This property always returns <see cref="SqlExpressionType.Table"/>.
-        ///     </para>
+        /// 
         /// </summary>
         public override SqlExpressionType NodeType => SqlExpressionType.Table;
 
         /// <summary>
-        ///     <para>
-        ///         Gets the name of the table.
-        ///     </para>
+        /// 
         /// </summary>
         public string TableName { get; }
 
         /// <summary>
-        ///     <para>
-        ///         Gets the columns of the table.
-        ///     </para>
+        /// 
         /// </summary>
         public TableColumn[] TableColumns { get; }
 
-        private readonly Dictionary<string, string> propertyMap;
+        /// <inheritdoc />
+        public override HashSet<ColumnModelPath> GetColumnModelMap()
+        {
+            return new HashSet<ColumnModelPath>(this.TableColumns.Select(x => new ColumnModelPath(x.DatabaseColumnName, new ModelPath(x.ModelPropertyName))));
+        }
 
         /// <summary>
-        ///     <para>
-        ///         Gets the database column name by the model property name.
-        ///     </para>
+        /// 
         /// </summary>
-        /// <param name="propertyName">The name of the model property.</param>
-        /// <returns>The name of the database column.</returns>
-        /// <exception cref="InvalidOperationException">
-        ///     <para>
-        ///         Thrown when the <paramref name="propertyName"/> is not found in the table.
-        ///     </para>
-        /// </exception>
+        /// <param name="propertyName"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
         public string GetByPropertyName(string propertyName)
         {
             if (this.propertyMap.TryGetValue(propertyName, out var columnName))
@@ -81,24 +58,13 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             throw new InvalidOperationException($"Property '{propertyName}' not found in table '{this.TableName}'.");
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Accepts a visitor to visit this SQL table expression.
-        ///     </para>
-        /// </summary>
-        /// <param name="sqlExpressionVisitor">The visitor to accept.</param>
-        /// <returns>The result of visiting this expression.</returns>
+        /// <inheritdoc />
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlTableExpression(this);
+            return sqlExpressionVisitor.VisitSqlTable(this);
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Returns a string representation of the SQL table expression.
-        ///     </para>
-        /// </summary>
-        /// <returns>A string representation of the SQL table expression.</returns>
+        /// <inheritdoc />
         public override string ToString()
         {
             return this.TableName;

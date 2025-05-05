@@ -1,6 +1,5 @@
 ﻿using Atis.Expressions;
 using Atis.SqlExpressionEngine.Abstractions;
-using Atis.SqlExpressionEngine.ExpressionExtensions;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
 using System.Linq;
@@ -63,7 +62,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Abstract base class for converting query method expressions to SQL expressions.
     ///     </para>
     /// </summary>
-    public abstract class QueryMethodExpressionConverterBase : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public abstract class QueryMethodExpressionConverterBase : LinqToSqlQueryConverterBase<MethodCallExpression>
     {
         /// <summary>
         ///     <para>
@@ -91,13 +90,14 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             var arguments = convertedChildren;
             var arg0 = arguments[0];
-            var sqlQuery = (arg0 as SqlQueryReferenceExpression)?.Reference
+            var sqlQuery = arg0 as SqlSelectExpression
                             ??
-                            arg0 as SqlQueryExpression
-                            ??
-                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
+                            throw new InvalidOperationException($"Expected {nameof(SqlSelectExpression)} on the stack");
             return this.Convert(sqlQuery, arguments.Skip(1).ToArray());
         }
+
+        /// <inheritdoc />
+        public override bool IsChainedQueryArgument(Expression childNode) => this.Expression.Arguments.FirstOrDefault() == childNode;
 
         /// <summary>
         ///     <para>
@@ -110,13 +110,13 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <remarks>
         ///     <para>
         ///         Usually the implementers of this class should over this method for the conversion.
-        ///         However, in-case if the query method initializes the instance of <see cref="SqlQueryExpression"/>
+        ///         However, in-case if the query method initializes the instance of <see cref="SqlSelectExpression"/>
         ///         class, then <see cref="Convert(SqlExpression[])"/> method should be overridden.
         ///         But doing so will sill require to override this method as well, in that case the implementation
         ///         of this method can simply throw NotImplementedException.
         ///     </para>
         /// </remarks>
-        protected abstract SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments);
+        protected abstract SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments);
 
         /// <summary>
         ///     <para>
@@ -125,26 +125,24 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         This property is set by this class when the first argument of the query method is converted to <see cref="SqlQueryExpression"/>.
+        ///         This property is set by this class when the first argument of the query method is converted to <see cref="SqlSelectExpression"/>.
         ///         However, in-case if the the implementer of this class is directly overriding <see cref="Convert(SqlExpression[])"/> method,
-        ///         then it's implementer's responsibility to set this property after initializing the <see cref="SqlQueryExpression"/> instance.
+        ///         then it's implementer's responsibility to set this property after initializing the <see cref="SqlSelectExpression"/> instance.
         ///     </para>
         /// </remarks>
-        protected SqlQueryExpression SourceQuery { get; set; }
+        protected SqlSelectExpression SourceQuery { get; set; }
 
         /// <inheritdoc />
         public override sealed void OnConversionCompletedByChild(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression childNode, SqlExpression convertedExpression)
         {
             if (childNode == this.Expression.Arguments.FirstOrDefault())
             {
-                SqlQueryExpression sqlQuery = (convertedExpression as SqlQueryReferenceExpression)?.Reference
-                                                ??
-                                                convertedExpression as SqlQueryExpression
-                                                ??
-                                                throw new InvalidOperationException($"Expected {nameof(SqlQueryReferenceExpression)} or {nameof(SqlQueryExpression)} on the stack, but got {convertedExpression.GetType()}");
-
                 if (this.SourceQuery != null)
                     throw new InvalidOperationException($"SourceQuery must be null at this point");
+
+                SqlSelectExpression sqlQuery = convertedExpression as SqlSelectExpression
+                                                ??
+                                                throw new InvalidOperationException($"Expected {nameof(SqlSelectExpression)} on the stack, but got {convertedExpression.GetType()}");
 
                 this.SourceQuery = sqlQuery;
 
@@ -194,7 +192,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// </summary>
         /// <param name="sqlQuery">The SQL query to which the parameter is mapped.</param>
         /// <param name="argIndex">The index of the argument.</param>
-        protected void MapLambdaParameter(SqlQueryExpression sqlQuery, int argIndex)
+        protected void MapLambdaParameter(SqlSelectExpression sqlQuery, int argIndex)
         {
             LambdaExpression argLambda = GetArgumentLambda(argIndex);
             if (argLambda?.Parameters.Count > 0)

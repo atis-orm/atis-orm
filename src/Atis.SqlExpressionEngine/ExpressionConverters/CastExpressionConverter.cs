@@ -43,7 +43,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for converting <see cref="UnaryExpression"/> to <see cref="SqlExpression"/>.
     ///     </para>
     /// </summary>
-    public class CastExpressionConverter : LinqToSqlExpressionConverterBase<UnaryExpression>
+    public class CastExpressionConverter : LinqToNonSqlQueryConverterBase<UnaryExpression>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="CastExpressionConverter"/> class.

@@ -26,7 +26,9 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         protected override bool IsQueryMethodCall(MethodCallExpression methodCallExpression)
         {
-            return methodCallExpression.Method.Name == nameof(Queryable.FirstOrDefault);
+            return methodCallExpression.Method.Name == nameof(Queryable.FirstOrDefault) ||
+                    methodCallExpression.Method.Name == nameof(Queryable.First)
+                        ;
         }
 
         /// <inheritdoc />
@@ -57,14 +59,14 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
             if (arguments.Length > 0)
             {
                 var whereCondition = arguments[0];
-                sqlQuery.ApplyWhere(whereCondition);
+                sqlQuery.ApplyWhere(whereCondition, useOrOperator: false);
             }
-            sqlQuery.ApplyTop(this.SqlFactory.CreateLiteral(1));
+            sqlQuery.ApplyTop(1);
             return sqlQuery;
         }
     }

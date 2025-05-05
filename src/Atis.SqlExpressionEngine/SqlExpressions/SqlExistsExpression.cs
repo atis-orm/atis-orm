@@ -22,10 +22,9 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// </summary>
         /// <param name="sqlQuery">The SQL query expression.</param>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="sqlQuery"/> is null.</exception>
-        public SqlExistsExpression(SqlQueryExpression sqlQuery)
+        public SqlExistsExpression(SqlDerivedTableExpression sqlQuery)
         {
-            this.SqlQuery = sqlQuery ?? throw new ArgumentNullException(nameof(sqlQuery));
-            this.SqlQuery.SetProjectionForExists();
+            this.SubQuery = sqlQuery ?? throw new ArgumentNullException(nameof(sqlQuery));
         }
 
         /// <summary>
@@ -43,7 +42,19 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         ///         Gets the SQL query expression.
         ///     </para>
         /// </summary>
-        public SqlQueryExpression SqlQuery { get; }
+        public SqlDerivedTableExpression SubQuery { get; }
+
+        /// <summary>
+        ///     <para>
+        ///         Accepts a visitor to visit this SQL EXISTS expression.
+        ///     </para>
+        /// </summary>
+        /// <param name="sqlExpressionVisitor">The visitor to accept.</param>
+        /// <returns>The result of visiting this expression.</returns>
+        protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
+        {
+            return sqlExpressionVisitor.VisitSqlExists(this);
+        }
 
         /// <summary>
         ///     <para>
@@ -56,23 +67,11 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// </summary>
         /// <param name="subQuery">The new subquery expression.</param>
         /// <returns>A new <see cref="SqlExistsExpression"/> instance with the updated subquery, or the current instance if unchanged.</returns>
-        public SqlExistsExpression Update(SqlQueryExpression subQuery)
+        public SqlExistsExpression Update(SqlDerivedTableExpression subQuery)
         {
-            if (subQuery == this.SqlQuery)
+            if (subQuery == this.SubQuery)
                 return this;
             return new SqlExistsExpression(subQuery);
-        }
-
-        /// <summary>
-        ///     <para>
-        ///         Accepts a visitor to visit this SQL EXISTS expression.
-        ///     </para>
-        /// </summary>
-        /// <param name="sqlExpressionVisitor">The visitor to accept.</param>
-        /// <returns>The result of visiting this expression.</returns>
-        protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
-        {
-            return sqlExpressionVisitor.VisitSqlExistsExpression(this);
         }
     }
 }

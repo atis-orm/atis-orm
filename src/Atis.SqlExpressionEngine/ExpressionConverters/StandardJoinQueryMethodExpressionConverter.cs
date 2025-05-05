@@ -1,9 +1,7 @@
 ﻿using Atis.Expressions;
 using Atis.SqlExpressionEngine.Abstractions;
-using Atis.SqlExpressionEngine.Internal;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -14,7 +12,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Factory class for creating LINQ's Join method.
     ///     </para>
     /// </summary>
-    public class StandardJoinQueryMethodExpressionConverterFactory : QueryMethodExpressionConverterFactoryBase
+    public class StandardJoinQueryMethodExpressionConverterFactory : LinqToSqlExpressionConverterFactoryBase<MethodCallExpression>
     {
         /// <summary>
         ///     <para>
@@ -26,20 +24,19 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
         }
 
-        /// <inheritdoc />
-        protected override bool IsQueryMethodCall(MethodCallExpression methodCallExpression)
+        public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
         {
-            return (methodCallExpression.Method.Name == nameof(Queryable.Join) ||
-                    methodCallExpression.Method.Name == nameof(Queryable.GroupJoin)) &&
+            if (expression is MethodCallExpression methodCallExpression &&
+                (methodCallExpression.Method.Name == nameof(Queryable.Join) ||
+                 methodCallExpression.Method.Name == nameof(Queryable.GroupJoin)) &&
                     (methodCallExpression.Method.DeclaringType == typeof(Queryable) ||
-                    methodCallExpression.Method.DeclaringType == typeof(Enumerable))
-                    ;
-        }
-
-        /// <inheritdoc />
-        protected override ExpressionConverterBase<Expression, SqlExpression> CreateConverter(MethodCallExpression methodCallExpression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
-        {
-            return new StandardJoinQueryMethodExpressionConverter(this.Context, methodCallExpression, converterStack);
+                    methodCallExpression.Method.DeclaringType == typeof(Enumerable)))
+            {
+                converter = new StandardJoinQueryMethodExpressionConverter(this.Context, methodCallExpression, converterStack);
+                return true;
+            }
+            converter = null;
+            return false;   
         }
     }
 
@@ -48,12 +45,17 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for standard join query methods.
     ///     </para>
     /// </summary>
-    public class StandardJoinQueryMethodExpressionConverter : QueryMethodExpressionConverterBase
+    public class StandardJoinQueryMethodExpressionConverter : LinqToSqlQueryConverterBase<MethodCallExpression>
     {
-        private SqlDataSourceExpression joinedDataSource;
-        private SqlJoinExpression join;
-        private SqlExpression sourceColumnSelection;
-        private SqlBinaryExpression joinCondition;
+        private readonly ILambdaParameterToDataSourceMapper lambdaParameterMap;
+        private SqlSelectExpression sourceQuery;
+        private ParameterExpression sourceLambdaParameterArg2;
+        private ParameterExpression sourceLambdaParameterArg4;
+        private Guid? join;
+        private ParameterExpression otherDataLambdaParameterArg3;
+        private ParameterExpression otherDataLambdaParameterArg4;
+        private SqlSelectExpression otherSelectQuery;
+        private SqlExpression sourceColumn;
 
         /// <summary>
         ///     <para>
@@ -66,6 +68,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public StandardJoinQueryMethodExpressionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
+            this.lambdaParameterMap = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
 
         /*
@@ -81,204 +84,218 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
         */
 
+        private int SourceQueryArgIndex => 0;
         private int OtherDataArgIndex => 1;
         private int SourceColumnsArgIndex => 2;
         private int OtherColumnsArgIndex => 3;
         private int SelectArgIndex => 4;
 
         private bool IsGroupJoin => this.Expression.Method.Name == nameof(Queryable.GroupJoin);
-        // SelectMany will flatten the result, so we'll consider the GroupJoin as normal Join
-        private bool UseSubQueryDataSource => IsGroupJoin && !(this.ConverterStack.FirstOrDefault() is SelectManyQueryMethodExpressionConverter);
 
         /// <inheritdoc />
-        protected override void OnSourceQueryCreated()
+        public override void OnConversionCompletedByChild(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression childNode, SqlExpression convertedExpression)
         {
-            // base.OnSourceQueryCreated will be mapping the lambda parameter, so we want to override that behavior
-            if (this.SourceQuery is null)
-                throw new InvalidOperationException($"this.SourceQuery is null.");
+            if (childNode == this.Expression.Arguments[this.SourceQueryArgIndex])  // main query is converted
+            {
+                this.sourceQuery = convertedExpression as SqlSelectExpression
+                                    ??
+                                    throw new InvalidOperationException($"Expected '{nameof(SqlSelectExpression)}' but got '{convertedExpression.GetType().Name}'.");
 
-            var sourceColumnLambda = this.GetArgumentLambda(this.SourceColumnsArgIndex);
-            var selectLambda = this.GetArgumentLambda(this.SelectArgIndex);
+                this.sourceLambdaParameterArg2 = this.GetArgLambdaParameter(2, 0);
+                this.sourceLambdaParameterArg4 = this.GetArgLambdaParameter(4, 0);
 
-            this.ParameterMap.TrySetParameterMap(sourceColumnLambda.Parameters[0], this.SourceQuery);
-            this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[0], this.SourceQuery.InitialDataSource);
+                this.lambdaParameterMap.TrySetParameterMap(sourceLambdaParameterArg2, sourceQuery);
+                this.lambdaParameterMap.TrySetParameterMap(sourceLambdaParameterArg4, sourceQuery);
+            }
+            else if (childNode == this.Expression.Arguments[this.OtherDataArgIndex])        // other data source converted
+            {
+                bool isDefaultIfEmpty = false;
+                if (convertedExpression is SqlDefaultIfEmptyExpression defaultIfEmpty)
+                {
+                    convertedExpression = defaultIfEmpty.DerivedTable;
+                    isDefaultIfEmpty = true;
+                }
+                var otherQuerySource = convertedExpression as SqlQuerySourceExpression
+                                        ??
+                                        throw new InvalidOperationException($"Expected '{nameof(SqlQuerySourceExpression)}' but got '{convertedExpression.GetType().Name}'.");
+                if (otherQuerySource is SqlDerivedTableExpression derivedTable)
+                    otherQuerySource = derivedTable.ConvertToTableIfPossible();
+
+                SqlDataSourceExpression dataSource;
+                if (this.IsGroupJoin)
+                {
+                    // below will automatically convert the derived table to SqlSelectQuery correctly if possible
+                    // which means it's NOT going to keep wrapping
+                    this.otherSelectQuery = this.SqlFactory.CreateSelectQueryFromQuerySource(otherQuerySource);
+
+                    this.otherDataLambdaParameterArg3 = this.GetArgLambdaParameter(3, 0);
+
+                    this.lambdaParameterMap.TrySetParameterMap(otherDataLambdaParameterArg3, this.otherSelectQuery);
+                }
+                else
+                {
+                    var joinType = isDefaultIfEmpty ? SqlJoinType.Left : SqlJoinType.Inner;
+                    dataSource = this.sourceQuery.AddJoin(otherQuerySource, joinType);
+                    this.join = dataSource.DataSourceAlias;
+
+                    this.otherDataLambdaParameterArg3 = this.GetArgLambdaParameter(3, 0);
+                    this.otherDataLambdaParameterArg4 = this.GetArgLambdaParameter(4, 1);
+
+                    this.lambdaParameterMap.TrySetParameterMap(otherDataLambdaParameterArg3, dataSource);
+                    this.lambdaParameterMap.TrySetParameterMap(otherDataLambdaParameterArg4, dataSource);
+
+                    this.sourceLambdaParameterArg4 = this.GetArgLambdaParameter(4, 0);
+                    this.lambdaParameterMap.TrySetParameterMap(this.sourceLambdaParameterArg4, dataSource);
+                }
+            }
+            else if (this.IsGroupJoin && childNode == this.Expression.Arguments[this.SourceColumnsArgIndex])
+            {
+                this.sourceColumn = convertedExpression;
+            }
+            else if (this.IsGroupJoin && childNode == this.Expression.Arguments[this.OtherColumnsArgIndex])
+            {
+                if (this.otherSelectQuery is null)
+                    throw new InvalidOperationException($"{nameof(otherSelectQuery)} is null");
+
+                var joinCondition = this.CreateJoinCondition(this.sourceColumn, convertedExpression);
+                this.otherSelectQuery.ApplyWhere(joinCondition, useOrOperator: false);
+            }
         }
 
-        /// <inheritdoc />
-        protected override void OnArgumentConverted(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression argument, SqlExpression converterArgument)
+        public override void OnBeforeChildVisit(Expression childNode)
         {
-            var argIndex = this.Expression.Arguments.IndexOf(argument);
-            if (argIndex == this.OtherDataArgIndex)     // this is the other data source converted
+            if (this.IsGroupJoin && childNode == this.Expression.Arguments[this.SelectArgIndex])
             {
-                var otherDataSqlQuery = (converterArgument as SqlQueryReferenceExpression)?.Reference
-                                            ??
-                                            converterArgument as SqlQueryExpression
-                                            ??
-                                            throw new InvalidOperationException($"Expected {nameof(SqlQueryExpression)} on the stack");
-                
-                SqlQuerySourceExpression querySource;
-                if (!this.UseSubQueryDataSource && otherDataSqlQuery.IsTableOnly())
-                {
-                    querySource = otherDataSqlQuery.InitialDataSource.QuerySource;
-                }
-                else
-                {
-                    if (this.UseSubQueryDataSource)
-                        querySource = this.SqlFactory.CreateSubQuery(otherDataSqlQuery);
-                    else
-                        querySource = otherDataSqlQuery;
-                }
+                // Preparing to visit the 5th argument, which is a NewExpression.
+                // In the case of GroupJoin, the other data source is converted to a SelectQuery 
+                // to allow adding a WHERE condition. However, when visiting the 5th argument, 
+                // typically a NewExpression, the new data source is selected in the NewExpression.
+                // This selection should be treated as a separate derived table in the query, 
+                // rather than as a joined data source, unless a SelectMany follows the GroupJoin.
+                // To achieve this, the SqlSelectExpression is converted to a SqlDerivedTableExpression, 
+                // ensuring it is added as a separate independent SqlExpression in the SqlSelectExpression's 
+                // `modelBinding` property. Later when this SqlDerivedTableExpression is accessed from
+                // `modelBinding` it will be received as a independent expression and will be rendered
+                // as sub-query.
+                var otherDerivedTable = this.SqlFactory.ConvertSelectQueryToDeriveTable(this.otherSelectQuery);
 
-                if (this.UseSubQueryDataSource)
-                {
-                    this.joinedDataSource = this.SqlFactory.CreateDataSourceForSubQuery(Guid.NewGuid(), querySource);
-                    this.SourceQuery.AddSubQueryDataSource(this.joinedDataSource);
-                }
-                else
-                {
-                    this.joinedDataSource = this.SqlFactory.CreateDataSourceForJoinedSource(Guid.NewGuid(), querySource);
-                    this.join = this.SourceQuery.AddCrossJoin(this.joinedDataSource);
-                }
-
-                var otherColumnLambda = this.GetArgumentLambda(this.OtherColumnsArgIndex);
-                var selectLambda = this.GetArgumentLambda(this.SelectArgIndex);
-                if (this.UseSubQueryDataSource)
-                {
-                    this.ParameterMap.TrySetParameterMap(otherColumnLambda.Parameters[0], querySource);
-                }
-
-                else
-                {
-                    this.ParameterMap.TrySetParameterMap(otherColumnLambda.Parameters[0], this.joinedDataSource);
-                }
-
-                if (this.UseSubQueryDataSource)
-                {
-                    this.ParameterMap.RemoveParameterMap(selectLambda.Parameters[0]);
-                    this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[0], this.SourceQuery);
-                    this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[1], querySource);
-                }
-                else
-                {
-                    // map 2nd argument of select argument to other data source
-                    this.ParameterMap.TrySetParameterMap(selectLambda.Parameters[1], this.joinedDataSource);
-                }
+                this.otherDataLambdaParameterArg4 = this.GetArgLambdaParameter(4, 1);
+                this.lambdaParameterMap.TrySetParameterMap(this.otherDataLambdaParameterArg4, otherDerivedTable);
             }
-            else if (argIndex == this.SourceColumnsArgIndex)
-            {
-                this.sourceColumnSelection = converterArgument;
-            }
-            else if (argIndex == this.OtherColumnsArgIndex)
-            {
-                // here we'll know that both parameters are converted
+            base.OnBeforeChildVisit(childNode);
+        }
 
-                var otherColumnSelection = converterArgument;
-
-                SqlBinaryExpression joinPredicate = null;
-
-                if (sourceColumnSelection is SqlCollectionExpression sourceColumnCollection)
-                {
-                    if (otherColumnSelection is SqlCollectionExpression otherColumnCollection)
-                    {
-                        var sourceColumns = sourceColumnCollection.SqlExpressions.Cast<SqlColumnExpression>().ToArray();
-                        var otherColumns = otherColumnCollection.SqlExpressions.Cast<SqlColumnExpression>().ToArray();
-                        if (sourceColumns.Length != otherColumns.Length)
-                            throw new InvalidOperationException($"Source columns count {sourceColumns.Length} does not match other columns count {otherColumns.Length}.");
-
-                        for (var i = 0; i < sourceColumns.Length; i++)
-                        {
-                            var sourceColumn = sourceColumns[i].ColumnExpression;
-                            var otherColumn = otherColumns[i].ColumnExpression;
-                            var condition = this.SqlFactory.CreateBinary(sourceColumn, otherColumn, SqlExpressionType.Equal);
-                            joinPredicate = joinPredicate == null ? condition : this.SqlFactory.CreateBinary(joinPredicate, condition, SqlExpressionType.AndAlso);
-                        }
-                    }
-                    else
-                        throw new InvalidOperationException($"Expected {nameof(SqlCollectionExpression)} for other columns selection Arg-Index: {this.OtherColumnsArgIndex}.");
-                }
-                else
-                {
-                    joinPredicate = this.SqlFactory.CreateBinary(sourceColumnSelection, otherColumnSelection, SqlExpressionType.Equal);
-                }
-
-                if (this.UseSubQueryDataSource)
-                {
-                    (this.joinedDataSource.QuerySource as SqlQueryExpression)?.ApplyWhere(joinPredicate);
-                }
-
-                this.joinCondition = joinPredicate;
-            }
+        private ParameterExpression GetArgLambdaParameter(int argIndex, int parameterIndex)
+        {
+            var argument = this.Expression.Arguments[argIndex];
+            var lambda = (argument as UnaryExpression)?.Operand as LambdaExpression
+                            ??
+                            argument as LambdaExpression
+                            ??
+                            throw new InvalidOperationException($"Expected '{nameof(LambdaExpression)}' but got '{argument.GetType().Name}'.");
+            return lambda.Parameters[parameterIndex];
         }
 
         /// <inheritdoc />
-        protected override SqlExpression Convert(SqlQueryExpression sqlQuery, SqlExpression[] arguments)
+        public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var projection = arguments[3];
+            // convertedChildren[0] = source query
+            // convertedChildren[1] = other query to join
+            // convertedChildren[2] = source query PK selection            
+            // convertedChildren[3] = other query FK selection            
+            // convertedChildren[4] = new shape
 
-            if (!this.UseSubQueryDataSource)
+            SqlCompositeBindingExpression newShape;
+            if (convertedChildren[4] is SqlCompositeBindingExpression compositeBinding)
+                newShape = compositeBinding;
+            else
+                newShape = this.SqlFactory.CreateCompositeBindingForSingleExpression(convertedChildren[4], ModelPath.Empty);
+
+            if (!this.IsGroupJoin)
             {
-                var joinType = joinedDataSource.GetJoinType() == SqlJoinType.Left ? SqlJoinType.Left : SqlJoinType.Inner;
-                
-                this.join.UpdateJoinType(joinType);
-                this.join.UpdateJoinCondition(joinCondition);
+                if (join is null)
+                    throw new InvalidOperationException($"join is null");
+                var leftSide = convertedChildren[2];
+                var rightSide = convertedChildren[3];
+                var joinCondition = this.CreateJoinCondition(leftSide, rightSide);
+                this.sourceQuery.UpdateJoinCondition(this.join.Value, joinCondition);
             }
+            
+            this.sourceQuery.UpdateModelBinding(newShape);
 
-            if (this.HasProjection)
+            if (this.IsGroupJoin)
             {
-                if (this.HasDefaultProjection())
+                if (this.IsDefaultProjection())
                 {
-                    this.UpdateModelMaps(sqlQuery.AllQuerySources);
+                    this.sourceQuery.MarkModelBindingAsNonProjectable(newShape.Bindings[1].ModelPath);
                 }
                 else
                 {
-                    sqlQuery.ApplyProjection(projection);
+                    this.sourceQuery.ApplyProjection(newShape);
                 }
             }
 
-            return sqlQuery;
+            return this.sourceQuery;
         }
 
-        private void UpdateModelMaps(IReadOnlyCollection<SqlDataSourceExpression> allDataSources)
+        private bool IsDefaultProjection()
         {
-            var extractor = new DataSourcePropertyInfoExtractor();
-            var updatedMap = extractor.RecalculateMemberMapping(GetArgumentLambda(SelectArgIndex));
-            var lastDs = allDataSources.Last();
-
-            if (updatedMap.CurrentDataSourceMemberInfo != null)
+            if (this.Expression.TryGetArgLambda(this.SelectArgIndex, out var lambda))
             {
-                foreach (var ds in allDataSources)
+                if (lambda.Body is NewExpression newExpression)
                 {
-                    if (ds != lastDs)
-                    {
-                        ds.AddModelPathPrefix(updatedMap.CurrentDataSourceMemberInfo.Name);
-                    }
+                    if (newExpression.Arguments.Count == 2 &&
+                        newExpression.Arguments[0] == lambda.Parameters[0] &&
+                        newExpression.Arguments[1] == lambda.Parameters[1])
+                        return true;
                 }
-            }
-
-            if (updatedMap.NewDataSourceMemberInfo != null)
-            {
-                lastDs.AddModelPathPrefix(updatedMap.NewDataSourceMemberInfo.Name);
-            }
-        }
-
-
-        private bool HasProjection => this.Expression.Arguments.Count >= 5;
-
-        private bool HasDefaultProjection()
-        {
-            if (this.HasProjection)
-            {
-                var selectLambda = this.GetArgumentLambda(this.SelectArgIndex);
-                var param0 = selectLambda.Parameters[0];
-                var param1 = selectLambda.Parameters[1];
-                var lambdaBody = selectLambda.Body;
-                if (lambdaBody is NewExpression newExpr &&
-                    newExpr.Arguments.Count == 2 &&
-                    newExpr.Arguments[0] == param0 &&
-                    newExpr.Arguments[1] == param1)
-                    return true;
             }
             return false;
         }
+
+        /// <inheritdoc />
+        public override void OnAfterVisit()
+        {
+            this.lambdaParameterMap.RemoveParameterMap(this.sourceLambdaParameterArg2);
+            this.lambdaParameterMap.RemoveParameterMap(this.sourceLambdaParameterArg4);
+            this.lambdaParameterMap.RemoveParameterMap(this.otherDataLambdaParameterArg3);
+            this.lambdaParameterMap.RemoveParameterMap(this.otherDataLambdaParameterArg4);
+            base.OnAfterVisit();
+        }
+
+        private SqlExpression CreateJoinCondition(SqlExpression leftSide, SqlExpression rightSide)
+        {
+            SqlBinaryExpression joinPredicate = null;
+
+            if (leftSide is SqlCompositeBindingExpression leftComposite)
+            {
+                if (rightSide is SqlCompositeBindingExpression rightComposite)
+                {
+                    if (leftComposite.Bindings.Length != rightComposite.Bindings.Length)
+                        throw new InvalidOperationException($"Source columns count {leftComposite.Bindings.Length} does not match other columns count {rightComposite.Bindings.Length}.");
+
+                    for (var i = 0; i < leftComposite.Bindings.Length; i++)
+                    {
+                        var leftSideBinding = leftComposite.Bindings[i];
+                        var rightSideBinding = rightComposite.Bindings[i];
+                        var sourceColumn = leftSideBinding.SqlExpression;
+                        var otherColumn = rightSideBinding.SqlExpression;
+                        var condition = this.SqlFactory.CreateBinary(sourceColumn, otherColumn, SqlExpressionType.Equal);
+                        joinPredicate = joinPredicate == null ? condition : this.SqlFactory.CreateBinary(joinPredicate, condition, SqlExpressionType.AndAlso);
+                    }
+                }
+                else
+                    throw new InvalidOperationException($"Expected {nameof(SqlCompositeBindingExpression)} for other columns selection Arg-Index: {this.OtherColumnsArgIndex}.");
+            }
+            else
+            {
+                joinPredicate = this.SqlFactory.CreateBinary(leftSide, rightSide, SqlExpressionType.Equal);
+            }
+
+            return joinPredicate;
+        }
+
+        /// <inheritdoc />
+        public override bool IsChainedQueryArgument(Expression childNode) => childNode == this.Expression.Arguments[0];
     }
 }

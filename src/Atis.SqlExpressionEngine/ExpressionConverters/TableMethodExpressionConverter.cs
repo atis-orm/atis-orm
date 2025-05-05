@@ -44,7 +44,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for converting method call expressions to SQL table expressions.
     ///     </para>
     /// </summary>
-    public class TableExpressionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class TableExpressionConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         private readonly IModel model;
 

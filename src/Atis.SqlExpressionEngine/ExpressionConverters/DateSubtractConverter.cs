@@ -9,7 +9,10 @@ using System.Text;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
-    public class DateSubtractConverterFacotry : LinqToSqlExpressionConverterFactoryBase<MemberExpression>
+    /// <summary>
+    /// 
+    /// </summary>
+    public class DateSubtractConverterFactory : LinqToSqlExpressionConverterFactoryBase<MemberExpression>
     {
         private static readonly HashSet<string> supportedMembers = new HashSet<string>(
             new[] {
@@ -21,7 +24,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 nameof(TimeSpan.Ticks),
             });
 
-        public DateSubtractConverterFacotry(IConversionContext context) : base(context)
+        public DateSubtractConverterFactory(IConversionContext context) : base(context)
         {
         }
 
@@ -42,7 +45,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class DateSubtractConverter : LinqToSqlExpressionConverterBase<MemberExpression>
+    public class DateSubtractConverter : LinqToNonSqlQueryConverterBase<MemberExpression>
     {
         public DateSubtractConverter(IConversionContext context, MemberExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
         {
@@ -101,7 +104,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return this.SqlFactory.CreateDateSubtract(datePart, dateStart, dateEnd);
         }
 
-        private class DateSubtractMethodCallConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+        private class DateSubtractMethodCallConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
         {
             public DateSubtractMethodCallConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
             {

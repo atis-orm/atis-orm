@@ -3,8 +3,10 @@ using Atis.SqlExpressionEngine.Preprocessors;
 using Atis.SqlExpressionEngine.Services;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using Atis.SqlExpressionEngine.UnitTest.Converters;
+
+//using Atis.SqlExpressionEngine.UnitTest.Converters;
 using Atis.SqlExpressionEngine.UnitTest.Preprocessors;
-using Atis.SqlExpressionEngine.UnitTest.Services;
+//using Atis.SqlExpressionEngine.UnitTest.Services;
 using System.Linq.Expressions;
 using Model = Atis.SqlExpressionEngine.UnitTest.Services.Model;
 
@@ -23,26 +25,31 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         #region base methods
         protected void Test(string testHeading, Expression queryExpression, string? expectedResult)
         {
-            SqlExpression result = this.ConvertExpressionToSqlExpression(queryExpression);
-            var translator = new SqlExpressionTranslator();
-            //var xmlDoc2 = SqlExpressionTreeGenerator.GenerateTree(newResult);
-            var resultQuery = translator.Translate(result);
-            Console.WriteLine($"+++++++++++++++++++++++++ {testHeading} ++++++++++++++++++++++++");
-            Console.WriteLine(resultQuery);
-            Console.WriteLine("-----------------------------------------------------------------");
-            if (expectedResult != null)
+            SqlExpression? result = this.ConvertExpressionToSqlExpression(queryExpression, out var updatedQueryExpression, out var err);
+            string? resultQuery = null;
+            if (result != null)
+            {
+                var translator = new SqlExpressionTranslator();
+                resultQuery = translator.Translate(result);
+                Console.WriteLine($"+++++++++++++++++++++++++ {testHeading} ++++++++++++++++++++++++");
+                Console.WriteLine(resultQuery);
+                Console.WriteLine("-----------------------------------------------------------------");
+            }
+            Console.WriteLine("Original Expression:");
+            Console.WriteLine(ExpressionPrinter.PrintExpression(queryExpression));
+            Console.WriteLine("Expression after Preprocessing:");
+            Console.WriteLine(ExpressionPrinter.PrintExpression(updatedQueryExpression));
+            if (err != null)
+                throw err;
+            if (expectedResult != null && resultQuery != null)
             {
                 ValidateQueryResults(resultQuery, expectedResult);
             }
         }
 
-        private SqlExpression ConvertExpressionToSqlExpression(Expression queryExpression)
+        private SqlExpression? ConvertExpressionToSqlExpression(Expression queryExpression, out Expression updatedQueryExpression, out Exception? err)
         {
-            Console.WriteLine("Original Expression:");
-            Console.WriteLine(ExpressionPrinter.PrintExpression(queryExpression));
-            var updatedQueryExpression = PreprocessExpression(queryExpression);
-            Console.WriteLine("Expression after Preprocessing:");
-            Console.WriteLine(ExpressionPrinter.PrintExpression(updatedQueryExpression));
+            updatedQueryExpression = PreprocessExpression(queryExpression);
 
             //var componentIdentifier = new QueryComponentIdentifier();
             var model = new Model();
@@ -50,15 +57,23 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var reflectionService = new ReflectionService(new ExpressionEvaluator());
             var parameterMapper = new LambdaParameterToDataSourceMapper();
             var sqlFactory = new SqlExpressionFactory();
-            //var navigationMapper = new NavigationToDataSourceMapper();
-            //var propertyMapper = new PropertyToDataSourceMapper();
-            var contextExtensions = new object[] { sqlDataTypeFactory, sqlFactory, /*componentIdentifier,*/ model, parameterMapper, /*navigationMapper,*/ reflectionService/*, propertyMapper*/ };
+            var contextExtensions = new object[] { sqlDataTypeFactory, sqlFactory, model, parameterMapper, reflectionService};
             var conversionContext = new ConversionContext(contextExtensions);
             var expressionConverterProvider = new LinqToSqlExpressionConverterProvider(conversionContext, factories: [new SqlFunctionConverterFactory(conversionContext)]);
-            var postProcessorProvider = new SqlExpressionPostprocessorProvider(sqlFactory, postprocessors: [/*new ExistsBooleanComparisonPostprocessor()*/]);
+            var postProcessorProvider = new SqlExpressionPostprocessorProvider(postprocessors: [/*new ExistsBooleanComparisonPostprocessor()*/]);
             var linqToSqlConverter = new LinqToSqlConverter(reflectionService, expressionConverterProvider, postProcessorProvider);
-            var result = linqToSqlConverter.Convert(updatedQueryExpression);
-            return result;
+            try
+            {
+                var result = linqToSqlConverter.Convert(updatedQueryExpression);
+                err = null;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                err = ex;
+                return null;
+            }
         }
 
         protected Expression PreprocessExpression(Expression expression)
@@ -70,7 +85,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var navigateToManyPreprocessor = new NavigateToManyPreprocessor(queryProvider, reflectionService);
             var navigateToOnePreprocessor = new NavigateToOnePreprocessor(queryProvider, reflectionService);
             var queryVariablePreprocessor = new QueryVariableReplacementPreprocessor();
-            var childJoinReplacementPreprocessor = new ChildJoinReplacementPreprocessor(reflectionService);
+            //var childJoinReplacementPreprocessor = new ChildJoinReplacementPreprocessor(reflectionService);
             var calculatedPropertyReplacementPreprocessor = new CalculatedPropertyPreprocessor(reflectionService);
             var specificationPreprocessor = new SpecificationCallRewriterPreprocessor(reflectionService);
             var convertPreprocessor = new ConvertExpressionReplacementPreprocessor();
@@ -80,7 +95,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             //var concreteParameterPreprocessor = new ConcreteParameterReplacementPreprocessor(new QueryPartsIdentifier(), reflectionService);
             var methodInterfaceTypeReplacementPreprocessor = new QueryMethodGenericTypeReplacementPreprocessor(reflectionService);
             var customMethodReplacementPreprocessor = new CustomBusinessMethodPreprocessor();
-            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, childJoinReplacementPreprocessor, calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor, customMethodReplacementPreprocessor
+            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, /*childJoinReplacementPreprocessor, */calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor, customMethodReplacementPreprocessor
                 /*, concreteParameterPreprocessor*/]);
             expression = preprocessor.Preprocess(expression);
             return expression;

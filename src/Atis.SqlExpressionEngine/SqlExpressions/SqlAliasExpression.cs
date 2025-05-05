@@ -51,7 +51,7 @@
         /// <returns>The result of visiting this expression.</returns>
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitSqlAliasExpression(this);
+            return sqlExpressionVisitor.VisitSqlAlias(this);
         }
 
         /// <summary>
@@ -65,7 +65,7 @@
         /// <returns>A string representation of the SQL alias expression.</returns>
         public override string ToString()
         {
-            return $"alias:{this.ColumnAlias}";
+            return $"{this.ColumnAlias}";
         }
     }
 }

@@ -15,11 +15,11 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         public SqlExpression Expression { get; }
         public IReadOnlyList<SqlExpression> Values { get; }
-        public override SqlExpressionType NodeType => SqlExpressionType.In;
+        public override SqlExpressionType NodeType => SqlExpressionType.InValues;
 
         protected internal override SqlExpression Accept(SqlExpressionVisitor sqlExpressionVisitor)
         {
-            return sqlExpressionVisitor.VisitInValuesExpression(this);
+            return sqlExpressionVisitor.VisitInValues(this);
         }
 
         public SqlExpression Update(SqlExpression expression, SqlExpression[] values)

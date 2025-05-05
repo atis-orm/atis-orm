@@ -44,7 +44,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for handling <see cref="Queryable.DefaultIfEmpty{TSource}(IQueryable{TSource})"/> method calls.
     ///     </para>
     /// </summary>
-    public class DefaultIfEmptyExpressionConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class DefaultIfEmptyExpressionConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         /// <summary>
         ///     <para>
@@ -62,26 +62,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var sourceExpression = convertedChildren[0];
-
-            if (sourceExpression is SqlDataSourceReferenceExpression dsRef)
-            {
-                dsRef.Reference.QuerySource.IsDefaultIfEmpty = true;
-            }
-            else if (sourceExpression is SqlQueryReferenceExpression queryRef)
-            {
-                queryRef.Reference.IsDefaultIfEmpty = true;
-            }
-            else
-            {
-                var sqlQuery = sourceExpression as SqlQuerySourceExpression
+            var derivedTable = convertedChildren[0] as SqlDerivedTableExpression
                                 ??
-                                throw new InvalidOperationException($"sourceExpression is not a {nameof(SqlQuerySourceExpression)}");
-
-                sqlQuery.IsDefaultIfEmpty = true;
-            }
-
-            return sourceExpression;
+                                throw new InvalidOperationException($"The first child of DefaultIfEmpty must be a {nameof(SqlDerivedTableExpression)}.");
+            return this.SqlFactory.CreateDefaultIfEmpty(derivedTable);
         }
     }
 }

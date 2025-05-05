@@ -44,7 +44,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter for handling nullable value expressions.
     ///     </para>
     /// </summary>
-    public class NullableValueExpressionConverter : LinqToSqlExpressionConverterBase<MemberExpression>
+    public class NullableValueExpressionConverter : LinqToNonSqlQueryConverterBase<MemberExpression>
     {
         /// <summary>
         ///     <para>

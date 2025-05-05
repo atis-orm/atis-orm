@@ -57,7 +57,7 @@ group by a_1.Address
             .Select(x => x.Key)
             .LeftJoin(queryProvider.DataSet<Student>(), (g, s) => new { g, s }, j => j.g == j.s.StudentId);
             string? expectedResult = @"
-select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
+select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
 		select	a_1.StudentId as Col1
 		from	StudentGrade as a_1
@@ -78,7 +78,7 @@ select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Addre
             .Select(x => x.Key)
             .LeftJoin(queryProvider.DataSet<Student>(), (g, s) => new { g, s }, j => j.g.Substring(0, 5) == j.s.StudentId);
             string? expectedResult = @"
-select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
+select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
 		select	a_1.StudentId as Col1
 		from	StudentGrade as a_1
@@ -100,7 +100,7 @@ select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Addre
             })
             .LeftJoin(x => x.s, x => x.g == x.s.StudentId);
             string? expectedResult = @"
-select	a_2.Col1 as Col1, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
+select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
 		select	a_1.StudentId as Col1
 		from	StudentGrade as a_1
@@ -307,18 +307,19 @@ having	(Max(a_1.Age) > 20)";
                     e.Name,
                     DegreeGroups = e.NavDegrees                                     // this sub-query will be translated to outer-apply
                         .GroupBy(d => d.University)
-                        .Select(g => new { g.Key, Count = g.Count() })
+                        .Select(g => new { University = g.Key, TotalDegrees = g.Count() })
+                        .FirstOrDefault()
                 });
 
             string? expectedResult = @"
-select	a_1.Name as Name, a_3.Key as Key, a_3.Count as Count
-	from	Employee as a_1
-		outer apply (
-			select	a_2.University as Key, Count(1) as Count
-			from	EmployeeDegree as a_2
-			where	(a_1.EmployeeId = a_2.EmployeeId)
-			group by a_2.University
-		) as a_3
+    select a_1.Name as Name, DegreeGroups_2.University as University, DegreeGroups_2.TotalDegrees as TotalDegrees
+	from Employee as a_1
+			outer apply (
+				select top (1) a_3.University as University, Count(1) as TotalDegrees
+				from EmployeeDegree as a_3
+				where (a_1.EmployeeId = a_3.EmployeeId)
+				group by a_3.University
+			) as DegreeGroups_2
 ";
 
             Test("Select with nested GroupBy inside projection should produce correlated subquery", q.Expression, expectedResult);

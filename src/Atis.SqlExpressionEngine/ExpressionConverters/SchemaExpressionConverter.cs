@@ -41,7 +41,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter class for converting schema method expressions to SQL expressions.
     ///     </para>
     /// </summary>
-    public class SchemaExpressionConverter : LinqToSqlExpressionConverterBase<Expression>
+    public class SchemaExpressionConverter : LinqToSqlQueryConverterBase<MethodCallExpression>
     {
         /// <summary>
         ///     <para>
@@ -51,7 +51,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <param name="context">The conversion context.</param>
         /// <param name="expression">The source expression to be converted.</param>
         /// <param name="converterStack">The stack of converters representing the parent chain for context-aware conversion.</param>
-        public SchemaExpressionConverter(IConversionContext context, Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
+        public SchemaExpressionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
         }
@@ -61,5 +61,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             return convertedChildren[0];
         }
+
+        public override bool IsChainedQueryArgument(Expression childNode) => childNode == this.Expression.Arguments[0];
     }
 }

@@ -1,27 +1,20 @@
-﻿namespace Atis.SqlExpressionEngine.SqlExpressions
+﻿using System.Collections.Generic;
+
+namespace Atis.SqlExpressionEngine.SqlExpressions
 {
     /// <summary>
-    ///     <para>
-    ///         Represents a data source in an SQL query expression tree.
-    ///     </para>
+    /// Represents a Table, Derived Table / Sub-Query, or CTE Reference within a select query.
     /// </summary>
-    /// <remarks>
-    ///     <para>
-    ///         A query source is an expression that can be used in From and Join
-    ///         parts of the query. Such as a table, subquery, or a CTE reference.
-    ///     </para>
-    ///     <para>
-    ///         This class provides a flag that can indicate the source query that
-    ///         when joining this data source, it should be added as an outer join.
-    ///     </para>
-    /// </remarks>
     public abstract class SqlQuerySourceExpression : SqlExpression
     {
         /// <summary>
-        ///     <para>
-        ///         Gets and sets flag to notify the SQL Query that it should be added as outer join.
-        ///     </para>
+        /// Returns the set of column names along with model path that query source is projecting.
         /// </summary>
-        public virtual bool IsDefaultIfEmpty { get; set; }
+        /// <returns>Unique instances of <see cref="ColumnModelPath"/>.</returns>
+        public abstract HashSet<ColumnModelPath> GetColumnModelMap();
+    }
+
+    public abstract class SqlSubQuerySourceExpression : SqlQuerySourceExpression
+    {
     }
 }

@@ -29,7 +29,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class ToStringConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+    public class ToStringConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
         private readonly ISqlDataTypeFactory sqlDataTypeFactory;
 

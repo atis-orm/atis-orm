@@ -55,25 +55,17 @@
             });
 
             string? expectedResult = @"
-select	a_1.DOC_NUM as DOC_NUM, a_1.Trans_DODAAC as Trans_DODAAC, a_1.Req_PID as Req_PID, 
-        a_1.Req_Julian as Req_Julian, a_1.Req_Seq as Req_Seq, a_1.DocNumDisplay as DocNumDisplay, 
-        a_1.Status as Status, a_1.SubmittedOn as SubmittedOn, a_1.SubmittedBy as SubmittedBy, 
-        a_1.SubmittedByPID as SubmittedByPID, a_1.IssuedOn as IssuedOn, a_1.IssuedBy as IssuedBy, 
-        a_1.IssuedByPID as IssuedByPID, a_1.Remarks as Remarks, a_1.CreatedByPID as CreatedByPID, 
-        a_1.UpdatedByPID as UpdatedByPID, a_2.LOCNDSCR as UIC_Desc, a_2.CITY as UIC_City, 
-        a_5.LU_ShortDesc as UIC_City_Desc, a_3.RANK as CreatedByPID_Rank, a_4.RANK as ProcessedByPID_Rank, 
-        a_7.LinesRequested as LinesRequested, a_7.LinesIssued as LinesIssued, 
-        case when (a_1.IssuedOn is not null) then (a_7.LinesRequested - a_7.LinesIssued) else null end as LinesOutOfStock
-	from	BenchStock_Requisition as a_1
-		left join SiteBase as a_2 on (a_1.Trans_DODAAC = a_2.LOCNCODE)
-		left join PID_Master as a_3 on (a_1.CreatedByPID = a_3.PID)
-		left join PID_Master as a_4 on (a_1.IssuedByPID = a_4.PID)
-		left join MasterLookup as a_5 on ((a_2.CITY = a_5.User_Key) and ('LOCN' = a_5.LU_Group_Key))
-		left join (
-			select	a_6.BenchStockDocNum as DocNum, Sum(a_6.QtyRequested) as LinesRequested, Sum(a_6.QtyIssued) as LinesIssued
-			from	BenchStock_RequisitionLine as a_6
-			group by a_6.BenchStockDocNum
-		) as a_7 on (a_1.DOC_NUM = a_7.DocNum)
+select a_1.DOC_NUM as DOC_NUM, a_1.Trans_DODAAC as Trans_DODAAC, a_1.Req_PID as Req_PID, a_1.Req_Julian as Req_Julian, a_1.Req_Seq as Req_Seq, a_1.DocNumDisplay as DocNumDisplay, a_1.Status as Status, a_1.SubmittedOn as SubmittedOn, a_1.SubmittedBy as SubmittedBy, a_1.SubmittedByPID as SubmittedByPID, a_1.IssuedOn as IssuedOn, a_1.IssuedBy as IssuedBy, a_1.IssuedByPID as IssuedByPID, a_1.Remarks as Remarks, a_1.CreatedByPID as CreatedByPID, a_1.UpdatedByPID as UpdatedByPID, a_2.LOCNDSCR as UIC_Desc, a_2.CITY as UIC_City, a_5.LU_ShortDesc as UIC_City_Desc, a_3.RANK as CreatedByPID_Rank, a_4.RANK as ProcessedByPID_Rank, a_6.LinesRequested as LinesRequested, a_6.LinesIssued as LinesIssued, case when (a_1.IssuedOn is not null) then (a_6.LinesRequested - a_6.LinesIssued) else null end as LinesOutOfStock
+	from BenchStock_Requisition as a_1
+			left join SiteBase as a_2 on (a_1.Trans_DODAAC = a_2.LOCNCODE)
+			left join PID_Master as a_3 on (a_1.CreatedByPID = a_3.PID)
+			left join PID_Master as a_4 on (a_1.IssuedByPID = a_4.PID)
+			left join MasterLookup as a_5 on ((a_2.CITY = a_5.User_Key) and ('LOCN' = a_5.LU_Group_Key))
+			left join (
+				select a_7.BenchStockDocNum as DocNum, Sum(a_7.QtyRequested) as LinesRequested, Sum(a_7.QtyIssued) as LinesIssued
+				from BenchStock_RequisitionLine as a_7
+				group by a_7.BenchStockDocNum
+			) as a_6 on (a_1.DOC_NUM = a_6.DocNum)
 ";
             Test("Bench stock complex query test", finalQuery.Expression, expectedResult);
         }

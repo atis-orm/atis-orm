@@ -3,52 +3,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 
 namespace Atis.SqlExpressionEngine
 {
     public static class ExtensionMethods
     {
-        public static SqlQuerySourceExpression ConvertToTableIfPossible(this SqlQuerySourceExpression sqlExpression)
+        public static bool AllEqual<T>(this IEnumerable<T> seq1, IEnumerable<T> seq2)
         {
-            if (IsTableOnly(sqlExpression))
-            {
-                return ((SqlQueryExpression)sqlExpression).DataSources.First().QuerySource;
-            }
-            return sqlExpression;
+            if (ReferenceEquals(seq1, seq2)) return true;
+            if (seq1 == null) return seq2 == null || !seq2.Any();
+            if (seq2 == null) return !seq1.Any();
+            return seq1.SequenceEqual(seq2);
         }
 
-        public static bool IsTableOnly(this SqlQuerySourceExpression sqlQuerySource)
-        {
-            return sqlQuerySource is SqlQueryExpression sqlQuery && sqlQuery.IsTableOnly();
-        }
-
-        public static SqlColumnExpression[] GetProjections(this SqlExpression sqlExpression)
-        {
-            if (sqlExpression is SqlColumnExpression sqlColumnExpression)
-            {
-                return new[] { sqlColumnExpression };
-            }
-            else if (sqlExpression is SqlCollectionExpression sqlCollectionExpression)
-            {
-                return sqlCollectionExpression.SqlExpressions.Cast<SqlColumnExpression>().ToArray();
-            }
-            else
-                throw new InvalidOperationException($"Argument '{nameof(sqlExpression)}' must be of type '{nameof(SqlColumnExpression)}' or '{nameof(SqlCollectionExpression)}'.");
-        }
-
-        public static bool TryGetScalarColumn(this SqlExpression sqlExpression, out SqlColumnExpression sqlScalarColumn)
-        {
-            if (sqlExpression is SqlColumnExpression sqlColumnExpression && sqlColumnExpression.NodeType == SqlExpressionType.ScalarColumn)
-            {
-                sqlScalarColumn = sqlColumnExpression;
-                return true;
-            }
-            sqlScalarColumn = null;
-            return false;
-        }
-
-        public static string[] GetModelPath(this MemberExpression memberExpression)
+        public static ModelPath GetModelPath(this MemberExpression memberExpression)
         {
             var pathElements = new List<string>();
             do
@@ -56,32 +24,74 @@ namespace Atis.SqlExpressionEngine
                 pathElements.Add(memberExpression.Member.Name);
                 memberExpression = memberExpression.Expression as MemberExpression;
             } while (memberExpression != null);
-            return pathElements.Reverse<string>().ToArray();
+            return new ModelPath(pathElements.Reverse<string>().ToArray());
         }
 
-        public static bool TryCreateSubQueryDataSourceCopy(this SqlExpression sqlExpression, out SqlQueryExpression sqlQueryCopy)
+        public static bool TryGetArgLambda(this MethodCallExpression methodCall, int argIndex, out LambdaExpression lambdaExpression)
         {
-            if (sqlExpression is SqlDataSourceExpression ds && ds.NodeType == SqlExpressionType.SubQueryDataSource)
+            if (methodCall is null)
+                throw new ArgumentNullException(nameof(methodCall));
+
+            var arg = methodCall.Arguments.Skip(argIndex).FirstOrDefault();
+            lambdaExpression = (arg as UnaryExpression)?.Operand as LambdaExpression
+                                        ??
+                                    arg as LambdaExpression;
+            return lambdaExpression != null;
+        }
+
+        public static bool TryGetArgLambdaParameter(this MethodCallExpression methodCall, int argIndex, int paramIndex, out ParameterExpression parameterExpression)
+        {
+            if (TryGetArgLambda(methodCall, argIndex, out var lambdaExpression))
             {
-                var otherDataSourceQuery = ds.QuerySource as SqlQueryExpression
-                                            ??
-                                            throw new InvalidOperationException($"'{ds.QuerySource}' is not a SqlQueryExpression");
-                // other data source cannot be modified itself, it will always make a copy whenever used
-                sqlQueryCopy = otherDataSourceQuery.CreateCopy();
-                return true;
+                parameterExpression = lambdaExpression.Parameters.Skip(paramIndex).FirstOrDefault();
+                return parameterExpression != null;
             }
-            sqlQueryCopy = null;
+            parameterExpression = null;
             return false;
         }
 
-        public static SqlDataSourceExpression[] GetColumnExpressionDataSources(SqlColumnExpression[] columnExpressions)
+        public static ParameterExpression GetArgLambdaParameterRequired(this MethodCallExpression methodCall, int argIndex, int paramIndex)
         {
-            if (columnExpressions?.Length > 0 &&
-                    columnExpressions.All(x => x.ColumnExpression is SqlDataSourceColumnExpression))
+            if (TryGetArgLambdaParameter(methodCall, argIndex, paramIndex, out var parameterExpression))
             {
-                return columnExpressions.GroupBy(x => ((SqlDataSourceColumnExpression)x.ColumnExpression).DataSourceReference.Reference).Select(x => x.Key).ToArray();
+                return parameterExpression;
             }
-            return Array.Empty<SqlDataSourceExpression>();
+            throw new ArgumentException($"Unable to extract ParameterExpression from method '{methodCall.Method.Name}' at argument index {argIndex} and parameter index {paramIndex}, make sure argument is LambdaExpression.");
+        }
+
+        public static bool SqlExpressionsAreEqual(SqlExpression sqlExpression1, SqlExpression sqlExpression2)
+        {
+            if (sqlExpression1 is null && sqlExpression2 is null)
+            {
+                return true;
+            }
+            if (sqlExpression1 is null || sqlExpression2 is null)
+            {
+                return false;
+            }
+            var hash1 = SqlExpressionHashGenerator.GenerateHash(sqlExpression1);
+            var hash2 = SqlExpressionHashGenerator.GenerateHash(sqlExpression2);
+            return hash1 == hash2;
+        }
+
+        public static SqlExpressionBinding PrependPath(this SqlExpressionBinding actualBinding, ModelPath pathToPrepend)
+        {
+            if (actualBinding is null)
+                throw new ArgumentNullException(nameof(actualBinding));
+            if (actualBinding is NonProjectableBinding)
+                return new NonProjectableBinding(actualBinding.SqlExpression, pathToPrepend.Append(actualBinding.ModelPath));
+            else
+                return new SqlExpressionBinding(actualBinding.SqlExpression, pathToPrepend.Append(actualBinding.ModelPath));
+        }
+
+        public static SqlExpressionBinding UpdateExpression(this SqlExpressionBinding actualBinding, SqlExpression sqlExpression)
+        {
+            if (actualBinding is null)
+                throw new ArgumentNullException(nameof(actualBinding));
+            if (actualBinding is NonProjectableBinding)
+                return new NonProjectableBinding(sqlExpression, actualBinding.ModelPath);
+            else
+                return new SqlExpressionBinding(sqlExpression, actualBinding.ModelPath);
         }
     }
 }

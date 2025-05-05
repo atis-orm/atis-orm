@@ -41,7 +41,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class StringCompareToConverter : LinqToSqlExpressionConverterBase<BinaryExpression>
+    public class StringCompareToConverter : LinqToNonSqlQueryConverterBase<BinaryExpression>
     {
         public StringCompareToConverter(IConversionContext context, BinaryExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
         {
@@ -132,7 +132,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return this.SqlFactory.CreateBinary(str1, str2, binaryNodeType);
         }
 
-        private class StringCompareMethodConverter : LinqToSqlExpressionConverterBase<MethodCallExpression>
+        private class StringCompareMethodConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
         {
             public StringCompareMethodConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
             {
