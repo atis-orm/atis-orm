@@ -99,5 +99,20 @@ select	Trim(a_1.Name) as C1, TrimStart(a_1.Name) as C2, TrimEnd(a_1.Name) as C3,
 
             Test("String Trim call", q.Expression, expectedResult);
         }
+
+        [TestMethod]
+        public void String_Aggregate_function_test()
+        {
+            var employees = new Queryable<Employee>(queryProvider);
+            var employeeDegrees = new Queryable<EmployeeDegree>(queryProvider);
+            var q = from e in employees
+                    join ed in employeeDegrees
+                                    .GroupBy(x => x.EmployeeId)
+                                    .Select(x => new { EmployeeId = x.Key, Degrees = string.Join(", ", x.Select(y => y.Degree)) })
+                                    on e.EmployeeId equals ed.EmployeeId
+                    select new { e.EmployeeId, e.Name, ed.Degrees };
+            string? expectedResult = null;
+            Test("String Aggregate function test", q.Expression, expectedResult);
+        }
     }
 }
