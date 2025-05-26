@@ -1,8 +1,11 @@
 ﻿using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace Atis.SqlExpressionEngine
 {
@@ -16,15 +19,18 @@ namespace Atis.SqlExpressionEngine
             return seq1.SequenceEqual(seq2);
         }
 
-        public static ModelPath GetModelPath(this MemberExpression memberExpression)
+        public static string GetPath(this MemberExpression memberExpression)
         {
-            var pathElements = new List<string>();
-            do
+            if (memberExpression is null)
+                throw new ArgumentNullException(nameof(memberExpression));
+            var path = memberExpression.Member.Name;
+            var current = memberExpression.Expression;
+            while (current is MemberExpression member)
             {
-                pathElements.Add(memberExpression.Member.Name);
-                memberExpression = memberExpression.Expression as MemberExpression;
-            } while (memberExpression != null);
-            return new ModelPath(pathElements.Reverse<string>().ToArray());
+                path = $"{member.Member.Name}.{path}";
+                current = member.Expression;
+            }
+            return path;
         }
 
         public static bool TryGetArgLambda(this MethodCallExpression methodCall, int argIndex, out LambdaExpression lambdaExpression)
@@ -37,6 +43,15 @@ namespace Atis.SqlExpressionEngine
                                         ??
                                     arg as LambdaExpression;
             return lambdaExpression != null;
+        }
+
+        public static LambdaExpression GetArgLambdaRequired(this MethodCallExpression methodCall, int argIndex)
+        {
+            if (TryGetArgLambda(methodCall, argIndex, out var lambdaExpression))
+            {
+                return lambdaExpression;
+            }
+            throw new ArgumentException($"Unable to extract LambdaExpression from method '{methodCall.Method.Name}' at argument index {argIndex}, make sure argument is LambdaExpression.");
         }
 
         public static bool TryGetArgLambdaParameter(this MethodCallExpression methodCall, int argIndex, int paramIndex, out ParameterExpression parameterExpression)
@@ -74,24 +89,102 @@ namespace Atis.SqlExpressionEngine
             return hash1 == hash2;
         }
 
-        public static SqlExpressionBinding PrependPath(this SqlExpressionBinding actualBinding, ModelPath pathToPrepend)
+        public static LambdaExpression ExtractLambda(this Expression expression)
         {
-            if (actualBinding is null)
-                throw new ArgumentNullException(nameof(actualBinding));
-            if (actualBinding is NonProjectableBinding)
-                return new NonProjectableBinding(actualBinding.SqlExpression, pathToPrepend.Append(actualBinding.ModelPath));
-            else
-                return new SqlExpressionBinding(actualBinding.SqlExpression, pathToPrepend.Append(actualBinding.ModelPath));
+            return (expression as UnaryExpression)?.Operand as LambdaExpression
+                    ??
+                    expression as LambdaExpression;
         }
 
-        public static SqlExpressionBinding UpdateExpression(this SqlExpressionBinding actualBinding, SqlExpression sqlExpression)
+        public static LambdaExpression ExtractLambdaRequired(this Expression expression)
+            => ExtractLambda(expression)
+                ?? throw new ArgumentException($"Unable to extract LambdaExpression from expression '{expression}'.");
+
+        public static IReadOnlyList<SqlExpression> FlattenQueryShape(this SqlQueryShapeExpression queryShape)
         {
-            if (actualBinding is null)
-                throw new ArgumentNullException(nameof(actualBinding));
-            if (actualBinding is NonProjectableBinding)
-                return new NonProjectableBinding(sqlExpression, actualBinding.ModelPath);
+            var list = new List<SqlExpression>();
+            addExpressions(queryShape, list);
+            return list;
+
+            void addExpressions(SqlExpression sqlExpression, List<SqlExpression> sqlExpressionList)
+            {
+                if (sqlExpression is SqlMemberInitExpression qs)
+                {
+                    foreach (var binding in qs.Bindings)
+                    {
+                        addExpressions(binding.SqlExpression, sqlExpressionList);
+                    }
+                }
+                else
+                    sqlExpressionList.Add(sqlExpression);
+            }
+        }
+
+        public static bool IsNullOrEmpty<T>(this IEnumerable<T> list)
+        {
+            if (list is null)
+                return true;
+            if (list is ICollection<T> collection)
+                return collection.Count == 0;
+            using (var enumerator = list.GetEnumerator())
+            {
+                return !enumerator.MoveNext();
+            }
+        }
+
+        public static IReadOnlyList<SelectColumn> ConvertQueryShapeToSelectList(SqlExpression queryShape, bool applyAll)
+        {
+            var selectList = new List<SelectColumn>();
+            FillSelectList(columnAlias: null, queryShape, selectList, applyAll: applyAll);
+            return selectList;
+        }
+
+        public static void FillSelectList(string columnAlias, SqlExpression sqlExpression, List<SelectColumn> selectList, bool applyAll)
+        {
+            if (sqlExpression is SqlMemberInitExpression queryShape)
+            {
+                foreach (var binding in queryShape.Bindings)
+                {
+                    if (binding.Projectable || applyAll)
+                        FillSelectList(binding.MemberName, binding.SqlExpression, selectList, applyAll);
+                }
+            }
+            else if (sqlExpression is SqlDataSourceQueryShapeExpression dsQueryShape)
+            {
+                FillSelectList(columnAlias, dsQueryShape.ShapeExpression, selectList, applyAll);
+            }
             else
-                return new SqlExpressionBinding(sqlExpression, actualBinding.ModelPath);
+            {
+                var columnAliasToSet = columnAlias ?? "Col1";
+
+                if (selectList.Any(x => x.Alias == columnAliasToSet))
+                    columnAliasToSet = GenerateUniqueColumnAlias(new HashSet<string>(selectList.Select(x => x.Alias)), columnAliasToSet);
+
+                selectList.Add(new SelectColumn(sqlExpression, columnAliasToSet ?? "Col1", scalarColumn: columnAlias == null));
+            }
+        }
+
+        private static string GenerateUniqueColumnAlias(HashSet<string> aliases, string columnAlias)
+        {
+            int i = 1;
+            var newColumnAlias = $"{columnAlias}_{i}";
+            while (aliases.Contains(newColumnAlias))
+            {
+                i++;
+                newColumnAlias = $"{columnAlias}_{i}";
+            }
+            return newColumnAlias;
+        }
+
+        public static T CastTo<T>(this SqlExpression sqlExpression, string exceptionMessage = null) where T : SqlExpression
+        {
+            if (sqlExpression is null)
+                throw new ArgumentNullException(nameof(sqlExpression));
+            if (!(exceptionMessage is null))
+                exceptionMessage = $" {exceptionMessage}";
+            return sqlExpression as T
+                ??
+                throw new InvalidCastException($"Unable to cast SqlExpression '{sqlExpression.GetType().Name}' to '{typeof(T).Name}'.{exceptionMessage}");
         }
     }
 }

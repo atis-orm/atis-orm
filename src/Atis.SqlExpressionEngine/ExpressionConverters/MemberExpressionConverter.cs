@@ -1,5 +1,6 @@
 ﻿using Atis.Expressions;
 using Atis.SqlExpressionEngine.Abstractions;
+using Atis.SqlExpressionEngine.Exceptions;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
 using System.IO;
@@ -67,66 +68,47 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
+            // although the `Expression` part of a MemberExpression can be said as Child node of MemberExpression,
+            // but we are naming it as `parent` below because it can be considered as the parent of the member.
             var parent = convertedChildren[0];
 
-            SqlDataSourceReferenceExpression parentDataSource;
-            ModelPath parentPath = ModelPath.Empty;
-            if (parent is SqlDataSourceMemberChainExpression parentChainExpression)
+            if (parent is SqlQueryShapeExpression queryShape)
             {
-                parentDataSource = parentChainExpression.DataSource;
-                parentPath = parentChainExpression.MemberChain;
-            }
-            else if (parent is SqlDataSourceReferenceExpression parentDsRef)
-            {
-                parentDataSource = parentDsRef;
-            }
-            else
-            {
-                throw new InvalidOperationException($"Parent expression '{parent.GetType().Name}' is not a valid data source reference.");
-            }
-
-            // we are not using Extension Method MemberExpression.GetModelPath because
-            // the parent might be some other expression but it is in chain
-            // for example, x.NavProp1().NavProp2().Field1, the parent of MemberExpression
-            // will not be a MemberExpression it will be an InvocationExpression
-            var currentPath = parentPath.Append(this.Expression.Member.Name);
-
-            // NOTE: The parentDataSource.Resolve method automatically adjusts the path after resolving.
-            // Example: .Select(x => new { C1 = new { T1 = new { V1 = x.Field1 } } }).Select(p2 => p2.C1.T1)
-            // In the above case, p2.C1.T1 resolves to a_1.Field1 with the path C1.T1.V1.Field1. However, we cannot return
-            // C1.T1.V1.Field1 to the select expression because its path has already been adjusted to C1.T1.
-            // The value will be accessed as result.V1 instead of result.C1.T1.V1.Field1. Therefore, the SqlSelectExpression
-            // removes C1.T1 from the path and returns a_1.Field1 with the updated path V1.Field1.
-
-            if (this.IsLeafNode)
-            {
-                var resolvedExpression = parentDataSource.Resolve(currentPath);
-                if (resolvedExpression is SqlDataSourceExpression ds)
-                {
-                    if (ds.TryResolveScalarColumn(out var scalarColumn))
-                        return scalarColumn;
-                }
+                if (!queryShape.TryResolveMember(this.Expression.Member.Name, out var resolvedExpression))
+                    throw new UnresolvedMemberAccessException(this.Expression.GetPath());
+                if (this.IsLeafNode && resolvedExpression is SqlQueryShapeFieldResolverExpression fieldResolver)
+                    resolvedExpression = fieldResolver.ShapeExpression;
                 return resolvedExpression;
             }
-            else
+            else if (parent is SqlDerivedTableExpression derivedTable)
             {
-                var resolvedExpression = parentDataSource.Resolve(currentPath);
-                if (resolvedExpression is SqlDataSourceExpression ds)
+                var top = derivedTable.Top;
+                var distinct = derivedTable.IsDistinct;
+                var rowOffset = derivedTable.RowOffset;
+                var rowsPerPage = derivedTable.RowsPerPage;
+                if (top != null || distinct || rowOffset != null || rowsPerPage != null)
                 {
-                    // ModelPath.Empty is crucial here because subsequent calls
-                    // must be relative to the data source.
-                    // Example: .Select(x => new { x.DerivedTable1.Prop1.Prop2.Field1 })
-                    // In the above case, this converter will process `x.DerivedTable1`,
-                    // which resolves to a SqlDataSourceExpression. We return the data source
-                    // with an empty path, ensuring that the next call (e.g., x.DerivedTable1.Prop1)
-                    // is relative to the data source.
-                    // For instance, the parent will be a chain expression with a SqlDataSourceExpression
-                    // as its parent. This ensures that Prop1 is resolved correctly in the SqlDataSourceExpression.
-                    // relative to the data source
-                    return new SqlDataSourceMemberChainExpression(ds, ModelPath.Empty);
+                    derivedTable = new SqlDerivedTableExpression(derivedTable.CteDataSources, derivedTable.FromSource, derivedTable.Joins, derivedTable.WhereClause, derivedTable.GroupByClause, derivedTable.HavingClause, derivedTable.OrderByClause, derivedTable.SelectColumnCollection, false, null, null, null, derivedTable.AutoProjection, derivedTable.Tag, derivedTable.QueryShape, derivedTable.NodeType);
                 }
-                return new SqlDataSourceMemberChainExpression(parentDataSource, currentPath);
+                var sqlQuery = this.SqlFactory.CreateSelectQuery(derivedTable);
+                var sqlQueryShape = sqlQuery.GetQueryShapeForFieldMapping().CastTo<SqlQueryShapeFieldResolverExpression>();
+                if (!sqlQueryShape.TryResolveMember(this.Expression.Member.Name, out var resolved2))
+                    throw new UnresolvedMemberAccessException(this.Expression.GetPath());
+                if (resolved2 is SqlQueryShapeFieldResolverExpression fieldResolver)
+                    resolved2 = fieldResolver.ShapeExpression;
+                sqlQuery.ApplyProjection(resolved2);
+                if (top != null)
+                    sqlQuery.ApplyTop(top.Value);
+                if (distinct)
+                    sqlQuery.ApplyDistinct();
+                if (rowOffset != null)
+                    sqlQuery.ApplyRowOffset(rowOffset.Value);
+                if (rowsPerPage != null)
+                    sqlQuery.ApplyRowsPerPage(rowsPerPage.Value);
+                return this.SqlFactory.ConvertSelectQueryToDeriveTable(sqlQuery);
             }
+
+            throw new NotImplementedException();
         }
     }
 }

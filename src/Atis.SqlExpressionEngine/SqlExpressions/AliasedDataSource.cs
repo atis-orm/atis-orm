@@ -9,11 +9,12 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
     {
         public AliasedDataSource(SqlQuerySourceExpression dataSource, Guid alias)
         {
-            this.QuerySource = dataSource;
+            this.QuerySource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
             this.Alias = alias;
         }
         public SqlQuerySourceExpression QuerySource { get; }
         public Guid Alias { get; }
+
 
         public override string ToString()
         {
@@ -21,22 +22,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         }
     }
 
-    //public class TableDataSource : AliasedDataSource
-    //{
-    //    public TableDataSource(SqlTableExpression dataSource, Guid alias) : base(dataSource, alias)
-    //    {
-    //    }
-
-    //    public new SqlTableExpression DataSource => (SqlTableExpression)base.QuerySource;
-    //}
-
-    //public class DerivedTableDataSource : AliasedDataSource
-    //{
-    //    public DerivedTableDataSource(SqlDerivedTableExpression dataSource, Guid alias) : base(dataSource, alias)
-    //    {
-    //    }
-    //    public new SqlDerivedTableExpression DataSource => (SqlDerivedTableExpression)base.QuerySource;
-    //}
 
     public class CteDataSource
     {
@@ -56,21 +41,19 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
     public class JoinDataSource : AliasedDataSource
     {
-        public JoinDataSource(SqlJoinType joinType, SqlQuerySourceExpression dataSource, Guid alias, SqlExpression joinCondition, string joinName, bool isNavigationJoin, Guid? navigationParent) 
+        public JoinDataSource(SqlJoinType joinType, SqlQuerySourceExpression dataSource, Guid alias, SqlExpression joinCondition, string joinName, bool isNavigationJoin) 
             : base(dataSource, alias)
         {
             this.JoinType = joinType;
             this.JoinCondition = joinCondition;
             this.JoinName = joinName;
             this.IsNavigationJoin = isNavigationJoin;
-            this.NavigationParent = navigationParent;
         }
 
         public SqlJoinType JoinType { get; }
         public SqlExpression JoinCondition { get; }
         public string JoinName { get; }
         public bool IsNavigationJoin { get; }
-        public Guid? NavigationParent { get; }
 
         public override string ToString()
         {

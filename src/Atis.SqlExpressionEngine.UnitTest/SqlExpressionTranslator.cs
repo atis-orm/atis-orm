@@ -1,4 +1,5 @@
 ﻿using Atis.SqlExpressionEngine.Internal;
+using Atis.SqlExpressionEngine.Services;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using Newtonsoft.Json.Linq;
 using System.Text;
@@ -26,10 +27,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlDerivedTableExpression(sqlDerivedTableExpression);
             }
-            else if (sqlExpression is SqlAliasedJoinSourceExpression sqlAliasedJoinSourceExpression)
-            {
-                return this.TranslateSqlAliasedJoinSourceExpression(sqlAliasedJoinSourceExpression);
-            }
+            //else if (sqlExpression is SqlAliasedJoinSourceExpression sqlAliasedJoinSourceExpression)
+            //{
+            //    return this.TranslateSqlAliasedJoinSourceExpression(sqlAliasedJoinSourceExpression);
+            //}
             else if (sqlExpression is SqlAliasedFromSourceExpression sqlAliasedFromSourceExpression)
             {
                 return this.TranslateSqlAliasedFromSourceExpression(sqlAliasedFromSourceExpression);
@@ -142,6 +143,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return this.TranslateSqlCommentExpression(sqlComment);
             }
+            else if (sqlExpression is SqlFragmentExpression sqlFragment)
+            {
+                return sqlFragment.Fragment;
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
@@ -165,8 +170,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string TranslateSqlStandaloneSelectExpression(SqlStandaloneSelectExpression node)
         {
-            var selectColumnToString = string.Join(", ", node.SelectList.Select(x => this.TranslateSelectColumn(x)));
-            return $"(select {selectColumnToString})";
+            return $"(select {this.TranslateSelectColumns(node.SelectList)})";
         }
 
         private string TranslateSqlAliasedFromSourceExpression(SqlAliasedFromSourceExpression node)
@@ -174,11 +178,80 @@ namespace Atis.SqlExpressionEngine.UnitTest
             return $"{this.Translate(node.QuerySource)} as {this.GetSimpleAlias(node.Alias)}";
         }
 
-        private string TranslateSqlAliasedJoinSourceExpression(SqlAliasedJoinSourceExpression node)
+        private string TranslateSqlAliasedJoinSourceExpression(SqlDerivedTableExpression parentTable, SqlAliasedJoinSourceExpression node)
         {
+            node = this.ConvertToInnerJoinIfPossible(parentTable, node);
             var alias = this.GetSimpleAlias(node.Alias, node.JoinName);
             var joinCondition = node.JoinCondition != null ? $" on {this.TranslateLogicalExpression(node.JoinCondition)}" : string.Empty;
             return $"{GetSqlJoinType(node.JoinType)} {this.Translate(node.QuerySource)} as {alias}{joinCondition}";
+        }
+
+        private SqlAliasedJoinSourceExpression ConvertToInnerJoinIfPossible(SqlDerivedTableExpression parentTable, SqlAliasedJoinSourceExpression node)
+        {
+            if ((node.JoinType == SqlJoinType.OuterApply || node.JoinType == SqlJoinType.CrossApply)
+                &&
+                node.QuerySource is SqlDerivedTableExpression derivedTable)
+            {
+                if (!(derivedTable.WhereClause?.FilterConditions.Length > 0)    // must have filter condition
+                    ||
+                    derivedTable.GroupByClause?.Length > 0 ||                   // must not have grouping
+                    derivedTable.HavingClause?.FilterConditions.Length > 0      // or having
+                    ||
+                    !(derivedTable.QueryShape is SqlQueryShapeExpression)       // either shape is not Query Shape
+                    ||                                                          // or it is query shape but it's a scalar
+                    (derivedTable.QueryShape as SqlQueryShapeExpression)?.IsScalar == true)
+                    return node;
+
+                if (!this.IsRowNumberSupported)
+                    return node;
+
+                var parentTableDataSources = new HashSet<Guid>(parentTable.AllDataSources.Select(x => x.Alias));
+                var joinableQueryBuilder = new JoinableQueryBuilder(derivedTable, parentTableDataSources, new SqlExpressionFactory(), node.Alias);
+                if (joinableQueryBuilder.TryBuildUnsafe(out var builderResult) && builderResult.JoinCondition != null)
+                {
+                    var joinType = node.JoinType == SqlJoinType.OuterApply ? SqlJoinType.Left : SqlJoinType.Inner;
+                    var updatedDerivedTable = builderResult.NormalizedDerivedTable;
+                    var top = updatedDerivedTable.Top;
+                    if (top != null)
+                    {
+                        // need to put ROW_NUM function and remove the top
+                        var partitionBy = $"partition by {string.Join(", ", builderResult.OtherTablePredicateSides.Select(this.Translate))}";
+                        var orderBy = string.Empty;
+                        if (updatedDerivedTable.OrderByClause != null)
+                        {
+                            orderBy = $" order by {string.Join(", ", updatedDerivedTable.OrderByClause.OrderByColumns.Select(x => this.TranslateOrderByColumn(x)))}";
+                        }
+                        var rowNum = new SqlFragmentExpression($"row_number() over ({partitionBy}{orderBy})");
+                        var currentSelectListColumns = updatedDerivedTable.SelectColumnCollection.SelectColumns.ToList();
+                        if (updatedDerivedTable.SelectColumnCollection.SelectColumns.FirstOrDefault()?.ScalarColumn == true)
+                        {
+                            var firstCol = currentSelectListColumns[0];
+                            currentSelectListColumns[0] = new SelectColumn(firstCol.ColumnExpression, firstCol.Alias, scalarColumn: false);
+                        }
+                        var newRowNumCol = new SelectColumn(rowNum, "auto_row_num", scalarColumn: false);
+                        currentSelectListColumns.Add(newRowNumCol);
+
+                        var memberInit = derivedTable.QueryShape as SqlMemberInitExpression
+                                            ??
+                                            derivedTable.QueryShape.CastTo<SqlDataSourceQueryShapeExpression>().ShapeExpression.CastTo<SqlMemberInitExpression>();
+                        memberInit.AddMemberAssignment(newRowNumCol.Alias, newRowNumCol.ColumnExpression, projectable: true);
+
+                        updatedDerivedTable = new SqlDerivedTableExpression(updatedDerivedTable.CteDataSources, updatedDerivedTable.FromSource, updatedDerivedTable.Joins, updatedDerivedTable.WhereClause, updatedDerivedTable.GroupByClause, updatedDerivedTable.HavingClause, null, new SqlSelectListExpression(currentSelectListColumns.ToArray()), false, null, null, null, false, updatedDerivedTable.Tag, updatedDerivedTable.QueryShape, SqlExpressionType.DerivedTable);
+
+                        var newFromSource = new SqlAliasedFromSourceExpression(updatedDerivedTable, Guid.NewGuid());
+                        var whereClause = new SqlFilterClauseExpression(new[] { new FilterCondition(new SqlBinaryExpression(new SqlDataSourceColumnExpression(newFromSource.Alias, newRowNumCol.Alias), new SqlLiteralExpression(top), SqlExpressionType.LessThanOrEqual), false) }, SqlExpressionType.WhereClause);
+                        var newProjection = currentSelectListColumns.Where(x=>x != newRowNumCol)
+                                                                    .Select(x=> new SelectColumn(new SqlDataSourceColumnExpression(newFromSource.Alias, x.Alias), x.Alias, false)).ToArray();
+                        var newSelectListClause = new SqlSelectListExpression(newProjection);
+                        var outerTable = new SqlDerivedTableExpression(null, newFromSource, null, whereClause, null, null, null, newSelectListClause, false, null, null, null, false, null, updatedDerivedTable.QueryShape, SqlExpressionType.DerivedTable);
+
+                        updatedDerivedTable = outerTable;
+                    }
+                    var updatedDataSource = updatedDerivedTable.ConvertToTableIfPossible();
+                    return new SqlAliasedJoinSourceExpression(joinType, updatedDataSource, node.Alias, builderResult.JoinCondition, node.JoinName, node.IsNavigationJoin);
+                }
+            }
+            return node;
         }
 
         private static string GetSqlJoinType(SqlJoinType joinType)
@@ -233,9 +306,9 @@ namespace Atis.SqlExpressionEngine.UnitTest
             return value.Replace("\r\n", indentText);
         }
 
-        private string JoinInNewLine(IEnumerable<SqlAliasedJoinSourceExpression> joins, string separator = "\r\n\t\t")
+        private string JoinInNewLine(SqlDerivedTableExpression parentTable, IEnumerable<SqlAliasedJoinSourceExpression> joins, string separator = "\r\n\t\t")
         {
-            var result = string.Join("\r\n\t\t", joins.Select(x => Indent(this.Translate(x), "\r\n\t\t")));
+            var result = string.Join("\r\n\t\t", joins.Select(x => Indent(this.TranslateSqlAliasedJoinSourceExpression(parentTable, x), "\r\n\t\t")));
             if (result.Length > 0)
                 result = $"{separator}{result}";
             return result;
@@ -302,10 +375,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
             return $"{this.TranslateNonLogicalExpression(selectColumn.ColumnExpression)} as {selectColumn.Alias}";
         }
 
-        private string TranslateSelectColumns(SelectColumn[] selectColumns)
+        private string TranslateSelectColumns(IReadOnlyList<SelectColumn> selectColumns)
         {
             var result = new StringBuilder();
-            for(var i = 0; i < selectColumns.Length; i++)
+            for(var i = 0; i < selectColumns.Count; i++)
             {
                 var selectColumn = selectColumns[i];
                 var comment = selectColumn.ColumnExpression as SqlCommentExpression;
@@ -335,7 +408,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 cteDataSourceToString = "\t";
 
             var fromString = $"\r\nfrom {Indent(this.Translate(node.FromSource))}";
-            var joins = JoinInNewLine(node.Joins);
+            var joins = JoinInNewLine(node, node.Joins);
             var whereClause = JoinPredicate(node.WhereClause, "where");
             var groupByClause = CommaJoinMoveNextLine(node.GroupByClause, "group by", this.Translate);
             var havingClause = JoinPredicate(node.HavingClause, "having");
@@ -503,6 +576,9 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
 
         int paramCount = 0;
+
+        public bool IsRowNumberSupported { get; set; }
+
         private string TranslateSqlParameterExpression(SqlParameterExpression sqlParameterExpression)
         {
             //return $"@p{paramCount++}";

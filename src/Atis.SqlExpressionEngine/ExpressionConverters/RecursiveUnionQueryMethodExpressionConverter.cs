@@ -29,12 +29,10 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
     public class RecursiveUnionQueryMethodExpressionConverter : LinqToSqlQueryConverterBase<MethodCallExpression>
     {
-        private readonly ILambdaParameterToDataSourceMapper lambdaParameterMap;
         private SqlDerivedTableExpression sourceQueryAsDerivedTable;
 
         public RecursiveUnionQueryMethodExpressionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
         {
-            this.lambdaParameterMap = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
 
         /// <inheritdoc/>
@@ -42,14 +40,13 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             if (childNode == this.Expression.Arguments[0])
             {
-                var sourceQuery = convertedExpression as SqlSelectExpression
-                                    ??
-                                    throw new InvalidOperationException($"Expected {nameof(SqlSelectExpression)}, but got {convertedExpression.GetType().Name}.");
+                var sourceQuery = convertedExpression.CastTo<SqlSelectExpression>();
 
-                this.sourceQueryAsDerivedTable = this.SqlFactory.ConvertSelectQueryToUnwrappableDeriveTable(sourceQuery);
+                var sourceQueryCopy = sourceQuery.CreateCopy();
+                this.sourceQueryAsDerivedTable = this.SqlFactory.ConvertSelectQueryToUnwrappableDeriveTable(sourceQueryCopy);
 
                 var lambdaParameterArg1 = this.Expression.GetArgLambdaParameterRequired(argIndex: 1, paramIndex: 0);
-                this.lambdaParameterMap.TrySetParameterMap(lambdaParameterArg1, sourceQueryAsDerivedTable);
+                this.MapParameter(lambdaParameterArg1, () => sourceQueryAsDerivedTable);
             }
             base.OnConversionCompletedByChild(childConverter, childNode, convertedExpression);
         }
@@ -60,17 +57,16 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc/>
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var sourceQuery = convertedChildren[0] as SqlSelectExpression
-                        ??
-                        throw new InvalidOperationException($"Arg-0: Expected {nameof(SqlSelectExpression)}, but got {convertedChildren[0].GetType().Name}.");
-            var recursiveMember = convertedChildren[1] as SqlDerivedTableExpression
-                                    ??
-                                    throw new InvalidOperationException($"Arg-1: Expected {nameof(SqlDerivedTableExpression)}, but got {convertedChildren[1].GetType().Name}.");
+            var sourceQuery = convertedChildren[0].CastTo<SqlSelectExpression>();
+            var recursiveMember = convertedChildren[1].CastTo<SqlDerivedTableExpression>();
 
             // here sourceQuery is intact because we didn't bind the sourceQuery to the lambda parameter
             // now we have the recursiveMember which has the sourceQuery used, so we need to replace
             // all the sourceQuery instances with CTE References            
 
+            // TODO: check if we could remove the anchorDerivedTable parameter
+            // and implement the logic in the SqlSelectExpression to convert itself
+            // to anchor
             sourceQuery.ConvertToRecursiveQuery(anchorDerivedTable: this.sourceQueryAsDerivedTable, recursiveDerivedTable: recursiveMember);
 
             return sourceQuery;

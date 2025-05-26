@@ -2,6 +2,7 @@
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -38,26 +39,23 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         protected override int WherePredicateArgumentIndex => this.Expression.Arguments.Count == 4 ? 3 : 2;
         /// <inheritdoc />
-        protected override SqlExpression CreateDmSqlExpression(SqlDerivedTableExpression sqlQuery, Guid selectedDataSource, SqlExpression[] arguments)
+        protected override SqlExpression CreateDmSqlExpression(SqlDerivedTableExpression sqlQuery, Guid selectedDataSource, IReadOnlyList<SqlExpression> arguments)
         {
-            var columnsArgIndex = arguments.Length == 2 ? 0 : 1;
+            var columnsArgIndex = arguments.Count == 2 ? 0 : 1;
             var setClause = arguments[columnsArgIndex];
-            if (!(setClause is SqlCompositeBindingExpression compositeBinding))
+            if (!(setClause is SqlMemberInitExpression memberInit))
                 throw new InvalidOperationException($"The arg-1 of the {nameof(QueryExtensions.Update)} method must be a collection of columns. Make sure arg-1 is a {nameof(MemberInitExpression)}.");
 
             var dataSourceToUpdate = sqlQuery.AllDataSources.Where(x=>x.Alias == selectedDataSource).FirstOrDefault()
                                         ??
                                         throw new InvalidOperationException($"The data source is not found in the query.");
-            var tableToUpdate = dataSourceToUpdate.QuerySource as SqlTableExpression
-                                ??
-                                throw new InvalidOperationException($"The data source is not a {nameof(SqlTableExpression)}.");
-
-
+            var tableToUpdate = dataSourceToUpdate.QuerySource.CastTo<SqlTableExpression>();
+            
             string[] columnNames;
             SqlExpression[] values;
 
-            columnNames = compositeBinding.Bindings.Select(x => tableToUpdate.GetByPropertyName(x.ModelPath.GetLastElementRequired())).ToArray();
-            values = compositeBinding.Bindings.Select(x => x.SqlExpression).ToArray();
+            columnNames = memberInit.Bindings.Select(x => tableToUpdate.GetByPropertyName(x.MemberName)).ToArray();
+            values = memberInit.Bindings.Select(x => x.SqlExpression).ToArray();
 
             var updateSqlExpression = this.SqlFactory.CreateUpdate(sqlQuery, selectedDataSource, columnNames, values);
 

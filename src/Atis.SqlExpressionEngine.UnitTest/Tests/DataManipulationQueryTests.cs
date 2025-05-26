@@ -105,8 +105,7 @@ where (a_3.ItemDescription like '%' + '123' + '%')
             Expression<Func<int>> expr = () => assets
                                                     .InnerJoin(items, (assets, joinedTable) => new { a = assets, j1 = joinedTable }, newShape => newShape.a.ItemId == newShape.j1.ItemId)
                                                     .InnerJoin(moreInfo, (oldShape, joinedTable) => new { os1 = oldShape, j2 = joinedTable }, newShape => newShape.j2.ItemId == newShape.os1.j1.ItemId)
-                                                    .Select(x => x.os1)
-                                                    .Update(ms => ms.j1, ms => new ItemBase { ItemDescription = ms.a.SerialNumber + ms.j1.ItemId }, ms => ms.j1.ItemDescription.Contains("123"));
+                                                    .Update(ms => ms.os1.j1, ms => new ItemBase { ItemDescription = ms.os1.a.SerialNumber + ms.os1.j1.ItemId }, ms => ms.os1.j1.ItemDescription.Contains("123"));
             var queryExpression = expr.Body;
             string? expectedResult = @"
 update a_2

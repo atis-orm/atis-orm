@@ -52,17 +52,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             // convertedChildren[0] is dummy (for IQueryProvider)
             var convertedExpression = convertedChildren[1];
-            SelectColumn[] selectColumns;
-            if (convertedExpression is SqlCompositeBindingExpression compositeBinding)
-            {
-                selectColumns = compositeBinding.Bindings.Select(x => new SelectColumn(x.SqlExpression, x.ModelPath.GetLastElementRequired(), x.ModelPath, scalarColumn: false)).ToArray();
-            }
-            else
-            {
-                selectColumns = new[] { new SelectColumn(convertedExpression, "Col1", ModelPath.Empty, scalarColumn: true) };
-            }
-            
-            var sqlQuery = this.SqlFactory.CreateSelectQueryFromStandaloneSelect(selectColumns);
+            var standaloneSelect = new SqlStandaloneSelectExpression(convertedExpression);            
+            var sqlQuery = this.SqlFactory.CreateSelectQueryFromStandaloneSelect(standaloneSelect);
             return sqlQuery;
         }
 

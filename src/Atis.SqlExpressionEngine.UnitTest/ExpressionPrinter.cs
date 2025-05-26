@@ -55,21 +55,38 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 this.Append(")");
                 return node;
             }
-            else if (node is NavigationExpression nav)
+            else if (node is NavigationMemberExpression nav)
             {
-                this.Append("Navigation(");
+                this.Append("NavMember(");
                 this.AppendLine();
                 this.Indent();
-                this.Visit(nav.SourceExpression);
+                this.Visit(nav.Expression);
                 this.Append(", ");
                 this.AppendLine();
                 this.Append($"\"{nav.NavigationProperty}\"");
+                this.AppendLine();
+                this.Unindent();
+                this.Append(")");
+                return node;
+            }
+            else if (node is NavigationJoinCallExpression navJoin)
+            {
+                this.Append("NavJoin(");
+                this.AppendLine();
+                this.Indent();
+                this.Visit(navJoin.QuerySource);
                 this.Append(", ");
                 this.AppendLine();
-                this.Visit(nav.JoinedDataSource);
+                this.Visit(navJoin.ParentSelection);
                 this.Append(", ");
                 this.AppendLine();
-                this.Visit(nav.JoinCondition);
+                this.Visit(navJoin.JoinedDataSource);
+                this.Append(", ");
+                this.AppendLine();
+                this.Visit(navJoin.JoinCondition);
+                this.Append(", ");
+                this.AppendLine();
+                this.Append($"\"{navJoin.NavigationProperty}\"");
                 this.AppendLine();
                 this.Unindent();
                 this.Append(")");

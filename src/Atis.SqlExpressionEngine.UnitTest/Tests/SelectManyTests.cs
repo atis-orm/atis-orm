@@ -31,11 +31,10 @@ select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a
             string? expectedResult = $@"
 select a_2.EmployeeId as EmployeeId, a_2.Degree as Degree
 	from Employee as a_1
-			cross apply (
+			inner join (
 				select a_3.EmployeeId as EmployeeId, a_3.Degree as Degree
 				from EmployeeDegree as a_3
-				where (a_3.EmployeeId = a_1.EmployeeId)
-			) as a_2
+			) as a_2 on (a_2.EmployeeId = a_1.EmployeeId)
 ";
             Test("Query Select Many With Where and Select Test", q.Expression, expectedResult);
         }

@@ -62,6 +62,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             return convertedChildren[0];
         }
 
+        /// <inheritdoc />
         public override bool IsChainedQueryArgument(Expression childNode) => childNode == this.Expression.Arguments[0];
     }
 }

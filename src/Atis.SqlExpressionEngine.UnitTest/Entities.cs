@@ -416,4 +416,36 @@ namespace Atis.SqlExpressionEngine.UnitTest
         public string ID_Plan { get; set; }
     }
 
+
+    public class Person
+    {
+        public int Id { get; set; }
+        public int Age { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string MiddleInitial { get; set; }
+        [NavigationLink(NavigationType.ToSingleChild, nameof(Id), nameof(Feet.PersonId))]
+        public Func<Feet> NavFeet { get; set; }
+        [NavigationLink(NavigationType.ToChildren, nameof(Id), nameof(Shoes.PersonId))]
+        public IQueryable<Shoes> NavShoes { get; set; }
+    }
+
+    public class Shoes
+    {
+        public int Id { get; set; }
+        public int Age { get; set; }
+        public string Style { get; set; }
+        public int PersonId { get; set; }
+        [NavigationLink(NavigationType.ToParent, nameof(Person.Id), nameof(PersonId))]
+        public Person Person { get; set; }
+    }
+
+    public class Feet
+    {
+        public int Id { get; set; }
+        public int Size { get; set; }
+        public int PersonId { get; set; }
+        [NavigationLink(NavigationType.ToParent, nameof(Person.Id), nameof(Id))]
+        public Person Person { get; set; }
+    }
 }

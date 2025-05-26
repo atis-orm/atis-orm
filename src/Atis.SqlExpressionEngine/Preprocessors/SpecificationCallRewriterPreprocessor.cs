@@ -94,7 +94,7 @@ namespace Atis.SqlExpressionEngine.Preprocessors
                             {
                                 // we'll compile the expression mentioned in the constructor argument and assume that it was a constant value
                                 // and pass it as value in below Activator.CreateInstance call
-                                ctorArg = this.reflectionService.Evalulate(newSpecificationExpr.Arguments[i]);
+                                ctorArg = this.reflectionService.Evaluate(newSpecificationExpr.Arguments[i]);
                             }
                             catch (Exception ex)
                             {
@@ -117,7 +117,7 @@ namespace Atis.SqlExpressionEngine.Preprocessors
                 {
                     try
                     {
-                        specification = this.reflectionService.Evalulate(methodCallExpr.Object);
+                        specification = this.reflectionService.Evaluate(methodCallExpr.Object);
                     }
                     catch (Exception ex)
                     {

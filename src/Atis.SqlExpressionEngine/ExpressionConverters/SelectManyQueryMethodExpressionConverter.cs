@@ -44,8 +44,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     /// </summary>
     public class SelectManyQueryMethodExpressionConverter : QueryMethodExpressionConverterBase
     {
-        private readonly ILambdaParameterToDataSourceMapper parameterMap;
-
         /// <summary>
         ///     <para>
         ///         Initializes a new instance of the <see cref="SelectManyQueryMethodExpressionConverter"/> class.
@@ -57,7 +55,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public SelectManyQueryMethodExpressionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
-            this.parameterMap = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
 
 
@@ -80,22 +77,24 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                     isDefaultIfEmpty = true;
                 }
 
-                var querySource = convertedArgument as SqlQuerySourceExpression
-                                    ??
-                                    throw new InvalidOperationException($"Arg-1 '{argument}' of SelectMany call is not a {nameof(SqlQuerySourceExpression)}.");
+                // we should NOT be receiving a SqlSelectExpression, but if we are receiving one we'll convert it
+                // to derived table, usually with some weird LINQ query this could happen
+                // for example, x.SelectMany(y => y)
+                if (convertedArgument is SqlSelectExpression selectQuery)
+                {
+                    convertedArgument = this.SqlFactory.ConvertSelectQueryToDeriveTable(selectQuery);
+                }
+
+                var querySource = convertedArgument.CastTo<SqlQuerySourceExpression>($"2nd Argument (Arg-1) of SelectMany must be converted to '{nameof(SqlQuerySourceExpression)}'.");
                 // Below method will decide if the new data source should be added as cross join or cross apply
                 // or inner join. In case if there is a where clause present in the querySource and it's linking
                 // SourceQuery with this new data source then it will be added as inner join otherwise
                 // cross apply or cross join.
                 var newDataSource = this.SourceQuery.AddDataSourceWithJoinResolution(querySource, isDefaultIfEmpty);
-
                 if (this.HasProjectionArgument)
                 {
-                    var resultSelectorArgLambda = this.GetArgumentLambda(this.ResultSelectorArgIndex);
-                    // there should be 2 parameters, 1 parameter is already mapped
-                    // this 2nd parameter mapping will be removed by base class `QueryMethodExpressionConverterBase`
-                    // automatically
-                    this.parameterMap.TrySetParameterMap(resultSelectorArgLambda.Parameters[1], newDataSource);
+                    var selectorArgParam1 = this.Expression.GetArgLambdaParameterRequired(this.ResultSelectorArgIndex, paramIndex: 1);
+                    this.MapParameter(selectorArgParam1, () => newDataSource);
                 }
             }
         }
@@ -105,10 +104,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             if (this.HasProjectionArgument)
             {
-                var compositeBinding = arguments[1] as SqlCompositeBindingExpression
-                                        ??
-                                        throw new InvalidOperationException($"3rd Argument '{this.Expression.Arguments[this.ResultSelectorArgIndex]}' of SelectMany call is converting to {arguments[1].GetType().Name} instead of {nameof(SqlCompositeBindingExpression)}.");
-                sqlQuery.UpdateModelBinding(compositeBinding);
+                var newQueryShape = arguments[1].CastTo<SqlQueryShapeExpression>();
+                sqlQuery.UpdateModelBinding(newQueryShape);
             }
             else
             {

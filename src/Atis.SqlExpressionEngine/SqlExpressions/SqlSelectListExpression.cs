@@ -7,19 +7,19 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 {
     public class SqlSelectListExpression : SqlExpression
     {
-        public SqlSelectListExpression(SelectColumn[] selectColumns)
+        public SqlSelectListExpression(IReadOnlyList<SelectColumn> selectColumns)
         {
-            if (!(selectColumns?.Length > 0))
+            if (!(selectColumns?.Count > 0))
                 throw new ArgumentNullException(nameof(selectColumns));
-            if (selectColumns.GroupBy(x => x.ModelPath).Any(y => y.Count() > 1))
-                throw new ArgumentException("Select Columns must have unique model paths.", nameof(selectColumns));
             if (selectColumns.Any(x => x.ColumnExpression is SqlSelectListExpression))
                 throw new ArgumentException("Select Columns cannot contain select list expressions.", nameof(selectColumns));
+            if (selectColumns.GroupBy(x=>x.Alias).Any(x=>x.Count() > 1))
+                throw new ArgumentException("Duplicate column names in select columns", nameof(selectColumns));
             this.SelectColumns = selectColumns;
         }
         /// <inheritdoc />
         public override SqlExpressionType NodeType => SqlExpressionType.SelectColumnCollection;
-        public SelectColumn[] SelectColumns { get; }
+        public IReadOnlyList<SelectColumn> SelectColumns { get; }
 
 
         /// <inheritdoc />

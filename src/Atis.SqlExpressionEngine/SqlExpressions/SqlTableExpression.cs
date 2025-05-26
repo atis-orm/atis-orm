@@ -40,9 +40,12 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         public TableColumn[] TableColumns { get; }
 
         /// <inheritdoc />
-        public override HashSet<ColumnModelPath> GetColumnModelMap()
+        public override SqlDataSourceQueryShapeExpression CreateQueryShape(Guid dataSourceAlias)
         {
-            return new HashSet<ColumnModelPath>(this.TableColumns.Select(x => new ColumnModelPath(x.DatabaseColumnName, new ModelPath(x.ModelPropertyName))));
+            var bindings = this.TableColumns.Select(x => new SqlMemberAssignment(x.ModelPropertyName, new SqlDataSourceColumnExpression(dataSourceAlias, x.DatabaseColumnName)))
+                                                .ToArray();
+            var memberInit = new SqlMemberInitExpression(bindings);
+            return new SqlDataSourceQueryShapeExpression(memberInit, dataSourceAlias);
         }
 
         /// <summary>

@@ -5,7 +5,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 {
     public class SqlAliasedJoinSourceExpression : SqlAliasedDataSourceExpression
     {
-        public SqlAliasedJoinSourceExpression(SqlJoinType joinType, SqlQuerySourceExpression querySource, Guid dataSourceAlias, SqlExpression joinCondition, string joinName, bool isNavigationJoin, Guid? navigationParent)
+        public SqlAliasedJoinSourceExpression(SqlJoinType joinType, SqlQuerySourceExpression querySource, Guid dataSourceAlias, SqlExpression joinCondition, string joinName, bool isNavigationJoin)
         {
             if (querySource is null)
                 throw new ArgumentNullException(nameof(querySource));
@@ -15,7 +15,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.JoinCondition = joinCondition;
             this.JoinName = joinName;
             this.IsNavigationJoin = isNavigationJoin;
-            this.NavigationParent = navigationParent;
         }
 
         /// <inheritdoc />
@@ -26,7 +25,6 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         public SqlJoinType JoinType { get; }
         public string JoinName { get; }
         public bool IsNavigationJoin { get; }
-        public Guid? NavigationParent { get; }
 
         /// <inheritdoc />
         protected internal override SqlExpression Accept(SqlExpressionVisitor visitor)
@@ -38,7 +36,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         {
             if (querySource == this.QuerySource && joinCondition == this.JoinCondition)
                 return this;
-            return new SqlAliasedJoinSourceExpression(this.JoinType, querySource, this.Alias, joinCondition, this.JoinName, this.IsNavigationJoin, this.NavigationParent);
+            return new SqlAliasedJoinSourceExpression(this.JoinType, querySource, this.Alias, joinCondition, this.JoinName, this.IsNavigationJoin);
         }
 
         /// <inheritdoc />

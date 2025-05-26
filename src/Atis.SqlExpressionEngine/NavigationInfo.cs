@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System;
+using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine
 {
@@ -26,12 +27,14 @@ namespace Atis.SqlExpressionEngine
         ///     </code>
         /// </remarks>
         public LambdaExpression JoinCondition { get; }
-        public Expression JoinedSource { get; }
-        public NavigationInfo(NavigationType navigationType, LambdaExpression joinCondition, Expression joinedSource)
+        public LambdaExpression JoinedSource { get; }
+        public string PropertyName { get; }
+        public NavigationInfo(NavigationType navigationType, LambdaExpression joinCondition, LambdaExpression joinedSource, string propertyName)
         {
             NavigationType = navigationType;
             this.JoinCondition = joinCondition;
             this.JoinedSource = joinedSource;
+            this.PropertyName = propertyName ?? throw new ArgumentNullException(nameof(propertyName));
         }
     }
 }

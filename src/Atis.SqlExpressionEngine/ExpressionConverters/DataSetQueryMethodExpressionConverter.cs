@@ -47,7 +47,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     public class DataSetQueryMethodExpressionConverter : LinqToSqlQueryConverterBase<MethodCallExpression>
     {
         private readonly IModel model;
-        private readonly IReflectionService reflectionService;
 
         /// <summary>
         ///     <para>
@@ -61,7 +60,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             : base(context, expression, converterStack)
         {
             this.model = context.GetExtension<IModel>();
-            this.reflectionService = context.GetExtension<IReflectionService>();
         }
 
         /// <inheritdoc />
@@ -79,11 +77,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var sourceType = this.reflectionService.GetEntityTypeFromQueryableType(this.Expression.Type);
+            var sourceType = this.ReflectionService.GetEntityTypeFromQueryableType(this.Expression.Type);
             var tableName = this.model.GetTableName(sourceType);
             var tableColumns = this.model.GetTableColumns(sourceType);
             var table = this.SqlFactory.CreateTable(tableName, tableColumns);
-            var result = this.SqlFactory.CreateSelectQueryByTable(table);
+            var result = this.SqlFactory.CreateSelectQuery(table);
             return result;
         }
 

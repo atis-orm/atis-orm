@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -14,19 +15,19 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             {
                 SqlExpressionType.DerivedTable,
                 SqlExpressionType.UnwrappableDerivedTable,
-                SqlExpressionType.DataManipulationDerivedTasble,
+                SqlExpressionType.DataManipulationDerivedTable,
             };
         private static SqlExpressionType ValidateNodeType(SqlExpressionType nodeType)
             => _allowedTypes.Contains(nodeType)
                 ? nodeType
                 : throw new InvalidOperationException($"SqlExpressionType '{nodeType}' is not a valid Derived Table Type.");
 
-        public SqlDerivedTableExpression(SqlAliasedCteSourceExpression[] cteDataSources, SqlAliasedFromSourceExpression fromSource, SqlAliasedJoinSourceExpression[] joinedDataSources, SqlFilterClauseExpression whereClause, SqlExpression[] groupByClause, SqlFilterClauseExpression havingClause, SqlOrderByClauseExpression orderByClause, SqlSelectListExpression selectColumnCollection, bool isDistinct, int? top, int? rowOffset, int? rowsPerPage, bool autoProjection, string tag, SqlExpressionType nodeType)
+        public SqlDerivedTableExpression(SqlAliasedCteSourceExpression[] cteDataSources, SqlAliasedFromSourceExpression fromSource, SqlAliasedJoinSourceExpression[] joinedDataSources, SqlFilterClauseExpression whereClause, SqlExpression[] groupByClause, SqlFilterClauseExpression havingClause, SqlOrderByClauseExpression orderByClause, SqlSelectListExpression selectColumnCollection, bool isDistinct, int? top, int? rowOffset, int? rowsPerPage, bool autoProjection, string tag, SqlExpression queryShape, SqlExpressionType nodeType)
         {
             if (fromSource is null)
                 throw new ArgumentNullException(nameof(fromSource));
-            if (nodeType != SqlExpressionType.DataManipulationDerivedTasble)
-                if (!(selectColumnCollection?.SelectColumns?.Length > 0))
+            if (nodeType != SqlExpressionType.DataManipulationDerivedTable)
+                if (!(selectColumnCollection?.SelectColumns?.Count > 0))
                     throw new ArgumentNullException(nameof(selectColumnCollection));
 
             this.NodeType = ValidateNodeType(nodeType);
@@ -45,6 +46,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.RowsPerPage = rowsPerPage;
             this.AutoProjection = autoProjection;
             this.Tag = tag;
+            this.QueryShape = queryShape ?? throw new ArgumentNullException(nameof(queryShape));
 
             this.IsCte = this.CteDataSources.Length > 0;
 
@@ -85,20 +87,34 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         public int? RowsPerPage { get; }
         public bool AutoProjection { get; }
         public string Tag { get; }
+        public SqlExpression QueryShape { get; }
         public IReadOnlyCollection<SqlAliasedDataSourceExpression> AllDataSources { get; }
 
-        public override HashSet<ColumnModelPath> GetColumnModelMap()
+        public override SqlDataSourceQueryShapeExpression CreateQueryShape(Guid dataSourceAlias)
         {
-            if (this.SelectColumnCollection is null)
+            if (this.SelectColumnCollection?.SelectColumns.IsNullOrEmpty() ?? true)
                 throw new InvalidOperationException($"Current Derived Table is '{this.NodeType}' and does not have a Select Column Collection.");
-            return new HashSet<ColumnModelPath>(
-                    this.SelectColumnCollection
-                            .SelectColumns
-                            .Select(x => x.ColumnExpression is SqlQueryableExpression queryable ?
-                                            new QueryableColumnModelPath(x.Alias, x.ModelPath, queryable)
-                                            :
-                                            new ColumnModelPath(x.Alias, x.ModelPath))
-            );
+
+            if (this.SelectColumnCollection.SelectColumns.Count == 1 &&
+                this.SelectColumnCollection.SelectColumns[0].ScalarColumn)
+                return new SqlDataSourceQueryShapeExpression(new SqlDataSourceColumnExpression(dataSourceAlias, this.SelectColumnCollection.SelectColumns[0].Alias), dataSourceAlias);
+
+            if (this.QueryShape is null)
+                throw new InvalidOperationException($"QueryShape property is null.");
+
+            // here we are NOT trying to re-create SqlSelectExpression we are trying to 
+            // generate a query shape as if the projection has been applied on SqlSelectExpression
+            // the shape will remain the same, that is nested member assignment, however, all the
+            // data source expressions will be changed to use the new alias
+            var queryShape = (this.QueryShape as SqlMemberInitExpression)
+                                ??
+                                (this.QueryShape as SqlDataSourceQueryShapeExpression)?.ShapeExpression as SqlMemberInitExpression
+                                ??
+                                throw new InvalidOperationException($"QueryShape property type is '{this.QueryShape.GetType().Name}' and is not a valid {nameof(SqlQueryShapeExpression)}.");
+
+            var memberInit = this.UpdateQueryShapeWithNewAlias(queryShape, dataSourceAlias, this.SelectColumnCollection.SelectColumns);
+            
+            return new SqlDataSourceQueryShapeExpression(memberInit, dataSourceAlias);
         }
 
         public SqlQuerySourceExpression ConvertToTableIfPossible()
@@ -149,6 +165,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 this.RowsPerPage,
                 this.AutoProjection,
                 this.Tag,
+                this.QueryShape,
                 this.NodeType);
         }
 

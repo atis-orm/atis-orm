@@ -70,15 +70,6 @@ namespace Atis.SqlExpressionEngine.Abstractions
 
         /// <summary>
         ///     <para>
-        ///         Gets the query expression from a queryable object.
-        ///     </para>
-        /// </summary>
-        /// <param name="queryableObject">The queryable object.</param>
-        /// <returns>The query expression.</returns>
-        Expression GetQueryExpressionFromQueryable(object queryableObject);
-
-        /// <summary>
-        ///     <para>
         ///         Evaluates the specified expression.
         ///     </para>
         /// </summary>
@@ -89,7 +80,7 @@ namespace Atis.SqlExpressionEngine.Abstractions
         ///         Caution: this method might execute the expression and can have security implications.
         ///     </para>
         /// </remarks>
-        object Evalulate(Expression expression);
+        object Evaluate(Expression expression);
 
         /// <summary>
         ///     <para>
@@ -116,6 +107,7 @@ namespace Atis.SqlExpressionEngine.Abstractions
         bool IsVariable(MemberExpression expression);
 
         bool IsEnumerable(object value);
-        bool IsProjectionContextMethod(MethodInfo method);
+        bool IsGroupingType(Type type);
+        bool IsAggregateMethod(MethodCallExpression methodCallExpression);
     }
 }

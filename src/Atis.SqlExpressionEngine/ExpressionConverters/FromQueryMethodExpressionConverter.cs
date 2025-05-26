@@ -75,11 +75,15 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             // convertedChildren[0] will be dummy (for IQueryProvider)
-            var dataSources = convertedChildren[1] as SqlCompositeBindingExpression
-                                ??
-                                throw new InvalidOperationException($"Expected {nameof(SqlCompositeBindingExpression)} but got {convertedChildren[1].GetType()}");
 
-            var selectQuery = this.SqlFactory.CreateSelectQueryByFrom(dataSources);
+            SqlExpression queryShape = (convertedChildren[1] as SqlQueryShapeExpression)
+                                        ??
+                                        (convertedChildren[1] as SqlQuerySourceExpression) as SqlExpression
+                                        ??
+                                        throw new InvalidOperationException($"convertedChildren[1] is not a SqlQueryShapeExpression or SqlQuerySourceExpression");
+
+
+            var selectQuery = this.SqlFactory.CreateSelectQuery(queryShape);
             return selectQuery;
         }
 

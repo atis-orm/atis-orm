@@ -70,17 +70,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
         /// <summary>
         ///     <para>
-        ///         Gets the data source associated with the current parameter expression.
-        ///     </para>
-        /// </summary>
-        /// <returns>The associated data source as a <see cref="SqlExpression"/>.</returns>
-        protected virtual SqlExpression GetDataSourceByParameterExpression()
-        {
-            return this.parameterMapper.GetDataSourceByParameterExpression(this.Expression);
-        }
-
-        /// <summary>
-        ///     <para>
         ///         Gets a value indicating whether the current parameter expression is a leaf node in the expression tree.
         ///     </para>
         /// </summary>
@@ -91,26 +80,19 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             var sqlExpression = this.parameterMapper.GetDataSourceByParameterExpression(this.Expression)
                                     ??
-                                    throw new InvalidOperationException($"No SqlExpression found for ParameterExpression '{this.Expression}'. This error usually indicates that the Query Method converter is not converting the first parameter to SqlQueryExpression, e.g. Select(customExpression, x => x.Field1), assume that 'customExpression' is not converting correctly to SqlQueryExpression, therefore, parameter 'x' will not be linked to any SqlQueryExpression instance and will cause this error when translating 'x' part of 'x.Field1' expression. Another reason could be that a custom query method's LambdaExpression parameter is not being mapped to any Data Source. E.g. CustomMethod(query, x => x.Field1, (p1, p2) => new {{ p1, p2 }}), so 'p1' and 'p2' parameters might be presenting data sources but not mapped to any. This is the responsibility of CustomMethod converter class to map those using {nameof(ILambdaParameterToDataSourceMapper)}.");
+                                    throw new InvalidOperationException($"No Parameter Mapping found for ParameterExpression '{this.Expression}'.");
 
-            SqlDataSourceReferenceExpression sqlDataSourceReferenceExpression = null;
-            if (sqlExpression is SqlDataSourceReferenceExpression dsRef)
-                sqlDataSourceReferenceExpression = dsRef;
-            else if (!(sqlExpression is SqlDerivedTableExpression))
-                // TODO: we might need to look at what other expressions a parameter can be
-                throw new InvalidOperationException($"Either ParameterExpression should yield SqlDataSourceReferenceExpression or SqlDerivedTableExpression");
-
-
-            if (this.IsLefNode)
+            if (sqlExpression is SqlQueryShapeFieldResolverExpression fieldResolver)
             {
-                if (sqlDataSourceReferenceExpression != null)
-                    if (sqlDataSourceReferenceExpression.TryResolveScalarColumn(out var scalarColumn))
-                        return scalarColumn;
+                if (fieldResolver.IsScalar)
+                    return fieldResolver.GetScalarExpression();
+                else if (this.IsLefNode)
+                    // if parameter is selected alone then we don't want to return the SqlQueryShapeFieldResolverExpression
+                    // as it would be difficult to implement everywhere conditions to handle this expression
+                    return fieldResolver.ShapeExpression;
             }
 
-            // either SqlExpression will be a SqlDataSourceReferenceExpression or
-            // SqlDerivedTableExpression
-            return sqlDataSourceReferenceExpression ?? sqlExpression;
+            return sqlExpression;
         }
     }
 }
