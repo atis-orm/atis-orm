@@ -43,7 +43,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     ///         Converter for <see cref="NewExpression"/> instances to SQL expressions.
     ///     </para>
     /// </summary>
-    public class NewExpressionConverter : CompositeBindingExpressionConverterBase<NewExpression>
+    public class NewExpressionConverter : CompositeMemberAssignmentConverterBase<NewExpression>
     {
         /// <summary>
         ///     <para>

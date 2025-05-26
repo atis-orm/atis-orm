@@ -25,14 +25,14 @@ namespace Atis.SqlExpressionEngine.Services
     /// </summary>
     public class LambdaParameterToDataSourceMapper : ILambdaParameterToDataSourceMapper
     {
-        private readonly Dictionary<ParameterExpression, SqlExpression> parameterMap = new Dictionary<ParameterExpression, SqlExpression>();
+        private readonly Dictionary<ParameterExpression, Func<SqlExpression>> parameterMap = new Dictionary<ParameterExpression, Func<SqlExpression>>();
 
         /// <inheritdoc />
-        public bool TrySetParameterMap(ParameterExpression parameterExpression, SqlExpression sqlExpression)
+        public bool TrySetParameterMap(ParameterExpression parameterExpression, Func<SqlExpression> sqlExpressionExtractor)
         {
             if (parameterMap.ContainsKey(parameterExpression))
                 return false;
-            parameterMap[parameterExpression] = sqlExpression;
+            parameterMap[parameterExpression] = sqlExpressionExtractor;
             return true;
         }
 
@@ -42,9 +42,9 @@ namespace Atis.SqlExpressionEngine.Services
         /// <inheritdoc />
         public SqlExpression GetDataSourceByParameterExpression(ParameterExpression parameterExpression)
         {
-            if (!parameterMap.TryGetValue(parameterExpression, out var dataSource))
+            if (!parameterMap.TryGetValue(parameterExpression, out var sqlExpressionExtractor))
                 return null;
-            return dataSource;
+            return sqlExpressionExtractor();
         }
 
         /// <inheritdoc />
@@ -54,5 +54,14 @@ namespace Atis.SqlExpressionEngine.Services
                                         ?? throw new InvalidOperationException($"No parameter found with name '{parameterName}'");
             return GetDataSourceByParameterExpression(parameterExpression);
         }
+
+        //public void UpdateExpression(SqlExpression oldSqlExpression, SqlExpression newSqlExpression)
+        //{
+        //    var matchedKeys = this.parameterMap.Where(x => x.Value == oldSqlExpression).ToArray();
+        //    foreach (var kv in matchedKeys)
+        //    {
+        //        this.parameterMap[kv.Key] = newSqlExpression;
+        //    }
+        //}
     }
 }

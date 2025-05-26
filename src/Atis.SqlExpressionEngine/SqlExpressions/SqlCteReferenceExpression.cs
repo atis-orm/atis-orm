@@ -15,9 +15,14 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         public override SqlExpressionType NodeType => SqlExpressionType.CteReference;
         public Guid CteAlias { get; }
 
-        public override HashSet<ColumnModelPath> GetColumnModelMap()
+        public override SqlDataSourceQueryShapeExpression CreateQueryShape(Guid dataSourceAlias)
         {
             throw new NotImplementedException();
+        }
+
+        protected internal override SqlExpression Accept(SqlExpressionVisitor visitor)
+        {
+            return visitor.VisitSqlCteReference(this);
         }
 
         public override string ToString()

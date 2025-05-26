@@ -40,11 +40,12 @@ namespace Atis.SqlExpressionEngine
                 new MemberInitExpressionConverterFactory(context),
                 new NewExpressionConverterFactory(context),
                 new StringFunctionsConverterFactory(context),
-                new NavigationExpressionConverterFactory(context),
+                new NavigationMemberExpressionConverterFacotry(context),
+                new NavigationJoinCallExpressionConverterFactory(context),
                 new FromQueryMethodExpressionConverterFactory(context),
                 new WhereQueryMethodExpressionConverterFactory(context),
                 new LetLinqKeywordConverterFactory(context),
-                new GroupBySelectMethodCallConverterFactory(context),
+                //new GroupBySelectMethodCallConverterFactory(context),
                 new SelectQueryMethodExpressionConverterFactory(context),
                 new AnyQueryMethodExpressionConverterFactory(context),
                 new SkipQueryMethodExpressionConverterFactory(context),
@@ -75,6 +76,7 @@ namespace Atis.SqlExpressionEngine
                 new DateFunctionsConverterFactory(context), 
                 new ToStringConverterFactory(context),
                 new GetValueOrDefaultConverterFactory(context),
+                new CastQueryMethoExpressionConverterFactory(context),
             };
             this.Factories.AddRange(defaultConverters);
         }

@@ -1,4 +1,5 @@
 ﻿using Atis.SqlExpressionEngine.UnitTest.Metadata;
+using System;
 using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.UnitTest.Tests
@@ -482,6 +483,49 @@ select	a_1.CountryID as CountryId, ConcatAggregate(a_1.StudentType) as StudentTy
 	group by a_1.CountryID
 ";
             Test("GroupBy Concat on GroupBy", q.Expression, expectedResult);
+        }
+
+
+
+        [TestMethod]
+        public void Queryable_Selecting_Grouped_9()
+        {
+            var peopleList = new Queryable<Person>(queryProvider);
+            var shoesList = new Queryable<Shoes>(queryProvider);
+            var q = from Person person1
+                  in from Person person2
+                         in peopleList
+                     select person2
+                    join Shoes shoes
+                        in shoesList
+                        on person1.Age equals shoes.Age
+                    group shoes by
+                        new
+                        {
+                            person1.Id,
+                            shoes.Style,
+                            shoes.Age
+                        }
+                    into temp
+                    select
+                        new
+                        {
+                            temp.Key.Id,
+                            temp.Key.Age,
+                            temp.Key.Style,
+                            Values = from t
+                                            in temp
+                                     select
+                                             new
+                                             {
+                                                 t.Id,
+                                                 t.Style,
+                                                 t.Age,
+                                             }
+                        };
+
+            string? expectedResult = null;
+            Test("Queryable Selecting Grouped Row Test-9", q.Expression, expectedResult);
         }
     }
 }

@@ -62,9 +62,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var derivedTable = convertedChildren[0] as SqlDerivedTableExpression
-                                ??
-                                throw new InvalidOperationException($"The first child of DefaultIfEmpty must be a {nameof(SqlDerivedTableExpression)}.");
+            var derivedTable = convertedChildren[0].CastTo<SqlDerivedTableExpression>();
             return this.SqlFactory.CreateDefaultIfEmpty(derivedTable);
         }
     }

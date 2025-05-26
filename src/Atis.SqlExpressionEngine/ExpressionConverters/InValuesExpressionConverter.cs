@@ -35,14 +35,12 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     /// </summary>
     public class InValuesExpressionConverter : LinqToNonSqlQueryConverterBase<InValuesExpression>
     {
-        private readonly IReflectionService reflectionService;
-
         public InValuesExpressionConverter(IConversionContext context, InValuesExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
-            this.reflectionService = context.GetExtensionRequired<IReflectionService>();
         }
 
+        /// <inheritdoc/>
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
             // child[0] = converted Expression (e.g., x.Department)

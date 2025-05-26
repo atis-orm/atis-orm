@@ -13,16 +13,12 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlDerivedTableExpression ConvertSelectQueryToDeriveTable(SqlSelectExpression selectQuery);
         SqlDerivedTableExpression ConvertSelectQueryToUnwrappableDeriveTable(SqlSelectExpression selectQuery);
         SqlDerivedTableExpression ConvertSelectQueryToDataManipulationDerivedTable(SqlSelectExpression selectQuery);
-        SqlSelectExpression CreateSelectQueryByTable(SqlTableExpression table);
-        SqlSelectExpression CreateSelectQueryByFrom(SqlCompositeBindingExpression dataSources);
-        SqlSelectExpression CreateSelectQueryFromStandaloneSelect(SelectColumn[] selectColumns);
-        SqlSelectExpression CreateSelectQueryFromQuerySource(SqlQuerySourceExpression querySource);
+        SqlSelectExpression CreateSelectQueryFromStandaloneSelect(SqlStandaloneSelectExpression standaloneSelect);
+        SqlSelectExpression CreateSelectQuery(SqlExpression queryShape);
         SqlAliasExpression CreateAlias(string alias);
         SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, SqlExpression[] arguments);
         SqlFunctionCallExpression CreateFunctionCall(string functionName, SqlExpression[] arguments);
         SqlConditionalExpression CreateCondition(SqlExpression test, SqlExpression ifTrue, SqlExpression ifFalse);
-        SqlCompositeBindingExpression CreateCompositeBindingForSingleExpression(SqlExpression sqlExpression, ModelPath modelPath);
-        SqlCompositeBindingExpression CreateCompositeBindingForMultipleExpressions(SqlExpressionBinding[] sqlExpressionBindings);
         SqlDefaultIfEmptyExpression CreateDefaultIfEmpty(SqlDerivedTableExpression derivedTable);
         SqlUnionQueryExpression CreateUnionQuery(UnionItem[] unionItems);
         SqlExistsExpression CreateExists(SqlDerivedTableExpression subQuery);
@@ -40,5 +36,6 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlNotExpression CreateNot(SqlExpression sqlExpression);
         SqlUpdateExpression CreateUpdate(SqlDerivedTableExpression source, Guid dataSourceToUpdate, string[] columns, SqlExpression[] values);
         SqlDeleteExpression CreateDelete(SqlDerivedTableExpression source, Guid dataSourceAlias);
+        SqlExpression CreateJoinCondition(SqlExpression predicateLeft, SqlExpression predicateRight);
     }
 }

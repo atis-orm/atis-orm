@@ -64,19 +64,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
-            SqlCompositeBindingExpression bindings;
-            var selector = arguments[0];
-            if (selector is SqlCompositeBindingExpression b)
-            {
-                bindings = b;
-            }
-            else
-            {
-                bindings = this.SqlFactory.CreateCompositeBindingForSingleExpression(selector, ModelPath.Empty);
-            }
-
-            sqlQuery.ApplyProjection(bindings);
-
+            sqlQuery.ApplyProjection(arguments[0]);
             return sqlQuery;
         }
     }

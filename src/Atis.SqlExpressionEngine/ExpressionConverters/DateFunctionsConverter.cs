@@ -25,6 +25,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
         public DateFunctionsConverterFactory(IConversionContext context) : base(context) { }
 
+        /// <inheritdoc />
         public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
         {
             if (expression is MethodCallExpression methodCall &&

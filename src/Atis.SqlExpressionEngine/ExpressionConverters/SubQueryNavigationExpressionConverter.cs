@@ -62,9 +62,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var sqlQuery = convertedChildren[0] as SqlSelectExpression
-                            ??
-                            throw new InvalidOperationException($"Expected a {nameof(SqlSelectExpression)} but got {convertedChildren[0].GetType().Name}.");
+            var sqlQuery = convertedChildren[0].CastTo<SqlSelectExpression>();
             sqlQuery.Tag = this.Expression.NavigationProperty;
             return sqlQuery;
         }

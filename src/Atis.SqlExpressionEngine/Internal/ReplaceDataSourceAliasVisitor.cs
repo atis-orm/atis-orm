@@ -1,50 +1,42 @@
 ﻿using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
+using System.Collections.Generic;
 
 namespace Atis.SqlExpressionEngine.Internal
 {
     class ReplaceDataSourceAliasVisitor : SqlExpressionVisitor
     {
-        private Guid dataSourceAliasToReplace;
-        private Guid? newDataSourceAlisa;
-        private SqlExpression sqlExpression;
+        private readonly Dictionary<Guid, Guid> aliasMap;
 
-        public ReplaceDataSourceAliasVisitor(Guid dataSourceAliasToReplace, Guid? newDataSourceAlisa)
+        public ReplaceDataSourceAliasVisitor(Dictionary<Guid, Guid> aliasMap)
         {
-            this.dataSourceAliasToReplace = dataSourceAliasToReplace;
-            this.newDataSourceAlisa = newDataSourceAlisa;
+            this.aliasMap = aliasMap ?? throw new ArgumentNullException(nameof(aliasMap));
         }
 
-        public static ReplaceDataSourceAliasVisitor Find(Guid oldDataSourceAlias)
+        public static SqlExpression FindAndReplace(Dictionary<Guid, Guid> aliasMap, SqlExpression sqlExpressionToSearch)
         {
-            return new ReplaceDataSourceAliasVisitor(oldDataSourceAlias, null);
-        }
-
-        public ReplaceDataSourceAliasVisitor In(SqlExpression sqlExpressionToSearch)
-        {
-            this.sqlExpression = sqlExpressionToSearch;
-            return this;
-        }
-
-        public SqlExpression ReplaceWith(Guid newDataSourceAlias)
-        {
-            if (this.sqlExpression is null)
-                throw new InvalidOperationException("The sqlExpression to search is not set.");
-            this.newDataSourceAlisa = newDataSourceAlias;
-            return this.Visit(this.sqlExpression);
-        }
-
-        public static SqlExpression FindAndReplace(Guid oldDataSourceAlias, Guid newDataSourceAlias, SqlExpression sqlExpressionToSearch)
-        {
-            var visitor = new ReplaceDataSourceAliasVisitor(oldDataSourceAlias, newDataSourceAlias);
+            var visitor = new ReplaceDataSourceAliasVisitor(aliasMap);
             return visitor.Visit(sqlExpressionToSearch);
+        }
+
+        protected internal override SqlExpression VisitDataSourceQueryShape(SqlDataSourceQueryShapeExpression node)
+        {
+            var visited = base.VisitDataSourceQueryShape(node);
+            if (visited is SqlDataSourceQueryShapeExpression dsQueryShape)
+            {
+                if (this.aliasMap.TryGetValue(dsQueryShape.DataSourceAlias, out var newAlias))
+                {
+                    visited = new SqlDataSourceQueryShapeExpression(dsQueryShape.ShapeExpression, newAlias);
+                }
+            }
+            return visited;
         }
 
         protected internal override SqlExpression VisitSqlDataSourceColumn(SqlDataSourceColumnExpression node)
         {
-            if (node.DataSourceAlias == this.dataSourceAliasToReplace)
+            if (this.aliasMap.TryGetValue(node.DataSourceAlias, out var newAlias))
             {
-                return new SqlDataSourceColumnExpression(this.newDataSourceAlisa.Value, node.ColumnName);
+                return new SqlDataSourceColumnExpression(newAlias, node.ColumnName);
             }
             return base.VisitSqlDataSourceColumn(node);
         }

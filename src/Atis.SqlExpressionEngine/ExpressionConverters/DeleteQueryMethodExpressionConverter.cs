@@ -2,6 +2,7 @@
 using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
@@ -12,11 +13,13 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
         }
 
+        /// <inheritdoc />
         protected override ExpressionConverterBase<Expression, SqlExpression> CreateConverter(MethodCallExpression methodCallExpression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
         {
             return new DeleteQueryMethodExpressionConverter(this.Context, methodCallExpression, converterStack);
         }
 
+        /// <inheritdoc />
         protected override bool IsQueryMethodCall(MethodCallExpression methodCallExpression)
         {
             return methodCallExpression.Method.Name == nameof(QueryExtensions.Delete) &&
@@ -29,11 +32,14 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
         }
 
+        /// <inheritdoc />
         protected override bool HasTableSelection => this.Expression.Arguments.Count == 3;
 
+        /// <inheritdoc />
         protected override int WherePredicateArgumentIndex => this.Expression.Arguments.Count == 3 ? 2 : 1;
 
-        protected override SqlExpression CreateDmSqlExpression(SqlDerivedTableExpression source, Guid selectedDataSource, SqlExpression[] arguments)
+        /// <inheritdoc />
+        protected override SqlExpression CreateDmSqlExpression(SqlDerivedTableExpression source, Guid selectedDataSource, IReadOnlyList<SqlExpression> arguments)
         {
             var deleteSqlExpression = this.SqlFactory.CreateDelete(source, selectedDataSource);
             return deleteSqlExpression;

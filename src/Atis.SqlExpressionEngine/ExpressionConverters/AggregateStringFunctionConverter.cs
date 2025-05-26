@@ -11,8 +11,11 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
     public class AggregateStringFunctionConverterFactory : LinqToSqlExpressionConverterFactoryBase<MethodCallExpression>
     {
+        private readonly IReflectionService reflectionService;
+
         public AggregateStringFunctionConverterFactory(IConversionContext context) : base(context)
         {
+            this.reflectionService = this.Context.GetExtensionRequired<IReflectionService>();
         }
 
         /// <inheritdoc />
@@ -68,7 +71,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             if (groupArgument is MethodCallExpression selectMethodCallExpression &&
                 selectMethodCallExpression.Method.Name == nameof(Enumerable.Select) &&
                 selectMethodCallExpression.Arguments?.FirstOrDefault() is ParameterExpression groupByParameter &&
-                groupByParameter.Type.IsGenericType && groupByParameter.Type.GetGenericTypeDefinition() == typeof(IGrouping<,>))
+                this.reflectionService.IsGroupingType(groupByParameter.Type))
                 return true;
 
             return false;
@@ -79,6 +82,17 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     {
         public AggregateStringFunctionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack) : base(context, expression, converterStack)
         {
+        }
+
+        public override bool TryCreateChildConverter(Expression childNode, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> childConverter)
+        {
+            if ((this.Expression.Method.Name == nameof(string.Join) && childNode == this.Expression.Arguments[1]) ||
+                (this.Expression.Method.Name == nameof(string.Concat) && childNode == this.Expression.Arguments[0]))
+            {
+                childConverter = new GroupBySelectMethodCallForStringAggregateConverter(this.Context, (MethodCallExpression)childNode, converterStack);
+                return true;
+            }
+            return base.TryCreateChildConverter(childNode, converterStack, out childConverter);
         }
 
         /// <inheritdoc />
@@ -99,6 +113,34 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             }
 
             throw new InvalidOperationException($"Aggregate string function '{this.Expression.Method.Name}' is not supported.");
+        }
+
+
+        private class GroupBySelectMethodCallForStringAggregateConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
+        {
+            public GroupBySelectMethodCallForStringAggregateConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
+            {
+            }
+
+            /// <inheritdoc />
+            public override void OnConversionCompletedByChild(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression childNode, SqlExpression convertedExpression)
+            {
+                // Select(x, y => y.NonGroupingField)
+
+                if (childNode == this.Expression.Arguments[0])      // childNode = x
+                {
+                    var sqlQuery = convertedExpression.CastTo<SqlSelectExpression>();
+
+                    var arg1Param0 = this.Expression.GetArgLambdaParameterRequired(argIndex: 1, paramIndex: 0);
+                    this.MapParameter(arg1Param0, () => sqlQuery.GetQueryShapeForFieldMapping());
+                }
+            }
+
+            /// <inheritdoc />
+            public override SqlExpression Convert(SqlExpression[] convertedChildren)
+            {
+                return convertedChildren[1];
+            }
         }
     }
 }

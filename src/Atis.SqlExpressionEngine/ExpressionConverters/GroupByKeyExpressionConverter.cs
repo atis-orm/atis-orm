@@ -14,6 +14,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     /// </summary>
     public class GroupByKeyExpressionConverterFactory : LinqToSqlExpressionConverterFactoryBase<MemberExpression>
     {
+        private readonly IReflectionService reflectionService;
+
         /// <summary>
         ///     <para>
         ///         Initializes a new instance of the <see cref="GroupByKeyExpressionConverterFactory"/> class.
@@ -22,6 +24,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <param name="context">The conversion context.</param>
         public GroupByKeyExpressionConverterFactory(IConversionContext context) : base(context)
         {
+            this.reflectionService = context.GetExtensionRequired<IReflectionService>();
         }
 
 
@@ -37,8 +40,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             if (memberExpression.Member.Name == "Key")
             {
                 var parentType = memberExpression.Expression.Type;
-                // TODO: see if we can move this part to IReflectionService
-                if (parentType.IsGenericType && parentType.GetGenericTypeDefinition() == typeof(IGrouping<,>))
+                if (this.reflectionService.IsGroupingType(parentType))
                 {
                     return true;
                 }
@@ -51,9 +53,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             if (expression is MemberExpression memberExpr)
             {
-                if (this.IsGroupByKeyMember(memberExpr)
-                    ||
-                    (memberExpr.Expression is MemberExpression parentOfMemberExpr && this.IsGroupByKeyMember(parentOfMemberExpr)))
+                if (this.IsGroupByKeyMember(memberExpr))
                 {
                     converter = new GroupByKeyExpressionConverter(this.Context, memberExpr, converterStack);
                     return true;
@@ -87,40 +87,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override SqlExpression Convert(SqlExpression[] convertedChildren)
         {
-            var child = convertedChildren[0];
-            var sqlQuery = child as SqlSelectExpression
-                            ??
-                            throw new InvalidOperationException($"Expected {nameof(SqlSelectExpression)} on the stack, given type is '{child.GetType()}'.");
-            // Case-1: x.Key
-            // Case-2: x.Key.Name
-            // if we are here it means either of the 2 cases are true
-            var isLeafNode = !(this.ParentConverter is GroupByKeyExpressionConverter);
-
-            if (this.Expression.Member.Name == "Key")
-            {
-                // x.Key
-                //  it means, user has done scalar grouping
-                if (isLeafNode)
-                {
-                    return sqlQuery.ResolveGroupBy(ModelPath.Empty);
-                }
-                else
-                    return sqlQuery;
-            }
-            else if (this.Expression.Expression is MemberExpression parentOfMemberExpr)
-            {
-                if (parentOfMemberExpr.Member.Name == "Key")
-                {
-                    // removing "Key"
-                    var modelPath = this.Expression.GetModelPath().RemoveElementsFromLeft(1);
-                    // x.Key.Field
-                    return sqlQuery.ResolveGroupBy(modelPath)
-                            ??
-                            throw new InvalidOperationException($"Expression '{this.Expression}' is a GroupBy Expression which should return an expression for Key '{this.Expression.Member.Name}', but no value was returned.");
-                }
-            }
-
-            throw new InvalidOperationException($"Expression '{this.Expression}' is a GroupBy Expression which should return an expression for Key '{this.Expression.Member.Name}', but no value was returned.");
+            var sqlQuery = convertedChildren[0].CastTo<SqlSelectExpression>();
+            return sqlQuery.GroupByClause;
         }
     }
 }

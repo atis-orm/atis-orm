@@ -17,12 +17,53 @@ namespace Atis.SqlExpressionEngine.Services
             // because we are testing the NodeType == DerivedTable so it's being used in the reverse order
             => this.ConvertSelectQueryToDeriveTableInternal(selectQuery, SqlExpressionType.UnwrappableDerivedTable);
 
+        private void FlattenSqlExpressions(SqlExpression sqlExpression, List<SqlExpression> sqlExpressions)
+        {
+            if (sqlExpression is SqlMemberInitExpression queryShape)
+            {
+                foreach (var binding in queryShape.Bindings)
+                {
+                    this.FlattenSqlExpressions(binding.SqlExpression, sqlExpressions);
+                }
+            }
+            else
+                sqlExpressions.Add(sqlExpression);
+        }
+
+        private SqlExpression CreateCopyOfQueryShape(SqlExpression queryShape, bool autoProjection)
+        {
+            if (queryShape is null)
+                throw new ArgumentNullException(nameof(queryShape));
+
+            return convert(queryShape);
+
+            SqlExpression convert(SqlExpression sqlExpression)
+            {
+                if (sqlExpression is SqlMemberInitExpression qs)
+                {
+                    IEnumerable<SqlMemberAssignment> bindings = qs.Bindings;
+                    if (!autoProjection)
+                        bindings = bindings.Where(x => x.Projectable);
+                    var newList = bindings.Select(x => new SqlMemberAssignment(x.MemberName, convert(x.SqlExpression), x.Projectable)).ToArray();
+                    return new SqlMemberInitExpression(newList);
+                }
+                else if (sqlExpression is SqlDataSourceQueryShapeExpression dsQueryShape)
+                {
+                    var newShape = convert(dsQueryShape.ShapeExpression);
+                    return new SqlDataSourceQueryShapeExpression(newShape, dsQueryShape.DataSourceAlias);
+                }
+                return sqlExpression;
+            }
+        }
+
         private SqlDerivedTableExpression ConvertSelectQueryToDeriveTableInternal(SqlSelectExpression selectQuery, SqlExpressionType nodeType)
         {
             if (selectQuery is null)
                 throw new ArgumentNullException(nameof(selectQuery));
 
-            selectQuery.ApplyAutoProjection();
+            var autoProjection = selectQuery.SelectList.Count == 0;
+            // we should NOT be modifying the given selectQuery instance
+            // previously we were doing sqlQuery.ApplyAutoProjection()
             var cteDataSources = selectQuery.CteDataSources
                                                 .Select(x => new SqlAliasedCteSourceExpression(x.CteBody, x.CteAlias))
                                                 .ToArray();
@@ -34,24 +75,18 @@ namespace Atis.SqlExpressionEngine.Services
             var joinedDataSources = selectQuery.DataSources
                                                 .Where(x => x is JoinDataSource)
                                                 .Cast<JoinDataSource>()
-                                                .Select(x => new SqlAliasedJoinSourceExpression(x.JoinType, x.QuerySource, x.Alias, x.JoinCondition, x.JoinName, x.IsNavigationJoin, x.NavigationParent))
+                                                .Select(x => new SqlAliasedJoinSourceExpression(x.JoinType, x.QuerySource, x.Alias, x.JoinCondition, x.JoinName, x.IsNavigationJoin))
                                                 .ToArray();
             SqlFilterClauseExpression whereClause = null;
             if (selectQuery.WhereClause.Count > 0)
                 whereClause = new SqlFilterClauseExpression(selectQuery.WhereClause.ToArray(), SqlExpressionType.WhereClause);
             SqlExpression[] groupByClause = null;
-            if (selectQuery.GroupByClause != null)
+            SqlExpression groupClause = selectQuery.GroupByClause != null ? this.CreateCopyOfQueryShape(selectQuery.GroupByClause, autoProjection) : null;
+            if (groupClause != null)
             {
-                var groupByExpressions = new List<SqlExpression>();
-                if (selectQuery.GroupByClause is SqlCompositeBindingExpression be)
-                {
-                    groupByExpressions.AddRange(be.Bindings.Select(x => x.SqlExpression));
-                }
-                else
-                {
-                    groupByExpressions.Add(selectQuery.GroupByClause);
-                }
-                groupByClause = groupByExpressions.ToArray();
+                var groupExpressions = new List<SqlExpression>();
+                this.FlattenSqlExpressions(groupClause, groupExpressions);
+                groupByClause = groupExpressions.ToArray();
             }
             SqlFilterClauseExpression havingClause = null;
             if (selectQuery.HavingClause.Count > 0)
@@ -59,31 +94,50 @@ namespace Atis.SqlExpressionEngine.Services
             SqlOrderByClauseExpression orderByClause = null;
             if (selectQuery.OrderByClause.Count > 0)
                 orderByClause = new SqlOrderByClauseExpression(selectQuery.OrderByClause.ToArray());
-            var selectList = new SqlSelectListExpression(selectQuery.SelectList.ToArray());
+            SqlExpression queryShape;
+            var selectQueryShape = selectQuery.GetQueryShapeForFieldMapping();
+            selectQueryShape = (selectQueryShape as SqlQueryShapeFieldResolverExpression)?.ShapeExpression
+                                ??
+                                selectQueryShape;
+            selectQueryShape = this.CreateCopyOfQueryShape(selectQueryShape, autoProjection);
+            queryShape = selectQueryShape;
+            IReadOnlyList<SelectColumn> columns;
+            if (selectQuery.SelectList.Count > 0)
+                columns = selectQuery.SelectList.Select(x => new SelectColumn(x.ColumnExpression, x.Alias, x.ScalarColumn)).ToArray();
+            else
+            {
+                if (groupClause == null)
+                    columns = ExtensionMethods.ConvertQueryShapeToSelectList(queryShape, applyAll: false);
+                else
+                    columns = ExtensionMethods.ConvertQueryShapeToSelectList(groupClause, applyAll: false);
+            }
+            var selectList = new SqlSelectListExpression(columns);
             var isDistinct = selectQuery.IsDistinct;
             var top = selectQuery.Top;
             var rowOffset = selectQuery.RowOffset;
             var rowsPerPage = selectQuery.RowsPerPage;
-            var autoProjection = selectQuery.AutoProjection;
             var tag = selectQuery.Tag;
 
+
             return new SqlDerivedTableExpression(
-                cteDataSources,
-                fromDataSource,
-                joinedDataSources,
-                whereClause,
-                groupByClause,
-                havingClause,
-                orderByClause,
-                selectList,
-                isDistinct,
-                top,
-                rowOffset,
-                rowsPerPage,
-                autoProjection,
-                tag,
-                nodeType);
+                    cteDataSources,
+                    fromDataSource,
+                    joinedDataSources,
+                    whereClause,
+                    groupByClause,
+                    havingClause,
+                    orderByClause,
+                    selectList,
+                    isDistinct,
+                    top,
+                    rowOffset,
+                    rowsPerPage,
+                    autoProjection,
+                    tag,
+                    queryShape,
+                    nodeType);
         }
+
 
         public SqlAliasExpression CreateAlias(string alias)
         {
@@ -98,18 +152,6 @@ namespace Atis.SqlExpressionEngine.Services
         public SqlLiteralExpression CreateLiteral(object value)
         {
             return new SqlLiteralExpression(value);
-        }
-
-        public SqlSelectExpression CreateSelectQueryByFrom(SqlCompositeBindingExpression dataSources)
-        {
-            if (!(dataSources?.Bindings.Length > 0))
-                throw new ArgumentNullException(nameof(dataSources), "Data sources cannot be null or empty.");
-            return new SqlSelectExpression(cteDataSources: null, compositeBinding: dataSources, sqlFactory: this);
-        }
-
-        public SqlSelectExpression CreateSelectQueryByTable(SqlTableExpression table)
-        {
-            return new SqlSelectExpression(cteDataSources: null, table: table, sqlFactory: this);
         }
 
         public SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, SqlExpression[] arguments)
@@ -127,11 +169,12 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlFunctionCallExpression(functionName, arguments);
         }
 
-        public SqlSelectExpression CreateSelectQueryFromStandaloneSelect(SelectColumn[] selectColumns)
+        public SqlSelectExpression CreateSelectQueryFromStandaloneSelect(SqlStandaloneSelectExpression standaloneSelect)
         {
-            var standaloneSelect = new SqlStandaloneSelectExpression(selectColumns);
-            var compositeBinding = this.CreateCompositeBindingForSingleExpression(standaloneSelect, ModelPath.Empty);
-            var selectSqlQuery = new SqlSelectExpression(cteDataSources: null, compositeBinding: compositeBinding, sqlFactory: this);
+            if (standaloneSelect is null)
+                throw new ArgumentNullException(nameof(standaloneSelect));
+
+            var selectSqlQuery = new SqlSelectExpression(cteDataSources: null, standaloneSelect, sqlFactory: this);
             return selectSqlQuery;
         }
 
@@ -148,87 +191,105 @@ namespace Atis.SqlExpressionEngine.Services
             if (derivedTable.NodeType == SqlExpressionType.DerivedTable && IsDerivedTableUnwrappable(derivedTable))
             {
                 var cteDataSources = derivedTable.CteDataSources
-                                                .Select(x => new CteDataSource(x.CteBody, x.CteAlias))
-                                                .ToArray();
-
-                var selectQuery = new SqlSelectExpression(cteDataSources, derivedTable.FromSource.QuerySource, this);
+                                                    .Select(x => new CteDataSource(x.CteBody, x.CteAlias))
+                                                    .ToArray();
+                var fromSource = derivedTable.FromSource;
+                var selectQuery = new SqlSelectExpression(cteDataSources, fromSource.QuerySource, this);
                 var oldFromAlias = derivedTable.FromSource.Alias;
                 var newFromAlias = selectQuery.DataSources.First().Alias;
-                var aliasMap = new List<(Guid oldAlias, Guid newAlias)>
+                var aliasMap = new Dictionary<Guid, Guid>
                 {
-                    (oldFromAlias, newFromAlias)
+                    { oldFromAlias, newFromAlias }
                 };
-                foreach (var join in derivedTable.Joins.Cast<SqlAliasedJoinSourceExpression>())
+                foreach (var join in derivedTable.Joins)
                 {
-                    SqlDataSourceReferenceExpression navigationParent;
-                    SqlExpression joinedSource = join.QuerySource;
-                    SqlJoinType joinType = join.JoinType;
-                    ModelPath navigationPath = new ModelPath(join.JoinName);
-                    string navigationName = join.JoinName;
-                    Guid? navigationParentAlias;
-                    if (join.NavigationParent == null)
-                    {
-                        navigationParent = selectQuery;
-                        navigationParentAlias = null;
-                    }
-                    else
-                    {
-                        navigationParentAlias = aliasMap.First(x => x.oldAlias == join.NavigationParent.Value).newAlias;
-                        navigationParent = new SqlDataSourceExpression(selectQuery, navigationParentAlias.Value);
-                    }
-                    var joinDataSource = selectQuery.AddNavigationJoin(navigationParent, joinedSource, joinType, navigationPath, navigationName);
-                    var newJoinAlias = joinDataSource.DataSourceAlias;
-                    
-                    var updatedJoinCondition = ReplaceDataSourceAliasVisitor.Find(join.Alias).In(join.JoinCondition).ReplaceWith(newJoinAlias);
-                    updatedJoinCondition = ReplaceDataSourceAliasVisitor.Find(oldFromAlias).In(updatedJoinCondition).ReplaceWith(newFromAlias);
-
-                    selectQuery.UpdateJoin(newJoinAlias, joinType, updatedJoinCondition, navigationName, navigationJoin: true, navigationParent: navigationParentAlias);
-
-                    aliasMap.Add((join.Alias, newJoinAlias));
+                    var updatedQuerySource = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, join.QuerySource) as SqlQuerySourceExpression
+                                            ??
+                                            throw new InvalidOperationException($"Failed to convert {join.QuerySource} to SqlQuerySourceExpression");
+                    var dsQueryShape = selectQuery.AddJoin(updatedQuerySource, join.JoinType);
+                    aliasMap.Add(join.Alias, dsQueryShape.DataSourceAlias);
+                    var joinCondition = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, join.JoinCondition);
+                    selectQuery.UpdateJoin(dsQueryShape.DataSourceAlias, join.JoinType, joinCondition, join.JoinName, join.IsNavigationJoin);
                 }
-                if (derivedTable.WhereClause != null)
+                if (!(derivedTable.WhereClause?.FilterConditions.IsNullOrEmpty() ?? true))
                 {
                     foreach (var filterCondition in derivedTable.WhereClause.FilterConditions)
                     {
-                        SqlExpression updatedFilterCondition = filterCondition.Predicate;
-                        foreach (var (oldAlias, newAlias) in aliasMap)
-                        {
-                            updatedFilterCondition = ReplaceDataSourceAliasVisitor.Find(oldAlias).In(updatedFilterCondition).ReplaceWith(newAlias);
-                        }
+                        var updatedFilterCondition = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, filterCondition.Predicate);
                         selectQuery.ApplyWhere(updatedFilterCondition, filterCondition.UseOrOperator);
                     }
                 }
-                var dataSourceInSelectList = derivedTable.SelectColumnCollection
-                                                        .SelectColumns.GroupBy(x => (x.ColumnExpression as SqlDataSourceColumnExpression)?.DataSourceAlias)                                                        
-                                                        .Select(x => x.Key)
-                                                        .ToArray();
-                if (dataSourceInSelectList.Length == 1 && derivedTable.Joins.Any(y => y.Alias == dataSourceInSelectList[0]))
+                if (!derivedTable.GroupByClause.IsNullOrEmpty())
                 {
-                    // NOTE: we are simply matching if *any* of the joined data source matched
-                    // while we should be picking that join data source and switch to that one 
-                    // instead of just switching to the last data source, but this is because
-                    // we are catering the SelectMany(x => x.NavChildren) where we switch
-                    // to the last added data source, otherwise, for normal navigational joins
-                    // we never switch to last data source
-                    selectQuery.SwitchBindingToLastDataSource();
+                    throw new NotImplementedException();
+                }
+                if (!(derivedTable.HavingClause?.FilterConditions.IsNullOrEmpty() ?? true))
+                {
+                    foreach (var filterCondition in derivedTable.HavingClause.FilterConditions)
+                    {
+                        var updatedFilterCondition = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, filterCondition.Predicate);
+                        selectQuery.ApplyHaving(updatedFilterCondition, filterCondition.UseOrOperator);
+                    }
+                }
+                var orderByColumns = derivedTable.OrderByClause?.OrderByColumns;
+                var orderByColumnsNonAliases = orderByColumns?.Where(x => !(x.ColumnExpression is SqlAliasExpression)).ToArray();
+                var orderByColumnsAliases = orderByColumns?.Where(x => x.ColumnExpression is SqlAliasExpression).ToArray();
+                if (orderByColumnsNonAliases != null)
+                {
+                    foreach (var orderBy in orderByColumnsNonAliases)
+                    {
+                        var updatedOrderBy = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, orderBy.ColumnExpression);
+                        selectQuery.ApplyOrderBy(updatedOrderBy, orderBy.Direction);
+                    }
+                }
+                var updatedQueryShape = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, derivedTable.QueryShape);
+                if (derivedTable.SelectColumnCollection?.SelectColumns.Count > 0 && !derivedTable.AutoProjection)
+                {
+                    if (derivedTable.QueryShape == null)
+                        throw new InvalidOperationException($"derivedTable.QueryShape is null");
+                    selectQuery.ApplyProjection(updatedQueryShape);
+                }
+                else
+                {
+                    selectQuery.UpdateModelBinding(updatedQueryShape);
+                }
+                if (orderByColumnsAliases != null)
+                {
+                    foreach (var orderBy in orderByColumnsAliases)
+                    {
+                        // no need to update since they are all aliases
+                        selectQuery.ApplyOrderBy(orderBy.ColumnExpression, orderBy.Direction);
+                    }
+                }
+                if (derivedTable.RowOffset != null)
+                {
+                    selectQuery.ApplyRowOffset(derivedTable.RowOffset.Value);
+                }
+                if (derivedTable.RowsPerPage != null)
+                {
+                    selectQuery.ApplyRowsPerPage(derivedTable.RowsPerPage.Value);
+                }
+                if (derivedTable.Top != null)
+                {
+                    selectQuery.ApplyTop(derivedTable.Top.Value);
                 }
                 return selectQuery;
             }
-            return new SqlSelectExpression(cteDataSources: null, querySource: derivedTable, sqlFactory: this);
+            return new SqlSelectExpression(cteDataSources: null, derivedTable, sqlFactory: this);
         }
 
-        public SqlSelectExpression CreateSelectQueryFromQuerySource(SqlQuerySourceExpression querySource)
+        public SqlSelectExpression CreateSelectQuery(SqlExpression queryShape)
         {
-            if (querySource is null)
-                throw new ArgumentNullException(nameof(querySource));
+            if (queryShape is null)
+                throw new ArgumentNullException(nameof(queryShape));
 
-            if (querySource.NodeType == SqlExpressionType.DerivedTable && querySource is SqlDerivedTableExpression derivedTable)
+            if (queryShape.NodeType == SqlExpressionType.DerivedTable && queryShape is SqlDerivedTableExpression derivedTable)
             {
                 return this.CreateUnwrappedSelectQueryFromDerivedTable(derivedTable);
             }
             else
             {
-                return new SqlSelectExpression(cteDataSources: null, querySource: querySource, sqlFactory: this);
+                return new SqlSelectExpression(cteDataSources: null, queryShape, sqlFactory: this);
             }
         }
 
@@ -248,17 +309,6 @@ namespace Atis.SqlExpressionEngine.Services
                     derivedTable.IsDistinct == false &&
                     derivedTable.RowOffset == null &&
                     derivedTable.RowsPerPage == null;
-        }
-
-        public SqlCompositeBindingExpression CreateCompositeBindingForSingleExpression(SqlExpression sqlExpression, ModelPath modelPath)
-        {
-            var expressionBinding = new SqlExpressionBinding(sqlExpression, modelPath);
-            return this.CreateCompositeBindingForMultipleExpressions(new[] { expressionBinding });
-        }
-
-        public SqlCompositeBindingExpression CreateCompositeBindingForMultipleExpressions(SqlExpressionBinding[] sqlExpressionBindings)
-        {
-            return new SqlCompositeBindingExpression(sqlExpressionBindings);
         }
 
         public SqlDefaultIfEmptyExpression CreateDefaultIfEmpty(SqlDerivedTableExpression derivedTable)
@@ -344,13 +394,39 @@ namespace Atis.SqlExpressionEngine.Services
         public SqlDerivedTableExpression ConvertSelectQueryToDataManipulationDerivedTable(SqlSelectExpression selectQuery)
         {
             var tempDerivedTable = this.ConvertSelectQueryToDeriveTable(selectQuery);
-            var dmDerivedTable = new SqlDerivedTableExpression(tempDerivedTable.CteDataSources, tempDerivedTable.FromSource, tempDerivedTable.Joins, tempDerivedTable.WhereClause, tempDerivedTable.GroupByClause, tempDerivedTable.HavingClause, tempDerivedTable.OrderByClause, selectColumnCollection: null, tempDerivedTable.IsDistinct, tempDerivedTable.Top, tempDerivedTable.RowOffset, tempDerivedTable.RowsPerPage, tempDerivedTable.AutoProjection, selectQuery.Tag, SqlExpressionType.DataManipulationDerivedTasble);
+            var dmDerivedTable = new SqlDerivedTableExpression(tempDerivedTable.CteDataSources, tempDerivedTable.FromSource, tempDerivedTable.Joins, tempDerivedTable.WhereClause, tempDerivedTable.GroupByClause, tempDerivedTable.HavingClause, tempDerivedTable.OrderByClause, selectColumnCollection: null, tempDerivedTable.IsDistinct, tempDerivedTable.Top, tempDerivedTable.RowOffset, tempDerivedTable.RowsPerPage, tempDerivedTable.AutoProjection, selectQuery.Tag, selectQuery.GetQueryShapeForFieldMapping(), SqlExpressionType.DataManipulationDerivedTable);
             return dmDerivedTable;
         }
 
         public SqlDeleteExpression CreateDelete(SqlDerivedTableExpression source, Guid dataSourceAlias)
         {
             return new SqlDeleteExpression(source, dataSourceAlias);
+        }
+
+        public SqlExpression CreateJoinCondition(SqlExpression leftSide, SqlExpression rightSide)
+        {
+            SqlBinaryExpression joinPredicate = null;
+
+            var leftExpressions = (leftSide as SqlQueryShapeExpression)?.FlattenQueryShape()
+                                    ??
+                                    new[] { leftSide };
+            var rightExpressions = (rightSide as SqlQueryShapeExpression)?.FlattenQueryShape()
+                                    ??
+                                    new[] { rightSide };
+
+
+            if (leftExpressions.Count != rightExpressions.Count)
+                throw new InvalidOperationException($"Source columns count {leftExpressions.Count} does not match other columns count {rightExpressions.Count}.");
+
+            for (var i = 0; i < leftExpressions.Count; i++)
+            {
+                var leftSideExpression = leftExpressions[i];
+                var rightSideExpression = rightExpressions[i];
+                var condition = this.CreateBinary(leftSideExpression, rightSideExpression, SqlExpressionType.Equal);
+                joinPredicate = joinPredicate == null ? condition : this.CreateBinary(joinPredicate, condition, SqlExpressionType.AndAlso);
+            }
+
+            return joinPredicate;
         }
     }
 }

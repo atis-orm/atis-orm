@@ -66,13 +66,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     {
         /// <summary>
         ///     <para>
-        ///         Gets the parameter map for lambda expressions.
-        ///     </para>
-        /// </summary>
-        protected ILambdaParameterToDataSourceMapper ParameterMap { get; }
-
-        /// <summary>
-        ///     <para>
         ///         Initializes a new instance of the <see cref="QueryMethodExpressionConverterBase"/> class.
         ///     </para>
         /// </summary>
@@ -82,7 +75,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         protected QueryMethodExpressionConverterBase(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
-            this.ParameterMap = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
 
         /// <inheritdoc />
@@ -181,7 +173,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
             for (var i = 1; i < this.Expression.Arguments.Count; i++)
             {
-                this.MapLambdaParameter(this.SourceQuery, i);
+                if (this.Expression.TryGetArgLambda(i, out var argLambda))
+                    this.MapLambdaParameter(argLambda);
             }
         }
 
@@ -190,48 +183,22 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         ///         Maps the lambda parameter to the data source for the specified argument index.
         ///     </para>
         /// </summary>
-        /// <param name="sqlQuery">The SQL query to which the parameter is mapped.</param>
-        /// <param name="argIndex">The index of the argument.</param>
-        protected void MapLambdaParameter(SqlSelectExpression sqlQuery, int argIndex)
+        /// <param name="argLambda"></param>
+        protected void MapLambdaParameter(LambdaExpression argLambda)
         {
-            LambdaExpression argLambda = GetArgumentLambda(argIndex);
             if (argLambda?.Parameters.Count > 0)
             {
                 var firstParam = argLambda.Parameters.First();
-                ParameterMap.TrySetParameterMap(firstParam, sqlQuery);
-            }
-        }
-
-        /// <summary>
-        ///     <para>
-        ///         Gets the lambda expression for the specified argument index.
-        ///     </para>
-        /// </summary>
-        /// <param name="argIndex">The index of the argument.</param>
-        /// <returns>The lambda expression for the specified argument index.</returns>
-        protected LambdaExpression GetArgumentLambda(int argIndex)
-        {
-            var arg = this.Expression.Arguments[argIndex];
-            var argLambda = (arg as UnaryExpression)?.Operand as LambdaExpression
-                                                    ??
-                                                    arg as LambdaExpression;
-            return argLambda;
-        }
-
-        /// <inheritdoc />
-        public sealed override void OnAfterVisit()
-        {
-            for(var i = 0; i < this.Expression.Arguments.Count; i++)
-            {
-                var argLambda = this.GetArgumentLambda(i);
-                if (argLambda != null)
+                if (this.ReflectionService.IsGroupingType(firstParam.Type))
                 {
-                    foreach (var param in argLambda.Parameters)
-                    {
-                        ParameterMap.RemoveParameterMap(param);
-                    }
+                    this.MapParameter(firstParam, () => this.SourceQuery);
+                }
+                else
+                {
+                    this.MapParameter(firstParam, () => this.SourceQuery.GetQueryShapeForFieldMapping());
                 }
             }
         }
+
     }
 }

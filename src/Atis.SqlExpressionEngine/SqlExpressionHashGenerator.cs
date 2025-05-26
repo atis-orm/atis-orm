@@ -71,12 +71,6 @@ namespace Atis.SqlExpressionEngine
 
         protected internal override SqlExpression VisitSqlStandaloneSelect(SqlStandaloneSelectExpression node)
         {
-            foreach (var selectItem in node.SelectList)
-            {
-                this.hashCode.Add(selectItem.Alias);
-                this.hashCode.Add(selectItem.ScalarColumn);
-                this.hashCode.Add(selectItem.ModelPath);
-            }
             return base.VisitSqlStandaloneSelect(node);
         }
 
@@ -98,10 +92,6 @@ namespace Atis.SqlExpressionEngine
             this.hashCode.Add(node.JoinName);
             this.hashCode.Add(node.JoinType);
             this.hashCode.Add(node.IsNavigationJoin);
-            if (node.NavigationParent != null)
-                this.hashCode.Add(node.NavigationParent.Value);
-            else
-                this.hashCode.Add(0);
             return base.VisitSqlAliasedJoinSource(node);
         }
 
@@ -116,15 +106,6 @@ namespace Atis.SqlExpressionEngine
             this.hashCode.Add(node.DataSourceAlias);
             this.hashCode.Add(node.ColumnName);
             return base.VisitSqlDataSourceColumn(node);
-        }
-
-        protected internal override SqlExpression VisitSqlCompositeBinding(SqlCompositeBindingExpression node)
-        {
-            foreach (var binding in node.Bindings)
-            {
-                this.hashCode.Add(binding.ModelPath);
-            }
-            return base.VisitSqlCompositeBinding(node);
         }
 
         protected internal override SqlExpression VisitSqlDateAdd(SqlDateAddExpression node)
@@ -166,7 +147,6 @@ namespace Atis.SqlExpressionEngine
             {
                 this.hashCode.Add(selectItem.Alias);
                 this.hashCode.Add(selectItem.ScalarColumn);
-                this.hashCode.Add(selectItem.ModelPath);
             }
             return base.VisitSqlSelectList(node);
         }
@@ -202,6 +182,18 @@ namespace Atis.SqlExpressionEngine
         {
             this.hashCode.Add(node.Comment);
             return base.VisitSqlComment(node);
+        }
+
+        protected internal override SqlExpression VisitSqlFragment(SqlFragmentExpression node)
+        {
+            this.hashCode.Add(node.Fragment);
+            return base.VisitSqlFragment(node);
+        }
+
+        protected internal override SqlExpression VisitDataSourceQueryShape(SqlDataSourceQueryShapeExpression node)
+        {
+            this.hashCode.Add(node.DataSourceAlias);
+            return base.VisitDataSourceQueryShape(node);
         }
     }
 }

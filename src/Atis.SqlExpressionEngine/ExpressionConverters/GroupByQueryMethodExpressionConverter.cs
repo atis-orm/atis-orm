@@ -57,10 +57,28 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
 
         /// <inheritdoc />
+        protected override void OnArgumentConverted(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression argument, SqlExpression converterArgument)
+        {
+            if (argument == this.Expression.Arguments[1])   // group by selector done
+            {
+                if (this.Expression.Arguments.Count > 2)
+                {
+                    var arg2Param0 = this.Expression.GetArgLambdaParameterRequired(argIndex: 2, paramIndex: 0);
+                    this.MapParameter(arg2Param0, () => this.SourceQuery.GetQueryShapeForDataSourceMapping());
+                }
+            }
+            base.OnArgumentConverted(childConverter, argument, converterArgument);
+        }
+
+        /// <inheritdoc />
         protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
             var groupBy = arguments[0];
             sqlQuery.ApplyGroupBy(groupBy);
+            if (arguments.Length > 1)
+            {
+                sqlQuery.UpdateModelBinding(arguments[1]);
+            }
             return sqlQuery;
         }
     }

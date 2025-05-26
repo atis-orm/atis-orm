@@ -1,4 +1,5 @@
 ﻿using Atis.SqlExpressionEngine.SqlExpressions;
+using System;
 using System.Linq.Expressions;
 
 namespace Atis.SqlExpressionEngine.Abstractions
@@ -8,6 +9,7 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlExpression GetDataSourceByParameterExpression(ParameterExpression parameterExpression);
         SqlExpression GetQueryByParameterName(string parameterName);
         void RemoveParameterMap(ParameterExpression parameterExpression);
-        bool TrySetParameterMap(ParameterExpression parameterExpression, SqlExpression sqlExpression);
+        bool TrySetParameterMap(ParameterExpression parameterExpression, Func<SqlExpression> sqlExpressionExtractor);
+        //void UpdateExpression(SqlExpression oldSqlExpression, SqlExpression newSqlExpression);
     }
 }

@@ -1,12 +1,10 @@
-﻿using Atis.Expressions;
-using Atis.SqlExpressionEngine.ExpressionExtensions;
-using Atis.SqlExpressionEngine.Abstractions;
-using Atis.SqlExpressionEngine.SqlExpressions;
-using System;
-using System.Linq;
+﻿using Atis.SqlExpressionEngine.ExpressionExtensions;
 using System.Linq.Expressions;
-using System.Reflection;
+using Atis.Expressions;
+using Atis.SqlExpressionEngine.SqlExpressions;
 using System.Collections.Generic;
+using System.Linq;
+using System;
 
 namespace Atis.SqlExpressionEngine.Preprocessors
 {
@@ -17,174 +15,150 @@ namespace Atis.SqlExpressionEngine.Preprocessors
     /// </summary>
     public abstract class NavigateToOnePreprocessorBase : ExpressionVisitor, IExpressionPreprocessor
     {
-
-        private readonly static MethodInfo createJoinedDataSourceOpenMethodInfo = typeof(NavigateToOnePreprocessorBase).GetMethod(nameof(CreateJoinedDataSourceGen), BindingFlags.NonPublic | BindingFlags.Instance);
-        
-        private readonly IReflectionService reflectionService;
-        private readonly Stack<Expression> expressionsStack = new Stack<Expression>();
-
-        /// <summary>
-        ///     <para>
-        ///         Initializes a new instance of the <see cref="NavigateToOnePreprocessorBase"/> class.
-        ///     </para>
-        /// </summary>
-        /// <param name="reflectionService">The reflection service used for type and property information.</param>
-        public NavigateToOnePreprocessorBase(IReflectionService reflectionService)
+        private class NavigationJoinMetadata
         {
-            this.reflectionService = reflectionService;
+            public NavigationJoinMetadata(Expression queryMethod)
+            {
+                this.QueryMethod = queryMethod ?? throw new ArgumentNullException(nameof(queryMethod));
+                this.Navigations = new Dictionary<string, (LambdaExpression ParentExpression, NavigationInfo NavInfo)>();
+            }
+            public Expression QueryMethod { get; }
+            public Dictionary<string, (LambdaExpression ParentExpression, NavigationInfo NavInfo)> Navigations { get; }
         }
 
+        private readonly Stack<Expression> stack = new Stack<Expression>();
+        private readonly Stack<Expression> queryMethodStack = new Stack<Expression>();
+        private readonly Dictionary<Expression, NavigationJoinMetadata> navigationJoinMetadata = new Dictionary<Expression, NavigationJoinMetadata>();
 
         /// <inheritdoc />
         public void Initialize()
         {
-
+            this.stack.Clear();
+            this.queryMethodStack.Clear();
+            this.navigationJoinMetadata.Clear();
+            this.newNodeVsOldNode.Clear();
         }
 
         /// <inheritdoc />
-        public Expression Preprocess(Expression node)
+        public Expression Preprocess(Expression expression)
         {
-            return this.Visit(node);   
+            this.Initialize();
+            this.flowType = FlowType.Extract;
+            var visited = this.Visit(expression);
+            this.flowType =  FlowType.Inject;
+            visited = this.Visit(visited);
+            return visited;
         }
+
+        private enum FlowType
+        {
+            Extract,
+            Inject,
+        }
+        private FlowType? flowType;
 
         /// <inheritdoc />
         public override Expression Visit(Expression node)
         {
             if (node is null) return null;
 
-            this.expressionsStack.Push(node);
-
-            var updatedNode = base.Visit(node);
-
-            var stack = this.expressionsStack.ToArray();
-            try
+            var wasQueryMethod = false;
+            this.stack.Push(node);
+            if (this.IsQueryMethod(node))
             {
-                if (this.IsNavigation(updatedNode, stack))
+                wasQueryMethod = true;
+                this.queryMethodStack.Push(node);
+            }
+
+            var visited = base.Visit(node);
+
+            if (flowType == FlowType.Extract)
+            {
+                var stackArray = stack.ToArray();
+                if (this.TryGetNavigationInfo(visited, stackArray, out Expression parentExpression, out NavigationInfo navigationInfo))
                 {
-                    // IsNavigation should return true in-case if MemberExpression itself is a navigation
-                    // e.g. NavigationProp().Column             <- should return false
-                    //      x.NavigationProp()                  <- should return true
-                    //      x.NavigationProp                    <- should return true
-                    //      ParentNavigation().NavigationProp() <- should return true
-                    //      ParentNavigation.NavigationProp     <- should return true
-
-                    // this method will be called on the leaf-node which means in the following case
-                    //      x.NavProp1().NavProp2().NavProp3().Column
-                    // we'll land here for x.NavProp1()
-
-                    var navigationInfo = this.GetNavigationInfo(updatedNode, stack);
-
-                    // this should return the parent expression, for example, in-case of
-                    //          x.NavProp1()                            -> should return x
-                    //          ParentNavigation().NavigationProp()     -> should return ParentNavigation()
-                    //          x.NavProp1                              -> should return x
-                    //          ParentNavigation.NavigationProp         -> should return ParentNavigation
-
-                    // however, since this method is being executed from leaf to root, so we'll be converting
-                    // each expression and we'll be getting the NavigationExpression as parent in later cases,
-                    // for example, x.NavProp1() is converted to a NavigationExpression, so when we'll reach
-                    // to node = NavProp1().NavProp2(), it will be received here as node = ->NavProp1->NavProp2()
-
-                    Expression sourceExpression = this.GetParentExpression(updatedNode, stack);
-                    string navigationProperty = this.GetNavigationPropertyName(updatedNode, stack);
-                    Expression joinedDataSource = navigationInfo.JoinedSource ?? this.CreateJoinedDataSource(updatedNode.Type);
-                    var joinedDataSourceType = this.GetJoinedDataSourceType(joinedDataSource);
-                    LambdaExpression joinCondition = null;
-                    if (navigationInfo.JoinCondition != null)
-                        joinCondition = this.CreateJoinCondition(sourceExpression, navigationInfo.JoinCondition, navigationInfo.NavigationType);
-                    SqlJoinType joinType = this.GetJoinType(navigationInfo);
-                    if (joinType == SqlJoinType.Inner)                                      // if new join is inner
-                    {
-                        if (sourceExpression is NavigationExpression parentNavigation)      // if parent is also a navigation
-                        {
-                            if (parentNavigation.SqlJoinType == SqlJoinType.Left || parentNavigation.SqlJoinType == SqlJoinType.OuterApply)
-                            {
-                                joinType = SqlJoinType.Left;
-                            }
-                        }
-                    }
-                    var navigationExpression = new NavigationExpression(sourceExpression, navigationProperty, joinedDataSource, joinedDataSourceType, joinCondition, joinType);
-                    return navigationExpression;
+                    var joinedDataSourceType = node.Type;
+                    this.CreateMetadataForNavigationJoin(parentExpression, navigationInfo);
+                    visited = new NavigationMemberExpression(parentExpression, navigationInfo.PropertyName, joinedDataSourceType);
                 }
-                return updatedNode;
             }
-            finally
+            else if (flowType ==  FlowType.Inject)
             {
-                this.expressionsStack.Pop();
+                if (this.newNodeVsOldNode.TryGetValue(node, out var oldNode))
+                {
+                    if (this.navigationJoinMetadata.TryGetValue(oldNode, out NavigationJoinMetadata navigationJoinMetadata))
+                    {
+                        visited = this.WrapFirstArgInNavigationJoinCall(navigationJoinMetadata, visited);
+                        // since we are exiting the query method so we no longer need to keep
+                        // the method's meta data in the dictionary
+                        this.navigationJoinMetadata.Remove(oldNode);
+                    }
+                }
             }
+            this.stack.Pop();
+            if (wasQueryMethod)
+            {
+                this.queryMethodStack.Pop();
+            }
+
+            if (flowType == FlowType.Extract)
+            {
+                // map node with visited
+                newNodeVsOldNode[visited] = node;
+            }
+
+            return visited;
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Gets the type of the joined data source.
-        ///     </para>
-        /// </summary>
-        /// <param name="joinedDataSource">The joined data source expression.</param>
-        /// <returns>The type of the joined data source.</returns>
-        protected virtual Type GetJoinedDataSourceType(Expression joinedDataSource)
+        private readonly Dictionary<Expression, Expression> newNodeVsOldNode = new Dictionary<Expression, Expression>();
+
+        protected abstract bool IsQueryMethod(Expression node);
+        protected abstract bool TryGetNavigationInfo(Expression node, IReadOnlyCollection<Expression> stackArray, out Expression parentExpression, out NavigationInfo navigationInfo);
+        protected abstract bool DoesParameterBelongToQueryMethod(ParameterExpression parameter, Expression queryMethod);
+        protected abstract Expression GetQuerySourceArgumentFromQueryMethod(Expression queryMethod);
+        protected abstract Expression CreateQueryMethodCall(Expression oldQueryMethodNode, Expression wrappedQuerySourceArg);
+        protected abstract IQueryProvider GetQueryProvider();
+        protected abstract Type GetEnumerableEntityType(Type enumerableType);
+        protected abstract bool TryExtractQueryMethodInjectionPoint(ParameterExpression parameterExpression, Expression parentExpression, NavigationInfo navigationInfo, out LambdaExpression parentExpressionLambda, out Expression queryMethod);
+
+
+
+        private Expression WrapFirstArgInNavigationJoinCall(NavigationJoinMetadata navigationMetadata, Expression queryMethodNode)
         {
-            return this.reflectionService.GetEntityTypeFromQueryableType(joinedDataSource.Type);
+            var querySourceArgument = this.GetQuerySourceArgumentFromQueryMethod(queryMethodNode)
+                                        ??
+                                        throw new InvalidOperationException($"Query Source Argument was not extracted from queryMethodNode '{queryMethodNode}'");
+            var querySourceEntityType = this.GetEnumerableEntityType(querySourceArgument.Type)
+                                            ??
+                                            throw new InvalidOperationException($"Query Source Entity Type was not extracted from querySourceArgument '{querySourceArgument}'");
+            var wrappedQuerySource = querySourceArgument;
+            var i = 0;
+            var navigations = navigationMetadata.Navigations.Values.ToArray();
+            foreach (var navigation in navigations)
+            {
+                var navigationProperty = navigation.NavInfo.PropertyName;
+                var joinedDataSource = navigation.NavInfo.JoinedSource
+                                        ??
+                                        throw new InvalidOperationException($"JoinedSource property is null");
+                var joinCondition = navigation.NavInfo.JoinCondition;
+                var sqlJoinType = this.GetJoinType(navigation.NavInfo);
+                if (i > 0 && sqlJoinType == SqlJoinType.Inner)                                      // if new join is inner
+                {
+                    var parentNavigation = navigations[i - 1];
+                    var parentNavigationSqlJoinType = this.GetJoinType(parentNavigation.NavInfo);
+                    if (parentNavigationSqlJoinType == SqlJoinType.Left || parentNavigationSqlJoinType == SqlJoinType.OuterApply)
+                    {
+                        sqlJoinType = SqlJoinType.Left;
+                    }
+                }
+                wrappedQuerySource = new NavigationJoinCallExpression(wrappedQuerySource, navigation.ParentExpression, navigationProperty, joinedDataSource, joinCondition, sqlJoinType, navigation.NavInfo.NavigationType);
+                i++;
+            }
+            var updatedQueryMethodCall = this.CreateQueryMethodCall(queryMethodNode, wrappedQuerySource);
+            return updatedQueryMethodCall;
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Creates the join condition for the navigation.
-        ///     </para>
-        /// </summary>
-        /// <param name="sourceExpression">The source expression.</param>
-        /// <param name="joinCondition">The join condition expression.</param>
-        /// <param name="navigationType">The type of navigation.</param>
-        /// <returns>A lambda expression representing the join condition.</returns>
-        protected virtual LambdaExpression CreateJoinCondition(Expression sourceExpression, LambdaExpression joinCondition, NavigationType navigationType)
-        {
-            // joinCondition will be like this
-            //   (parent, child) => parent.PK == child.FK
-            // if NavigationType = ToChild
-            //      then it means it's 1 to 1 relation and sourceExpression = parent
-            //     e.g. itemBase => itemBase.NavItemExtension().Category
-            //              ItemBase = parent, NavItemExtension = Navigation from ItemBase to ItemExtension (child)
-            //              NavItemExtension.JoinCondition will be (itemBase, itemExtension) => itemBase.ItemId == itemExtension.ItemId
-            //
-            //          We'll replace `parent` (itemBase) with sourceExpression and remove `parent` from Lambda
-            //
-            // if NavigationType = ToParent
-            //      then it means it's many to 1 relation and sourceExpression = child
-            //     e.g. invoiceDetail => invoiceDetail.NavInvoice().InvoiceNum
-            //              InvoiceDetail = child, NavInvoice = Navigation from InvoiceDetail to Invoice (parent)
-            //              NavInvoice.JoinCondition will be (invoice, invoiceDetail) => invoice.InvoiceId == invoiceDetail.InvoiceId
-            //
-            //          We'll replace `child` (invoiceDetail) with sourceExpression and remove `child` from Lambda
-
-            if (joinCondition.Parameters.Count != 2)
-                throw new NotSupportedException("Join condition should have exactly 2 parameters.");
-
-            ParameterExpression parameterToReplace;
-            ParameterExpression parameterToUse;
-            if (navigationType == NavigationType.ToSingleChild)
-            {
-                parameterToReplace = joinCondition.Parameters[0];
-                parameterToUse = joinCondition.Parameters[1];
-            }
-            else if (navigationType == NavigationType.ToParent || navigationType == NavigationType.ToParentOptional)
-            {
-                parameterToReplace = joinCondition.Parameters[1];
-                parameterToUse = joinCondition.Parameters[0];
-            }
-            else
-                throw new InvalidOperationException($"Navigation type '{navigationType}' is not supported.");
-
-            var newJoinConditionBody = ExpressionReplacementVisitor.Replace(parameterToReplace, sourceExpression, joinCondition.Body);
-            return Expression.Lambda(newJoinConditionBody, parameterToUse);
-        }
-
-        /// <summary>
-        ///     <para>
-        ///         Gets the type of join to be used for the navigation.
-        ///     </para>
-        /// </summary>
-        /// <param name="navigationInfo">The navigation information.</param>
-        /// <returns>The type of join to be used.</returns>
-        protected virtual SqlJoinType GetJoinType(NavigationInfo navigationInfo)
+        private SqlJoinType GetJoinType(NavigationInfo navigationInfo)
         {
 
             SqlJoinType joinType;
@@ -207,84 +181,55 @@ namespace Atis.SqlExpressionEngine.Preprocessors
             return joinType;
         }
 
-        /// <summary>
-        ///     <para>
-        ///         Gets the name of the navigation property.    
-        ///     </para>
-        /// </summary>
-        /// <param name="currentNode">The current expression node.</param>
-        /// <param name="expressionStack">The stack of parent expressions.</param>
-        /// <returns>The name of the navigation property.</returns>
-        protected abstract string GetNavigationPropertyName(Expression currentNode, Expression[] expressionStack);
-
-        /// <summary>
-        ///     <para>
-        ///         Gets the parent expression of the current node.
-        ///     </para>
-        /// </summary>
-        /// <remarks>
-        ///     <para>
-        ///         For example, if currentNode is <c>x.NavProp</c>, then the parent expression is <c>x</c>.
-        ///     </para>
-        /// </remarks>
-        /// <param name="currentNode">The current expression node.</param>
-        /// <param name="expressionStack">The stack of parent expressions.</param>
-        /// <returns>The parent expression.</returns>
-        protected abstract Expression GetParentExpression(Expression currentNode, Expression[] expressionStack);
-
-        /// <summary>
-        ///     <para>
-        ///         Gets the navigation information for the current node.
-        ///     </para>
-        /// </summary>
-        /// <param name="currentNode">The current expression node.</param>
-        /// <param name="expressionStack">The stack of parent expressions.</param>
-        /// <returns>The navigation information.</returns>
-        protected abstract NavigationInfo GetNavigationInfo(Expression currentNode, Expression[] expressionStack);
-
-        /// <summary>
-        ///     <para>
-        ///         Determines whether the current node represents a navigation.
-        ///     </para>
-        /// </summary>
-        /// <param name="currentNode">The current expression node.</param>
-        /// <param name="expressionStack">The stack of parent expressions.</param>
-        /// <returns><c>true</c> if the current node represents a navigation; otherwise, <c>false</c>.</returns>
-        protected abstract bool IsNavigation(Expression currentNode, Expression[] expressionStack);
-
-        /// <summary>
-        ///     <para>
-        ///         Gets the query provider for the current context.
-        ///     </para>
-        /// </summary>
-        /// <returns>The query provider.</returns>
-        protected abstract IQueryProvider GetQueryProvider();
-
-        /// <summary>
-        ///     <para>
-        ///         Creates a joined data source expression for the specified parent type.
-        ///     </para>
-        /// </summary>
-        /// <param name="parentType">The type of the parent entity.</param>
-        /// <returns>The joined data source expression.</returns>
-        protected virtual Expression CreateJoinedDataSource(Type parentType)
+        private void CreateMetadataForNavigationJoin(Expression parentExpression, NavigationInfo navigationInfo)
         {
-            // here we will create the CreateJoinedDataSource<TParent>()
-            var closedMethodInfo = createJoinedDataSourceOpenMethodInfo.MakeGenericMethod(parentType);
-            // now we will call the method to get CreateJoinedDataSource
-            var dataSourceExpression = (Expression)closedMethodInfo.Invoke(this, Array.Empty<object>());
-            return dataSourceExpression;
+            ParameterExpression parameterExpression = this.ExtractParameter(parentExpression);
+            
+            if (parameterExpression is null)
+                throw new InvalidOperationException($"{nameof(parameterExpression)} is null");      // should never happen
+
+            if (this.TryExtractQueryMethodInjectionPoint(parameterExpression, parentExpression, navigationInfo, out LambdaExpression parentExpressionLambda, out Expression queryMethod))
+            {
+                var parentExpressionBody = parentExpressionLambda.Body;
+                var navigationKey = $"{parentExpressionBody}.{navigationInfo.PropertyName}";
+                if (!this.navigationJoinMetadata.TryGetValue(queryMethod, out var navigationJoinMetadata))
+                {
+                    navigationJoinMetadata = new NavigationJoinMetadata(queryMethod);
+                    this.navigationJoinMetadata.Add(queryMethod, navigationJoinMetadata);
+                }
+                if (navigationJoinMetadata.Navigations.Count == 0 || !navigationJoinMetadata.Navigations.ContainsKey(navigationKey))
+                {
+                    navigationJoinMetadata.Navigations.Add(navigationKey, (parentExpressionLambda, navigationInfo));
+                }
+            }
         }
 
-        /// <summary>
-        /// Creates a joined data source expression for the specified parent type.
-        /// </summary>
-        /// <typeparam name="TParent">The type of the parent entity.</typeparam>
-        /// <returns>The joined data source expression.</returns>
-        private Expression CreateJoinedDataSourceGen<TParent>()
+        protected virtual bool TryGetQueryMethodFromParameter(ParameterExpression parameterExpression, out Expression queryMethod)
         {
-            var q = this.GetQueryProvider().DataSet<TParent>();
-            return q.Expression;
+            if (this.queryMethodStack.Count > 0)
+            {
+                foreach (var method in this.queryMethodStack)
+                {
+                    if (this.DoesParameterBelongToQueryMethod(parameterExpression, method))
+                    {
+                        queryMethod = method;
+                        return true;
+                    }
+                }
+            }
+            queryMethod = null;
+            return false;
+        }
+
+        protected virtual ParameterExpression ExtractParameter(Expression expression)
+        {
+            if (expression is NavigationMemberExpression navMember)
+                return this.ExtractParameter(navMember.Expression);
+            else if (expression is MemberExpression memberExpression)
+                return this.ExtractParameter(memberExpression.Expression);
+            else if (expression is ParameterExpression parameterExpression)
+                return parameterExpression;
+            throw new InvalidOperationException($"{nameof(expression)} does not contain {nameof(ParameterExpression)}");
         }
     }
 }

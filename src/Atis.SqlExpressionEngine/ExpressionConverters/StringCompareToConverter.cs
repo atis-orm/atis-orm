@@ -16,6 +16,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         {
         }
 
+        /// <inheritdoc />
         public override bool TryCreate(Expression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack, out ExpressionConverterBase<Expression, SqlExpression> converter)
         {
             if (expression is BinaryExpression binaryExpression &&
@@ -67,9 +68,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             if (convertedChildren.Length < 2)
                 throw new InvalidOperationException("String comparison was not correct, should have at-least 2 conversions.");
 
-            var collection = convertedChildren[0] as SqlCollectionExpression
-                                ?? 
-                                throw new InvalidOperationException("String comparison was not correct, left hand side should be a collection of expressions.");
+            var collection = convertedChildren[0].CastTo<SqlCollectionExpression>("String comparison was not correct, left hand side should be a collection of expressions.");
             if (!(collection.SqlExpressions?.Count() >= 2))
                 throw new InvalidOperationException("Left-hand side must have at least two string expressions.");
 

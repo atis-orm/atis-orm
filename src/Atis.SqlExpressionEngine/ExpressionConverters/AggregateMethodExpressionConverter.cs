@@ -46,9 +46,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     /// </summary>
     public class AggregateMethodExpressionConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
-        private readonly ILambdaParameterToDataSourceMapper parameterMap;
-        private ParameterExpression lambdaParameterMapped;
-
         /// <summary>
         ///     <para>
         ///         Initializes a new instance of the <see cref="AggregateMethodExpressionConverter"/> class.
@@ -60,7 +57,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public AggregateMethodExpressionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
-            this.parameterMap = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
 
         private SqlSelectExpression sourceQuery;
@@ -69,7 +65,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <inheritdoc />
         public override void OnConversionCompletedByChild(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression childNode, SqlExpression convertedExpression)
         {
-            if (this.Expression.Arguments.FirstOrDefault() == childNode)    // if 1st arg was converted
+            if (this.Expression.Arguments[0] == childNode)    // if 1st arg was converted
             {
                 if (convertedExpression is SqlSelectExpression q)
                 {
@@ -78,26 +74,17 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                 }
                 else if (convertedExpression is SqlDerivedTableExpression d)
                 {
-                    this.sourceQuery = this.SqlFactory.CreateSelectQueryFromQuerySource(d);
+                    this.sourceQuery = this.SqlFactory.CreateSelectQuery(d);
                     applyProjection = true;
                 }
                 else
                     throw new InvalidOperationException($"Expected a {nameof(SqlSelectExpression)} or {nameof(SqlDerivedTableExpression)} but got {convertedExpression.GetType().Name}.");
 
                 // mapping given query with next Lambda Parameter (if available)
-                if(this.Expression.TryGetArgLambdaParameter(argIndex: 1, paramIndex: 0, out this.lambdaParameterMapped))
+                if (this.Expression.TryGetArgLambdaParameter(argIndex: 1, paramIndex: 0, out var arg1Param0))
                 {
-                    this.parameterMap.TrySetParameterMap(this.lambdaParameterMapped, this.sourceQuery);
+                    this.MapParameter(arg1Param0, () => this.sourceQuery.GetQueryShapeForFieldMapping());
                 }
-            }
-        }
-
-        /// <inheritdoc/>
-        public override void OnAfterVisit()
-        {
-            if (this.lambdaParameterMapped != null)
-            {
-                this.parameterMap.RemoveParameterMap(this.lambdaParameterMapped);
             }
         }
 
@@ -114,8 +101,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             var functionCallExpression = this.SqlFactory.CreateFunctionCall(this.Expression.Method.Name, methodArguments);
             if (applyProjection)
             {
-                var compositeBinding = this.SqlFactory.CreateCompositeBindingForSingleExpression(functionCallExpression, ModelPath.Empty);
-                this.sourceQuery.ApplyProjection(compositeBinding);
+                this.sourceQuery.ApplyProjection(functionCallExpression);
                 result = this.SqlFactory.ConvertSelectQueryToDeriveTable(sourceQuery);
             }
             else

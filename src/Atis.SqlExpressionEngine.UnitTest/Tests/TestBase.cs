@@ -6,6 +6,8 @@ using Atis.SqlExpressionEngine.UnitTest.Converters;
 
 //using Atis.SqlExpressionEngine.UnitTest.Converters;
 using Atis.SqlExpressionEngine.UnitTest.Preprocessors;
+using Atis.SqlExpressionEngine.UnitTest.Services;
+
 //using Atis.SqlExpressionEngine.UnitTest.Services;
 using System.Linq.Expressions;
 using Model = Atis.SqlExpressionEngine.UnitTest.Services.Model;
@@ -25,56 +27,69 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         #region base methods
         protected void Test(string testHeading, Expression queryExpression, string? expectedResult)
         {
-            SqlExpression? result = this.ConvertExpressionToSqlExpression(queryExpression, out var updatedQueryExpression, out var err);
+            SqlExpression? result = null;
+            Expression updatedQueryExpression = queryExpression;
+
+            try
+            {
+                result = ConvertExpressionToSqlExpression(queryExpression, out updatedQueryExpression);
+            }
+            catch
+            {
+                printExpressions();
+                throw;
+            }
+
             string? resultQuery = null;
             if (result != null)
             {
-                var translator = new SqlExpressionTranslator();
+                var translator = new SqlExpressionTranslator()
+                {
+                    IsRowNumberSupported = false,
+                };
                 resultQuery = translator.Translate(result);
                 Console.WriteLine($"+++++++++++++++++++++++++ {testHeading} ++++++++++++++++++++++++");
                 Console.WriteLine(resultQuery);
                 Console.WriteLine("-----------------------------------------------------------------");
             }
-            Console.WriteLine("Original Expression:");
-            Console.WriteLine(ExpressionPrinter.PrintExpression(queryExpression));
-            Console.WriteLine("Expression after Preprocessing:");
-            Console.WriteLine(ExpressionPrinter.PrintExpression(updatedQueryExpression));
-            if (err != null)
-                throw err;
+
+            printExpressions();
+
             if (expectedResult != null && resultQuery != null)
             {
                 ValidateQueryResults(resultQuery, expectedResult);
             }
+
+
+            void printExpressions()
+            {
+                Console.WriteLine("Original Expression:");
+                Console.WriteLine(ExpressionPrinter.PrintExpression(queryExpression));
+                Console.WriteLine("Expression after Preprocessing:");
+                Console.WriteLine(ExpressionPrinter.PrintExpression(updatedQueryExpression));
+            }
+
         }
 
-        private SqlExpression? ConvertExpressionToSqlExpression(Expression queryExpression, out Expression updatedQueryExpression, out Exception? err)
+        private SqlExpression? ConvertExpressionToSqlExpression(Expression queryExpression, out Expression updatedQueryExpression)
         {
             updatedQueryExpression = PreprocessExpression(queryExpression);
 
-            //var componentIdentifier = new QueryComponentIdentifier();
             var model = new Model();
             var sqlDataTypeFactory = new SqlDataTypeFactory();
             var reflectionService = new ReflectionService(new ExpressionEvaluator());
             var parameterMapper = new LambdaParameterToDataSourceMapper();
             var sqlFactory = new SqlExpressionFactory();
-            var contextExtensions = new object[] { sqlDataTypeFactory, sqlFactory, model, parameterMapper, reflectionService};
+            var logger = new Logger();
+            var contextExtensions = new object[] { sqlDataTypeFactory, sqlFactory, model, parameterMapper, reflectionService, logger };
             var conversionContext = new ConversionContext(contextExtensions);
             var expressionConverterProvider = new LinqToSqlExpressionConverterProvider(conversionContext, factories: [new SqlFunctionConverterFactory(conversionContext)]);
-            var postProcessorProvider = new SqlExpressionPostprocessorProvider(postprocessors: [/*new ExistsBooleanComparisonPostprocessor()*/]);
+            var postProcessorProvider = new SqlExpressionPostprocessorProvider(postprocessors: []);
             var linqToSqlConverter = new LinqToSqlConverter(reflectionService, expressionConverterProvider, postProcessorProvider);
-            try
-            {
-                var result = linqToSqlConverter.Convert(updatedQueryExpression);
-                err = null;
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                err = ex;
-                return null;
-            }
+
+            return linqToSqlConverter.Convert(updatedQueryExpression); // Let exception bubble up
         }
+
 
         protected Expression PreprocessExpression(Expression expression)
         {
@@ -83,7 +98,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var queryProvider = new QueryProvider();
             var reflectionService = new ReflectionService(new ExpressionEvaluator());
             var navigateToManyPreprocessor = new NavigateToManyPreprocessor(queryProvider, reflectionService);
-            var navigateToOnePreprocessor = new NavigateToOnePreprocessor(queryProvider, reflectionService);
+            var navigateToOnePreprocessor = new NavigateToOnePreprocessor(reflectionService, queryProvider);
             var queryVariablePreprocessor = new QueryVariableReplacementPreprocessor();
             //var childJoinReplacementPreprocessor = new ChildJoinReplacementPreprocessor(reflectionService);
             var calculatedPropertyReplacementPreprocessor = new CalculatedPropertyPreprocessor(reflectionService);

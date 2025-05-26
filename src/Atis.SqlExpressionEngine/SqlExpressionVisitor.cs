@@ -1,6 +1,7 @@
 ﻿using Atis.SqlExpressionEngine.SqlExpressions;
 using System;
 using System.Collections.Generic;
+using System.Xml.Linq;
 
 namespace Atis.SqlExpressionEngine
 {
@@ -103,23 +104,8 @@ namespace Atis.SqlExpressionEngine
 
         protected virtual internal SqlExpression VisitSqlStandaloneSelect(SqlStandaloneSelectExpression node)
         {
-            var selectList = new List<SelectColumn>();
-            if (node.SelectList != null)
-            {
-                foreach (var selectColumn in node.SelectList)
-                {
-                    var newSelectColumn = Visit(selectColumn.ColumnExpression);
-                    if (newSelectColumn != selectColumn.ColumnExpression)
-                    {
-                        selectList.Add(new SelectColumn(newSelectColumn, selectColumn.Alias, selectColumn.ModelPath, selectColumn.ScalarColumn));
-                    }
-                    else
-                    {
-                        selectList.Add(selectColumn);
-                    }
-                }
-            }
-            return node.Update(selectList.ToArray());
+            var queryShape = this.Visit(node.QueryShape);
+            return node.Update(queryShape);
         }
 
         protected virtual internal SqlExpression VisitSqlLiteral(SqlLiteralExpression node)
@@ -135,25 +121,6 @@ namespace Atis.SqlExpressionEngine
         protected virtual internal SqlExpression VisitSqlAlias(SqlAliasExpression node)
         {
             return node;
-        }
-
-        protected virtual internal SqlExpression VisitSqlCompositeBinding(SqlCompositeBindingExpression node)
-        {
-            var newBindings = new List<SqlExpressionBinding>();
-            for (var i = 0; i < node.Bindings.Length; i++)
-            {
-                var binding = node.Bindings[i];
-                var visitedSqlExpression = Visit(binding.SqlExpression);
-                if (visitedSqlExpression != binding.SqlExpression)
-                {
-                    newBindings.Add(new SqlExpressionBinding(visitedSqlExpression, binding.ModelPath));
-                }
-                else
-                {
-                    newBindings.Add(binding);
-                }
-            }
-            return node.Update(newBindings.ToArray());
         }
 
         protected virtual internal SqlExpression VisitSqlStringFunction(SqlStringFunctionExpression node)
@@ -213,7 +180,7 @@ namespace Atis.SqlExpressionEngine
                 var newSelectColumn = Visit(selectColumn.ColumnExpression);
                 if (newSelectColumn != selectColumn.ColumnExpression)
                 {
-                    newColumnList.Add(new SelectColumn(newSelectColumn, selectColumn.Alias, selectColumn.ModelPath, selectColumn.ScalarColumn));
+                    newColumnList.Add(new SelectColumn(newSelectColumn, selectColumn.Alias, selectColumn.ScalarColumn));
                 }
                 else
                 {
@@ -391,6 +358,46 @@ namespace Atis.SqlExpressionEngine
         protected virtual internal SqlExpression VisitSqlComment(SqlCommentExpression node)
         {
             return node;
+        }
+
+        protected virtual internal SqlExpression VisitSqlFragment(SqlFragmentExpression node)
+        {
+            return node;
+        }
+
+        protected virtual internal SqlExpression VisitSqlCteReference(SqlCteReferenceExpression node)
+        {
+            return node;
+        }
+
+        private IReadOnlyList<SqlMemberAssignment> CreateMemberAssignmentList(IReadOnlyCollection<SqlMemberAssignment> bindings)
+        {
+            var newList = new List<SqlMemberAssignment>();
+            foreach (var binding in bindings)
+            {
+                var newBinding = Visit(binding.SqlExpression);
+                if (newBinding != binding.SqlExpression)
+                {
+                    newList.Add(new SqlMemberAssignment(binding.MemberName, newBinding));
+                }
+                else
+                {
+                    newList.Add(binding);
+                }
+            }
+            return newList;
+        }
+
+        protected virtual internal SqlExpression VisitSqlMemberInit(SqlMemberInitExpression node)
+        {
+            var newList = this.CreateMemberAssignmentList(node.Bindings);
+            return node.Update(newList);
+        }
+
+        protected virtual internal SqlExpression VisitDataSourceQueryShape(SqlDataSourceQueryShapeExpression node)
+        {
+            var shapeExpression = this.Visit(node.ShapeExpression);
+            return node.Update(shapeExpression);
         }
     }
 }

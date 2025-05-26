@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Atis.SqlExpressionEngine.SqlExpressions
@@ -13,14 +14,12 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="selectList"></param>
+        /// <param name="projection"></param>
         /// <exception cref="ArgumentNullException"></exception>
-        public SqlStandaloneSelectExpression(SelectColumn[] selectList)
+        public SqlStandaloneSelectExpression(SqlExpression projection)
         {
-            if (!(selectList?.Length > 0))
-                throw new ArgumentNullException(nameof(selectList));
-
-            this.SelectList = selectList;
+            this.QueryShape = projection ?? throw new ArgumentNullException(nameof(projection));
+            this.SelectList = ExtensionMethods.ConvertQueryShapeToSelectList(this.QueryShape, applyAll: true);
         }
 
         /// <inheritdoc />
@@ -29,13 +28,22 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <summary>
         /// 
         /// </summary>
-        public SelectColumn[] SelectList { get; }
+        public SqlExpression QueryShape { get; }
+        public IReadOnlyList<SelectColumn> SelectList { get; }
 
-        /// <inheritdoc />
-        public override HashSet<ColumnModelPath> GetColumnModelMap()
+        public override SqlDataSourceQueryShapeExpression CreateQueryShape(Guid dataSourceAlias)
         {
-            return new HashSet<ColumnModelPath>(this.SelectList.Select(x => new ColumnModelPath(x.Alias, x.ModelPath)));
+            if (this.SelectList.Count == 1 &&
+                this.SelectList[0].ScalarColumn)
+                return new SqlDataSourceQueryShapeExpression(new SqlDataSourceColumnExpression(dataSourceAlias, this.SelectList[0].Alias), dataSourceAlias);
+
+            var memberInit = this.QueryShape as SqlMemberInitExpression
+                                ??
+                                throw new InvalidOperationException($"QueryShape type '{this.QueryShape.GetType().Name}' is not supported.");
+            var result = this.UpdateQueryShapeWithNewAlias(memberInit, dataSourceAlias, this.SelectList);
+            return new SqlDataSourceQueryShapeExpression(result, dataSourceAlias);
         }
+
 
 
         /// <inheritdoc />
@@ -49,19 +57,38 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// </summary>
         /// <param name="selectColumns"></param>
         /// <returns></returns>
-        public SqlExpression Update(SelectColumn[] selectColumns)
+        public SqlExpression Update(SqlExpression projection)
         {
-            if (this.SelectList.AllEqual(selectColumns))
+            if (this.QueryShape == projection)
                 return this;
 
-            return new SqlStandaloneSelectExpression(selectColumns);
+            return new SqlStandaloneSelectExpression(projection);
         }
 
         /// <inheritdoc />
         public override string ToString()
         {
-            var selectColumnToString = string.Join(", ", this.SelectList.Select(x => x.ToString()));
-            return $"(select {selectColumnToString})";
+            var columns = this.ConvertToString(this.QueryShape, memberName: null);
+            return $"(select {columns})";
+        }
+
+        private string ConvertToString(SqlExpression sqlExpression, string memberName)
+        {
+            if (sqlExpression is SqlMemberInitExpression queryShape)
+            {
+                var columns = new StringBuilder();
+                foreach (var binding in queryShape.Bindings)
+                {
+                    if (columns.Length > 0)
+                        columns.Append(", ");
+                    columns.Append(this.ConvertToString(binding.SqlExpression, binding.MemberName));
+                }
+                return columns.ToString();
+            }
+            else
+            {
+                return $"{sqlExpression} as {memberName ?? "Col1"}";
+            }
         }
     }
 }

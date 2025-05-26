@@ -143,9 +143,7 @@ namespace Atis.SqlExpressionEngine.Preprocessors
         {
             if (navigationInfo.JoinedSource != null)
             {
-                var joinedSourceLambda = navigationInfo.JoinedSource as LambdaExpression
-                                        ??
-                                        throw new InvalidOperationException("navigationInfo.JoinedSource is not LambdaExpression");
+                var joinedSourceLambda = navigationInfo.JoinedSource;
                 var joinedSourceBody = joinedSourceLambda.Body;
                 // below will be like this new Queryable<ChildTable>()
                 joinedSourceBody = ExpressionReplacementVisitor.Replace(joinedSourceLambda.Parameters[0], parentExpression, joinedSourceBody);

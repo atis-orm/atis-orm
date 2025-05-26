@@ -66,8 +66,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             }
             if (!sqlQuery.HasProjectionApplied)
             {
-                var selectOne = this.SqlFactory.CreateCompositeBindingForSingleExpression(this.SqlFactory.CreateLiteral(1), ModelPath.Empty);
-                sqlQuery.ApplyProjection(selectOne);
+                sqlQuery.ApplyProjection(this.SqlFactory.CreateLiteral(1));
             }
             var derivedTable = this.SqlFactory.ConvertSelectQueryToDeriveTable(sqlQuery);
             var existsQuery = this.SqlFactory.CreateExists(derivedTable);

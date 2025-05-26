@@ -36,9 +36,9 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         public UnionItem[] Unions { get; }
 
         /// <inheritdoc />
-        public override HashSet<ColumnModelPath> GetColumnModelMap()
+        public override SqlDataSourceQueryShapeExpression CreateQueryShape(Guid dataSourceAlias)
         {
-            return this.Unions.First().DerivedTable.GetColumnModelMap();
+            return this.Unions.First().DerivedTable.CreateQueryShape(dataSourceAlias);
         }
 
         /// <inheritdoc />

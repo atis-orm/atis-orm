@@ -1,6 +1,7 @@
 ﻿using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.Exceptions;
 using Atis.SqlExpressionEngine.Internal;
+using Atis.SqlExpressionEngine.Visitors;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
     /// <summary>
     /// 
     /// </summary>
-    public partial class SqlSelectExpression : SqlDataSourceReferenceExpression
+    public partial class SqlSelectExpression : SqlExpression
     {
         /// <inheritdoc />
         public override SqlExpressionType NodeType => SqlExpressionType.Select;
@@ -23,7 +24,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         private readonly List<CteDataSource> cteDataSources = new List<CteDataSource>();
         public IReadOnlyCollection<CteDataSource> CteDataSources => cteDataSources;
         private readonly List<SelectColumn> selectList = new List<SelectColumn>();
-        public IReadOnlyCollection<SelectColumn> SelectList => selectList;
+        public IReadOnlyList<SelectColumn> SelectList => selectList;
         private readonly List<FilterCondition> whereClause = new List<FilterCondition>();
         public IReadOnlyCollection<FilterCondition> WhereClause => whereClause;
         public SqlExpression GroupByClause { get; protected set; }
@@ -35,91 +36,71 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         public bool IsDistinct { get; set; }
         public int? RowOffset { get; set; }
         public int? RowsPerPage { get; set; }
-        public ISqlExpressionFactory SqlFactory { get; }
         public bool AutoProjection { get; private set; }
         public string Tag { get; set; }
+        public ISqlExpressionFactory SqlFactory { get; }
+        // QueryShape property cannot be other than SqlExpression because
+        //      db.Table1.GroupBy(x => x.Field1).Select(x => x.Key).Select(g => g + 1)
+        // In above case `g` parameter must be resolved to a SqlDataSourceColumnExpression not anything else.
+        // So default mapping of a ParameterExpression would be directly to QueryShape property
+        // because most of the time this will be true, except for certain cases where we need to
+        // map it a bit differently for example,
+        //      db.Table1.GroupBy(x => x.Field1).Select(x => x.Key).LeftJoin(db.Table2, (o, j) => new { o, j }, ...)
+        // In above example, `o` in the NewExpression must NOT be resolved as SqlDataSourceColumnExpression, so in
+        // these specific cases during the LambdaExpression Parameter mapping we will NOT map the QuerySource
+        // property with ParameterExpression, rather we will create another expression on the fly to map.
+        protected SqlExpression QueryShape { get; set; }
 
-        private readonly SqlQueryModelBinding modelBinding = new SqlQueryModelBinding();
-        private readonly Dictionary<Guid, SqlQueryModelBinding> dataSourceModelBinding = new Dictionary<Guid, SqlQueryModelBinding>();
-
-        public SqlSelectExpression(CteDataSource[] cteDataSources, SqlTableExpression table, ISqlExpressionFactory sqlFactory)
-            : this(cteDataSources, 
-                    (sqlFactory ?? throw new ArgumentNullException(nameof(sqlFactory))).CreateCompositeBindingForSingleExpression(table, ModelPath.Empty), 
-                    sqlFactory)
+        private SqlSelectExpression(IEnumerable<CteDataSource> cteDataSources, IEnumerable<AliasedDataSource> dataSources, IEnumerable<SelectColumn> selectList, IEnumerable<FilterCondition> whereClause, SqlExpression groupByClause, IEnumerable<FilterCondition> havingClause, IEnumerable<OrderByColumn> orderByClause, int? top, bool isDistinct, int? rowOffset, int? rowsPerPage, bool autoProjection, string tag, SqlExpression queryShape, ISqlExpressionFactory sqlFactory)
         {
-        }
-
-        public SqlSelectExpression(CteDataSource[] cteDataSources, SqlQuerySourceExpression querySource, ISqlExpressionFactory sqlFactory)
-            : this(cteDataSources, 
-                    (sqlFactory ?? throw new ArgumentNullException(nameof(sqlFactory))).
-                        CreateCompositeBindingForSingleExpression(querySource ?? throw new ArgumentNullException(nameof(querySource)), ModelPath.Empty), 
-                    sqlFactory)
-        {
-        }
-
-        public SqlSelectExpression(CteDataSource[] cteDataSources, SqlCompositeBindingExpression compositeBinding, ISqlExpressionFactory sqlFactory)
-        {
+            if (cteDataSources != null)
+                this.cteDataSources.AddRange(cteDataSources);
+            if (dataSources != null)
+                this.dataSources.AddRange(dataSources);
+            if (selectList != null)
+                this.selectList.AddRange(selectList);
+            if (whereClause != null)
+                this.whereClause.AddRange(whereClause);
+            this.GroupByClause = groupByClause;
+            if (havingClause != null)
+                this.havingClause.AddRange(havingClause);
+            if (orderByClause != null)
+                this.orderByClause.AddRange(orderByClause);
+            this.Top = top;
+            this.IsDistinct = isDistinct;
+            this.RowOffset = rowOffset;
+            this.RowsPerPage = rowsPerPage;
+            this.AutoProjection = autoProjection;
+            this.Tag = tag;
+            this.QueryShape = queryShape;
             this.SqlFactory = sqlFactory ?? throw new ArgumentNullException(nameof(sqlFactory));
+        }
 
-            if (compositeBinding is null)
-                throw new ArgumentNullException(nameof(compositeBinding));
-
-            if (compositeBinding.Bindings.Length > 1 && compositeBinding.Bindings.Any(x => x.ModelPath.IsEmpty))
-                throw new ArgumentException($"There are more than 1 items in the {nameof(compositeBinding)}, but one of them has empty model path.", nameof(compositeBinding));
+        public SqlSelectExpression(CteDataSource[] cteDataSources, SqlExpression selectedSource, ISqlExpressionFactory sqlFactory)
+        {
+            if (selectedSource is null)
+                throw new ArgumentNullException(nameof(selectedSource));
+            this.SqlFactory = sqlFactory ?? throw new ArgumentNullException(nameof(sqlFactory));
 
             if (cteDataSources?.Length > 0)
             {
                 this.cteDataSources.AddRange(cteDataSources);
             }
 
-            for (var i = 0; i < compositeBinding.Bindings.Length; i++)
-            {
-                var binding = compositeBinding.Bindings[i];
-                // get the query source (Derived Table, Table, CTE, etc.)
-                var querySource = binding.SqlExpression as SqlQuerySourceExpression
-                                            ??
-                                            throw new ArgumentException($"Binding expression '{binding.SqlExpression}' is not a valid query source expression.", nameof(binding));
-                if (querySource is SqlDerivedTableExpression derivedTable &&
-                    derivedTable.CteDataSources.Length > 0)
-                {
-                    // extracting CTE Data Sources from derived table
-                    this.cteDataSources.AddRange(derivedTable.CteDataSources.Select(x => new CteDataSource(x.CteBody, x.CteAlias)));
-                    // removing CTE Data Sources from derived table
-                    querySource = derivedTable.Update(null, derivedTable.FromSource, derivedTable.Joins, derivedTable.WhereClause, derivedTable.GroupByClause, derivedTable.HavingClause, derivedTable.OrderByClause, derivedTable.SelectColumnCollection)
-                                                .ConvertToTableIfPossible();
-                }
+            var queryShapeComposer = new QueryShapeComposer(this);
+            this.QueryShape = queryShapeComposer.ComposeQueryShape(selectedSource);
+        }
 
-                AliasedDataSource aliasedDataSource;
-                if (i > 0)
-                    // if this is not 1st data source then it means this will be added as cross join
-                    aliasedDataSource = new JoinDataSource(SqlJoinType.Cross, querySource, Guid.NewGuid(), joinCondition: null, joinName: null, isNavigationJoin: false, navigationParent: null);
-                else
-                    // so first data source will be added directly in data source
-                    aliasedDataSource = new AliasedDataSource(querySource, Guid.NewGuid());
+        public SqlSelectExpression CreateCopy()
+        {
+            return SqlSelectExpressionCopyMaker.CreateCopy(this);
+        }
 
-                // now we are creating model binding for the data source, this is important because 
-                // if a data source is provided to resolve a model path we will pick the data source's model binding
-                this.AddAliasedDataSource(aliasedDataSource);
-
-                if (!binding.ModelPath.IsEmpty)
-                {
-                    // if ModelPath is not empty then it means the projection of data source's will not
-                    // be added into this query's modelBinding list, rather we'll only add the data sources
-                    // in query's modelBinding list
-                    this.modelBinding.AddBinding(this.CreateDataSource(aliasedDataSource.Alias), binding.ModelPath);
-                }
-                else
-                {
-                    // if binding.ModelPath is empty then this method will be called with only 1 data source as default
-                    // e.g. students.Where(x => x.StudentId == "123");
-                    // `students` will be converted to SqlSelectExpression with single data source without a ModelPath
-                    // that's where we will add all the student columns in current Select Expression's binding list
-                    // which is modelBinding
-                    AddQuerySourceColumnsInQueryModelBinding(aliasedDataSource, this.modelBinding, binding.ModelPath);
-                }
-            }
-
-            this.SqlFactory = sqlFactory;
+        public void RemoveGrouping()
+        {
+            if (this.HasProjectionApplied)
+                throw new InvalidOperationException($"Projection has been applied, cannot remove grouping.");
+            this.GroupByClause = null;
         }
 
         // TODO: we haven't finalized but we are making this class as non-visitable
@@ -139,6 +120,16 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             predicate = this.WrapIfRequiredSingle(SqlQueryOperation.Where, predicate);
             this.whereClause.Add(new FilterCondition(predicate, useOrOperator));
             this.OnAfterApply(SqlQueryOperation.Where);
+        }
+
+        public void ApplyWhereMultipleFields(SqlExpression predicateShapeLeft, SqlExpression predicateShapeRight)
+        {
+            if (predicateShapeLeft is null)
+                throw new ArgumentNullException(nameof(predicateShapeLeft));
+            if (predicateShapeRight is null)
+                throw new ArgumentNullException(nameof(predicateShapeRight));
+            var joinCondition = this.SqlFactory.CreateJoinCondition(predicateShapeLeft, predicateShapeRight);
+            this.ApplyWhere(joinCondition, useOrOperator: false);
         }
 
         public void ApplyHaving(SqlExpression predicate, bool useOrOperator)
@@ -161,82 +152,112 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.OnAfterApply(SqlQueryOperation.GroupBy);
         }
 
-        public void ApplyProjection(SqlCompositeBindingExpression boundSelectList)
+        public void ApplyProjection(SqlExpression projection)
         {
-            if (boundSelectList is null)
-                throw new ArgumentNullException(nameof(boundSelectList));
-            if (boundSelectList.Bindings.Length == 0)
-                throw new ArgumentException("Select list must have at least one binding.", nameof(boundSelectList));
-            if (boundSelectList.Bindings.Length > 1 && boundSelectList.Bindings.Any(x => x.ModelPath.IsEmpty))
-                throw new ArgumentException($"There are more than 1 items in the {nameof(boundSelectList)}, but one of them has empty model path.", nameof(boundSelectList));
+            if (projection is null)
+                throw new ArgumentNullException(nameof(projection));
 
-            boundSelectList = this.WrapIfRequiredSingle(SqlQueryOperation.Select, boundSelectList) as SqlCompositeBindingExpression
-                                ??
-                                throw new InvalidOperationException($"Select list '{boundSelectList}' is not a valid select list.");
+            projection = this.WrapIfRequiredSingle(SqlQueryOperation.Select, projection);
 
             if (this.selectList.Count > 0)
                 throw new InvalidOperationException("Select list already has been defined.");
 
-            boundSelectList = this.ConvertDerivedTableToOuterApplyProjections(boundSelectList);
+            projection = this.ConvertDerivedTableToOuterApplyInProjection(projection, memberName: null);
 
-            this.UpdateModelBinding(boundSelectList);
-            this.ApplyProjectionFromModelBinding(applyAll: false);
+            this.QueryShape = projection;
+            this.ApplyProjectionFromQueryShape(this.QueryShape, applyAll: false);
         }
 
-        private SqlCompositeBindingExpression ConvertDerivedTableToOuterApplyProjections(SqlCompositeBindingExpression boundSelectList)
+        public SqlExpression GetQueryShapeForFieldMapping() 
+            => this.QueryShape is SqlQueryShapeExpression qs ? new SqlQueryShapeFieldResolverExpression(qs, this) : this.QueryShape;
+
+        public SqlQueryShapeExpression GetQueryShapeForDataSourceMapping()
         {
-            var bindingToRemove = new List<SqlExpressionBinding>();
-            var bindingsToAdd = new List<SqlExpressionBinding>();
-            var bindingChanged = false;
-            foreach (var binding in boundSelectList.Bindings)
+            if (this.HasProjectionApplied)
+                throw new InvalidOperationException($"Projection has been applied, query should be wrapped before calling this method.");
+            // we are NOT returning the query shape directly because this is possible that the 
+            // QueryShape is a QueryDataSourceShapeExpression, so we are creating one
+            if (this.dataSources.Count == 1)
             {
-                bool addBinding = true;
-                if (binding.SqlExpression is SqlDerivedTableExpression derivedTable)
+                if (this.QueryShape is SqlDataSourceQueryShapeExpression qds)
+                    return qds;
+                else
+                    return new SqlDataSourceQueryShapeExpression(this.QueryShape, this.dataSources[0].Alias);
+            }
+            // if there are more than 1 data sources and QueryShape is something else then it's a problem
+            // and must be looked into and see what are the cases
+            return this.QueryShape as SqlQueryShapeExpression
+                    ??
+                     throw new InvalidOperationException($"QueryShape is not a {nameof(SqlQueryShapeExpression)}.");
+
+            //      db.From(() => new { t1 = db.Table1, t2 = db.Table2 })
+            //           .Select(x => new { x.t1.Field1, x.t2.Field2 } )
+            //           .LeftJoin(db.Table3, (o, j) => new { o, j }, s => s.o.t1.Field1 == s.j.FieldX)
+            // 
+            // In above example, before we can convert 2nd argument of LeftJoin, previous query must be wrapped.
+            // Assuming query is wrapped, so when we will reach in the 2nd argument, the `o` needs to be mapped with
+            // a SqlExpression, so we'll reach in this method, and at that time the HasProjectionApplied will be false
+            // and DataSources.Count = 1, so we'll return, this.QueryShape [SqlMemberInitExpression] along with 1st data source alias
+            //
+            //      db.Table1.GroupBy(x => x.Field1).Select(x => x.Key)
+            //                .LeftJoin(db.Table2, (o, j) => new { o, j }, s => s.o == s.j.FieldX)
+            // 
+            // In above example, again the query will be wrapped and we'll reach up to `o` for 2nd argument,
+            // and we'll land in this method, HasProjectionApplied = false and DataSourcesCount = 1, so we'll return
+            // this.QueryShape [SqlDataSourceColumnExpression] along with 1st data source alias,
+            // and when 2nd argument is completed the QueryShape will be changed to
+            //
+            //  SqlMemberInitExpression [Bindings[0] = { "o", SqlDataSourceQueryShapeExpression }, Bindings[1] = { "j", SqlDataSourceQueryShapeExpression } ]
+            //
+            // Then we'll move to 3rd argument and we'll face s which will return MemberInitExpression (QueryShape) and then
+            // we'll receive `s.o` in MemberExpressionConverter which will resolve `o` from previous expression and will return
+            // SqlDataSourceColumnExpression. <- this is a problem because s.o will NOT be resolved to SqlDataSourceColumnExpression
+            // it will be resolved to SqlDataSourceQueryShapeExpression, we thought we could change the MemberExpressionConverter to
+            // check if it's a SqlDataSourceQueryShapeExpression then check if it's scalar then return the underlying ShapeExpression
+            // but this is wrong, because we might be using similar MemberExpression as 1st arg of Join, e.g. LeftJoin(x => x.o, ...),
+            // In this case it should be resolved to SqlDataSourceQueryShapeExpression.
+            // So to handle above problem we have GetQueryShapeForFieldMapping() method above, that method returns a special SqlQueryShapeExpression
+            // that always resolve to internal leaf node expression for scalar query shape.
+        }
+
+        private SqlExpression ConvertDerivedTableToOuterApplyInProjection(SqlExpression projection, string memberName)
+        {
+            if (projection is SqlMemberInitExpression memberInit)
+            {
+                var memberAssignments = new List<SqlMemberAssignment>();
+                var memberAssignmentChanged = false;
+                foreach (var binding in memberInit.Bindings)
                 {
-                    if (this.ShouldBeAddedAsOuterApply(derivedTable))
-                    {
-                        var dataSource = this.AddNavigationJoin(this, derivedTable, SqlJoinType.OuterApply, binding.ModelPath, binding.ModelPath.GetLastElementRequired());
-                        bindingChanged = true;
-                        addBinding = false;
-                        var projections = derivedTable.GetColumnModelMap();
-                        foreach (var projection in projections)
-                        {
-                            var dsColumn = new SqlDataSourceColumnExpression(dataSource.DataSourceAlias, projection.ColumnName);
-                            bindingsToAdd.Add(new SqlExpressionBinding(dsColumn, binding.ModelPath.Append(projection.ModelPath)));
-                        }
-                    }
+                    var updatedExpression = this.ConvertDerivedTableToOuterApplyInProjection(binding.SqlExpression, binding.MemberName);
+                    if(updatedExpression != binding.SqlExpression)
+                        memberAssignmentChanged = true;
+                    memberAssignments.Add(new SqlMemberAssignment(binding.MemberName, updatedExpression));
                 }
-                if (addBinding)
-                    bindingsToAdd.Add(binding);
+                if (memberAssignmentChanged)
+                    return new SqlMemberInitExpression(memberAssignments);
+                else
+                    return memberInit;
             }
-            if (bindingChanged)
+            else if (projection is SqlDerivedTableExpression derivedTable &&
+                    this.ShouldSubQueryBeProjectedAsJoin(derivedTable))
             {
-                boundSelectList = new SqlCompositeBindingExpression(bindingsToAdd.ToArray());
+                var dsShape = this.AddDataSourceWithJoinResolution(derivedTable, isDefaultIfEmpty: true, memberName);
+                return dsShape.ShapeExpression;
             }
-
-            return boundSelectList;
+            else
+                return projection;
         }
 
-        private bool ShouldBeAddedAsOuterApply(SqlDerivedTableExpression derivedTable)
+        private bool ShouldSubQueryBeProjectedAsJoin(SqlDerivedTableExpression derivedTable)
         {
-            if (derivedTable.NodeType == SqlExpressionType.DataManipulationDerivedTasble)
+            if (derivedTable.NodeType == SqlExpressionType.DataManipulationDerivedTable)
                 return false;
-            //var myDataSources = new HashSet<Guid>(this.dataSources.Select(x => x.Alias));
-            //var myColumnsUsedInDerivedTable = DataSourceColumnUsageExtractor.FindDataSources(myDataSources).In(derivedTable).ExtractDataSourceColumnExpressions();
             if (derivedTable.SelectColumnCollection?.SelectColumns.All(x => x.ScalarColumn) ?? false)
                 // if all are scalar columns then cannot be outer apply
                 return false;
             else
                 // if there are no scalar columns then it must be outer apply
                 return true;
-            //if (myColumnsUsedInDerivedTable.Count > 0)
-            //    return true;
-            //return false;
-        }
-
-        public bool ApplyAutoProjection()
-        {
-            return this.ApplyAutoProjectionIfPossible(applyAll: false);
         }
 
         public void ApplyOrderBy(SqlExpression orderByExpression, SortDirection direction)
@@ -290,35 +311,33 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.OnAfterApply(SqlQueryOperation.RowOffset);
         }
 
-        public SqlDataSourceExpression AddJoin(SqlQuerySourceExpression querySource, SqlJoinType joinType)
+        public SqlDataSourceQueryShapeExpression AddJoin(SqlQuerySourceExpression querySource, SqlJoinType joinType)
         {
-            return this.AddJoinedSource(SqlQueryOperation.Join, this, querySource, joinType, navigationPath: null);
+            return this.AddJoinedSource(SqlQueryOperation.Join, querySource, joinType);
         }
 
-        public bool TryResolveNavigationDataSource(SqlDataSourceReferenceExpression navigationParent, ModelPath modelPath, out SqlDataSourceExpression navigationDataSource)
+        public bool TryResolveNavigationDataSource(SqlQueryShapeExpression parentQueryShape, string memberName, out SqlExpression assignment)
         {
-            if (navigationParent.TryResolveExact(modelPath, out SqlExpression sqlExpression))
-            {
-                navigationDataSource = sqlExpression as SqlDataSourceExpression
-                                        ??
-                                        throw new InvalidOperationException($"Expected a {nameof(SqlDataSourceExpression)} but got {sqlExpression.GetType().Name}.");
-                return true;
-            }
-            navigationDataSource = null;
-            return false;
+            return parentQueryShape.TryResolveMember(memberName, out assignment);
         }
 
-        public SqlDataSourceExpression AddNavigationJoin(SqlDataSourceReferenceExpression navigationParent, SqlExpression joinedSource, SqlJoinType joinType, ModelPath navigationPath, string navigationName)
+        //public SqlExpression GetDataSourceQueryShape(Guid dataSourceAlias)
+        //{
+        //    var (dataSource, _) = this.GetAliasedDataSourceRequired(dataSourceAlias);
+        //    return dataSource.CreateQueryShape();
+        //}
+
+        public SqlDataSourceQueryShapeExpression AddNavigationJoin(SqlQueryShapeExpression navigationParent, SqlExpression joinedSource, SqlJoinType joinType, string navigationName)
         {
             if (navigationParent is null)
                 throw new ArgumentNullException(nameof(navigationParent));
             if (joinedSource is null)
                 throw new ArgumentNullException(nameof(joinedSource));
-            if (navigationPath.IsEmpty)
-                throw new ArgumentException($"Navigation path cannot be empty.", nameof(navigationPath));
+            if (string.IsNullOrWhiteSpace(navigationName))
+                throw new ArgumentException($"Navigation Name cannot be empty.", nameof(navigationName));
             
-            if (this.TryResolveNavigationDataSource(navigationParent, navigationPath, out _))
-                throw new InvalidOperationException($"Navigation join already exists for the given navigation path '{navigationPath}'.");
+            if (this.TryResolveNavigationDataSource(navigationParent, navigationName, out _))
+                throw new InvalidOperationException($"Navigation join already exists for the given navigation name '{navigationName}'.");
 
             SqlQuerySourceExpression sqlQuerySource;
             if (joinedSource is SqlTableExpression table)
@@ -336,19 +355,18 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 else
                     sqlQuerySource = derivedTable;
             }
-            var dataSource = this.AddJoinedSource(SqlQueryOperation.NavigationJoin, navigationParent, sqlQuerySource, joinType, navigationPath, joinName: navigationName);
+            var dataSource = this.AddJoinedSource(SqlQueryOperation.NavigationJoin, sqlQuerySource, joinType, navigationParent, navigationName: navigationName, joinName: navigationName);
             return dataSource;
         }
 
         // TODO: check if we can move isDefaultEmpty logic inside here as well
-        public SqlDataSourceExpression AddDataSourceWithJoinResolution(SqlQuerySourceExpression newQuerySource, bool isDefaultIfEmpty)
+        public SqlDataSourceQueryShapeExpression AddDataSourceWithJoinResolution(SqlQuerySourceExpression newQuerySource, bool isDefaultIfEmpty, string tag = null)
         {
             // This method is called through SelectMany converter where SelectMany has received an external query
             // and it is sending that external query to this method.
             SqlJoinType joinType = SqlJoinType.Cross;
             SqlExpression joinCondition = null;
             Guid? newDataSourceAlias = null;
-            string tag = null;
             SqlQueryOperation newOperation = SqlQueryOperation.Join;
 
             // This method is being called from SelectMany Converter and if this is the case that before SelectMany there
@@ -388,7 +406,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                     // we add newQuerySource in this SqlSelectExpression.
                     newDataSourceAlias = tempAlias;
                     joinType = joinCondition != null ? SqlJoinType.Inner : SqlJoinType.Cross;
-                    tag = derivedTable.Tag;
+                    tag = tag ?? derivedTable.Tag;
                     newOperation = string.IsNullOrWhiteSpace(derivedTable.Tag) ? SqlQueryOperation.Join : SqlQueryOperation.NavigationJoin;
                 }
                 else
@@ -416,18 +434,13 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             // We are passing `newDataSourceAlias` in below method which will be null in normal scenarios,
             // however, in-case if the given `newQuerySource` can be inner joined in this SqlSelectExpression
             // then `newDataSourceAlias` will be set above and will not be null in that case.
-            
+
             // `joinCondition` will not be null if `newQuerySource` can be added as inner join.
-            var dataSource = this.AddJoinedSource(newOperation, this, newQuerySource, joinType, navigationPath: null, dataSourceAlias: newDataSourceAlias, joinCondition: joinCondition, joinName: tag);
-
+            //var queryShape = this.QueryShape as SqlDataSourceQueryShapeExpression
+            //                    ??
+            //                    throw new InvalidOperationException($"QueryShape is not a {nameof(SqlDataSourceQueryShapeExpression)}.");
+            var dataSource = this.AddJoinedSource(newOperation, newQuerySource, joinType, parentShape: null, navigationName: null, dataSourceAlias: newDataSourceAlias, joinCondition: joinCondition, joinName: tag);
             return dataSource;
-        }
-
-        public void AddCteDataSource(SqlSubQuerySourceExpression cteBody, Guid cteAlias)
-        {
-            if (this.cteDataSources.Any(x => x.CteAlias == cteAlias))
-                throw new InvalidOperationException($"CTE with alias {cteAlias} already exists.");
-            this.cteDataSources.Add(new CteDataSource(cteBody, cteAlias));
         }
 
         public void ConvertToRecursiveQuery(SqlDerivedTableExpression anchorDerivedTable, SqlDerivedTableExpression recursiveDerivedTable)
@@ -454,32 +467,26 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             var fromSource = new AliasedDataSource(cteReference, Guid.NewGuid());
             AddAliasedDataSource(fromSource);
 
-            foreach (var querySourceColumn in querySource.GetColumnModelMap())
-            {
-                var dsColumn = new SqlDataSourceColumnExpression(fromSource.Alias, querySourceColumn.ColumnName);
-                this.modelBinding.AddBinding(dsColumn, querySourceColumn.ModelPath);
-            }
+            this.QueryShape = querySource.CreateQueryShape(fromSource.Alias);
         }
 
         public void SwitchBindingToLastDataSource()
         {
-            var dataSource = this.dataSources.Last();
-            this.modelBinding.Reset();
-            var aliasedDataSource = this.dataSources.Where(x => x.Alias == dataSource.Alias).First();
-            AddQuerySourceColumnsInQueryModelBinding(aliasedDataSource, this.modelBinding, ModelPath.Empty);
+            var lastDataSource = this.dataSources.Last();
+            this.QueryShape = this.CreateDataSourceQueryShape(lastDataSource);
         }
 
-        public void UpdateJoin(Guid joinDataSourceAlias, SqlJoinType joinType, SqlExpression joinCondition, string joinName, bool navigationJoin, Guid? navigationParent)
+        public void UpdateJoin(Guid joinDataSourceAlias, SqlJoinType joinType, SqlExpression joinCondition, string joinName, bool navigationJoin)
         {
             var (dataSource, indexOfDataSource) = this.GetAliasedDataSourceRequired(joinDataSourceAlias);
-            this.dataSources[indexOfDataSource] = new JoinDataSource(joinType, dataSource.QuerySource, joinDataSourceAlias, joinCondition: joinCondition, joinName: joinName, isNavigationJoin: navigationJoin, navigationParent: navigationParent);
+            this.dataSources[indexOfDataSource] = new JoinDataSource(joinType, dataSource.QuerySource, joinDataSourceAlias, joinCondition: joinCondition, joinName: joinName, isNavigationJoin: navigationJoin);
         }
 
         public void UpdateJoinType(Guid joinDataSourceAlias, SqlJoinType joinType)
         {
             var (dataSource, indexOfDataSource) = this.GetAliasedDataSourceRequired(joinDataSourceAlias);
             if (dataSource is JoinDataSource joinDataSource)
-                this.dataSources[indexOfDataSource] = new JoinDataSource(joinType, joinDataSource.QuerySource, joinDataSourceAlias, joinCondition: joinDataSource.JoinCondition, joinName: joinDataSource.JoinName, isNavigationJoin: joinDataSource.IsNavigationJoin, navigationParent: joinDataSource.NavigationParent);
+                this.dataSources[indexOfDataSource] = new JoinDataSource(joinType, joinDataSource.QuerySource, joinDataSourceAlias, joinCondition: joinDataSource.JoinCondition, joinName: joinDataSource.JoinName, isNavigationJoin: joinDataSource.IsNavigationJoin);
             else
                 throw new InvalidOperationException($"Join data source with alias {joinDataSourceAlias} is not a join data source.");
         }
@@ -488,7 +495,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         {
             var (dataSource, indexOfDataSource) = this.GetAliasedDataSourceRequired(joinDataSourceAlias);
             if (dataSource is JoinDataSource joinDataSource)
-                this.dataSources[indexOfDataSource] = new JoinDataSource(joinDataSource.JoinType, joinDataSource.QuerySource, joinDataSource.Alias, joinCondition: joinCondition, joinName: joinDataSource.JoinName, isNavigationJoin: joinDataSource.IsNavigationJoin, navigationParent: joinDataSource.NavigationParent);
+                this.dataSources[indexOfDataSource] = new JoinDataSource(joinDataSource.JoinType, joinDataSource.QuerySource, joinDataSource.Alias, joinCondition: joinCondition, joinName: joinDataSource.JoinName, isNavigationJoin: joinDataSource.IsNavigationJoin);
             else
                 throw new InvalidOperationException($"Join data source with alias {joinDataSourceAlias} is not a join data source.");
         }
@@ -497,17 +504,9 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         {
             var (dataSource, indexOfDataSource) = this.GetAliasedDataSourceRequired(joinDataSourceAlias);
             if (dataSource is JoinDataSource joinDataSource)
-                this.dataSources[indexOfDataSource] = new JoinDataSource(joinDataSource.JoinType, joinDataSource.QuerySource, joinDataSource.Alias, joinCondition: joinDataSource.JoinCondition, joinName: joinName, isNavigationJoin: joinDataSource.IsNavigationJoin, navigationParent: joinDataSource.NavigationParent);
+                this.dataSources[indexOfDataSource] = new JoinDataSource(joinDataSource.JoinType, joinDataSource.QuerySource, joinDataSource.Alias, joinCondition: joinDataSource.JoinCondition, joinName: joinName, isNavigationJoin: joinDataSource.IsNavigationJoin);
             else
                 throw new InvalidOperationException($"Join data source with alias {joinDataSourceAlias} is not a join data source.");
-        }
-
-        public SqlJoinType GetJoinType(Guid joinDataSourceAlias)
-        {
-            var (dataSource, indexOfDataSource) = this.GetAliasedDataSourceRequired(joinDataSourceAlias);
-            if (dataSource is JoinDataSource joinDataSource)
-                return joinDataSource.JoinType;
-            throw new InvalidOperationException($"Join data source with alias {joinDataSourceAlias} is not a join data source.");
         }
 
         private SqlExpression WrapIfRequiredSingle(SqlQueryOperation newOperation, SqlExpression sqlExpression)
@@ -525,6 +524,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             }
         }
 
+        public void WrapIfRequired(SqlQueryOperation newOperation) => this.WrapIfRequired(newOperation, null);
+
         protected SqlExpression[] WrapIfRequired(SqlQueryOperation newOperation, SqlExpression[] sqlExpressions)
         {
             if (sqlExpressions?.Length > 0)
@@ -537,9 +538,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
             if (this.IsWrapRequired(newOperation))
             {
-                var autoProjectionWasApplied = this.ApplyAutoProjectionIfPossible(applyAll: false);
-
-                this.WrapQuery(autoProjectionWasApplied);
+                this.WrapQuery();
 
                 if (sqlExpressions?.Length > 0)
                 {
@@ -550,38 +549,17 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             return sqlExpressions;
         }
 
-        protected virtual void WrapQuery(bool autoProjectionWasApplied)
+        protected virtual void WrapQuery()
         {
+            this.ApplyAutoProjectionIfPossible(applyAll: false);
+
             var currentCteDataSources = this.cteDataSources.ToArray();
             for (var i = 0; i < currentCteDataSources.Length; i++)
                 this.cteDataSources.Remove(currentCteDataSources[i]);
 
             this.AppendSelectListWithColumnsUsedInSubQuery();
 
-            // if auto projection was applied we'll keep the non projectable bindings,
-            // that were added during GroupJoin / Let keyword
-            var nonProjectableBindings = autoProjectionWasApplied ? this.modelBinding.GetNonProjectableBindings() : Array.Empty<SqlExpressionBinding>();
-
-            // You might think that why not move the queryableSelectedInProject into autoProjectionWasApplied flag
-            // but we cannot do that, read below flow:
-            // 1. SqlQueryableExpression was applied in Select List of this SqlSelectExpression for the first time
-            //      in above case it would NOT be present in modelBinding for now because it's just applied in Select
-            // 2. Below will extract the SqlQueryableExpression from Select List and will Concat it in nonProjectableBindings
-            //      this is because although it was not in non-projectable binding list but still it's in Select list
-            //      therefore, it should be available in next method, without this in the modelBinding we will face error
-            //      when user will try to access, for example dbc.Table.Select(x => new { .. G = queryable }).Where(x => x.G.Any(...))
-            //      in this example, when user will do `x.G` it would try to resolve it and if it's not in modelBinding 
-            //      this will not be resolved.
-            // 3. Next user applied Where method and used this SqlQueryableExpression which renders as Exist
-            // 4. Assume that next wrap happened with Auto Projection = false and user didn't select this SqlQueryableExpression,
-            //      in that case nonProjectableBindings will be empty (autoProjectionWasApplied = true), thus SqlQueryableExpression will not be picked up,
-            //      and below queryableSelectedInProjection will not have any elements, eventually at the end of this method
-            //      when it's adding nonProjectableBindings there will be nothing in the array, so this SqlQueryableExpression
-            //      will become out of scope
-
             var queryableSelectedInProjection = this.selectList.Where(x => x.ColumnExpression is SqlQueryableExpression).ToArray();
-            if (queryableSelectedInProjection.Length > 0)
-                nonProjectableBindings = nonProjectableBindings.Concat(queryableSelectedInProjection.Select(x => new SqlExpressionBinding(x.ColumnExpression, x.ModelPath))).ToArray();
 
             foreach (var queryable in queryableSelectedInProjection)
                 this.selectList.Remove(queryable);
@@ -593,27 +571,30 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             var derivedTableDataSource = new AliasedDataSource(derivedTable, Guid.NewGuid());
             AddAliasedDataSource(derivedTableDataSource);
 
+            this.QueryShape = this.CreateDataSourceQueryShape(derivedTableDataSource);
+
+            if (queryableSelectedInProjection.Length > 0 &&
+                    this.QueryShape is SqlQueryShapeExpression queryShape)
+            {
+                SqlMemberInitExpression memberInit;
+                if (queryShape is SqlDataSourceQueryShapeExpression dsQs)
+                    memberInit = dsQs.ShapeExpression as SqlMemberInitExpression
+                                ??
+                                throw new InvalidOperationException($"QueryShape is not a {nameof(SqlMemberInitExpression)}.");
+                else if (queryShape is SqlMemberInitExpression mi)
+                    memberInit = mi;
+                else
+                    throw new InvalidOperationException($"QueryShape is not a {nameof(SqlMemberInitExpression)}.");
+
+                foreach (var queryable in queryableSelectedInProjection)
+                {
+                    var updatedExpression = this.ReplaceDataSourceAccessingSingle(queryable.ColumnExpression);
+                    memberInit.AddMemberAssignment(queryable.Alias, updatedExpression, projectable: true);
+                }
+            }
+
             for (var i = 0; i < currentCteDataSources.Length; i++)
                 this.cteDataSources.Add(currentCteDataSources[i]);
-
-            AddQuerySourceColumnsInQueryModelBinding(derivedTableDataSource, this.modelBinding, ModelPath.Empty);
-
-            // Lift Up: adding back because they were removed during Initialize
-            if (nonProjectableBindings.Length > 0)
-            {
-                // When adding back we are replacing the data source columns of this query with
-                // new sub-query columns in those expressions as well. Note that this happens
-                // in the WrapIfRequired method for the given SqlExpression[] but these
-                // expressions also need to be replaced as they are lifting up
-                var innerExpressions = nonProjectableBindings.Select(x => x.SqlExpression).ToArray();
-                innerExpressions = this.ReplaceDataSourceAccessing(innerExpressions);
-                for (var i = 0; i < innerExpressions.Length; i++)
-                {
-                    nonProjectableBindings[i] = nonProjectableBindings[i].UpdateExpression(innerExpressions[i]);
-                }
-
-                this.modelBinding.AddBindings(nonProjectableBindings);
-            }
         }
 
         protected void OnAfterApply(SqlQueryOperation operationApplied)
@@ -626,16 +607,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             // modelBinding if NavigationJoin will cause the wrapping.
             if (this.IsWrapRequired(SqlQueryOperation.NavigationJoin))      // if next navigation join will cause the wrapping
             {
-                // then we remove all the navigation data sources from modelBinding so that it
-                // will cause the joining to happen again
-                var autoNavigationDataSourcesInBinding = this.modelBinding.GetFilteredByExpression(this.IsAutoJoinedDataSource);
-                if (autoNavigationDataSourcesInBinding.Length > 0)
-                {
-                    foreach (var autoNavigationDataSource in autoNavigationDataSourcesInBinding)
-                    {
-                        this.modelBinding.Remove(autoNavigationDataSource);
-                    }
-                }
+                // TODO: check if we need to remove non-projectable members from QueryShape
             }
         }
 
@@ -702,310 +674,33 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.RowOffset = null;
             this.RowsPerPage = null;
             this.AutoProjection = false;
-            this.modelBinding.Reset();
-            this.dataSourceModelBinding.Clear();
+            // TODO: check if it's ok
+            this.QueryShape = null;
         }
 
-        public void UndoProjection()
+
+        public void UpdateModelBinding(SqlExpression newQueryShape)
         {
-            this.selectList.Clear();
-        }
+            if (newQueryShape is null)
+                throw new ArgumentNullException(nameof(newQueryShape));
 
-        public void MarkModelBindingAsNonProjectable(ModelPath modelPath)
-        {
-            this.modelBinding.MarkBindingAsNonProjectable(modelPath);
-        }
-
-        public void UpdateModelBinding(SqlCompositeBindingExpression compositeBinding)
-        {
-            if (compositeBinding is null)
-                throw new ArgumentNullException(nameof(compositeBinding));
-
-            var currentBindings = this.modelBinding.CreateCopy();
-            var firstDataSource = this.dataSources.First();
-            var oneDataSource = currentBindings.All(x => (x.SqlExpression as SqlDataSourceColumnExpression)?.DataSourceAlias == firstDataSource.Alias && !x.ModelPath.IsEmpty);
-
-            this.modelBinding.Reset();
-
-            foreach (var binding in compositeBinding.Bindings)
-            {
-                if (binding.SqlExpression == this)
-                {
-                    if (oneDataSource)
-                    {
-                        var ds = this.CreateDataSource(firstDataSource.Alias);
-                        this.modelBinding.AddBinding(ds, binding.ModelPath);
-                    }
-                    else
-                    {
-                        var newBindings = currentBindings.Select(x => x.PrependPath(binding.ModelPath)).ToArray();
-                        this.modelBinding.AddBindings(newBindings);
-                    }
-                }
-                else
-                {
-                    // if the binding is not a data source or not in the temp data source model binding dictionary
-                    // then we can add it to the main model binding
-                    this.modelBinding.AddBinding(binding.SqlExpression, binding.ModelPath);
-                }
-            }
-        }
-
-        /// <inheritdoc />
-        public override bool TryResolveScalarColumn(out SqlExpression scalarColumnExpression)
-        {
-            var firstSelectItem = this.selectList.FirstOrDefault();
-            if (firstSelectItem?.ScalarColumn == true)
-            {
-                scalarColumnExpression = firstSelectItem.ColumnExpression;
-                return true;
-            }
-            if (this.dataSources.Count == 1)
-            {
-                var ds0Alias = this.dataSources[0].Alias;
-                if (this.dataSourceModelBinding.ContainsKey(ds0Alias) && this.TryResolveScalarColumnByDataSourceAlias(ds0Alias, out var scalarCol))
-                {
-                    scalarColumnExpression = scalarCol;
-                    return true;
-                }
-            }
-            scalarColumnExpression = null;
-            return false;
-        }
-
-        public bool TryResolveScalarColumnByDataSourceAlias(Guid dataSourceAlias, out SqlExpression scalarColumnExpression)
-        {
-            var dataSource = this.dataSources.Where(x => x.Alias == dataSourceAlias).FirstOrDefault()
-                            ??
-                            throw new ArgumentException($"Data source with alias '{dataSourceAlias}' not found.", nameof(dataSourceAlias));
-            if (!this.dataSourceModelBinding.TryGetValue(dataSourceAlias, out var queryModelBinding))
-                throw new ArgumentException($"Data source with alias '{dataSourceAlias}' not found.", nameof(dataSourceAlias));
-            return queryModelBinding.TryResolveExact(ModelPath.Empty, out scalarColumnExpression);
-        }
-
-        /// <inheritdoc />
-        public override SqlExpression Resolve(ModelPath modelPath)
-        {
-            if (this.selectList.Count > 0)
-            {
-                return this.ResolveBySelect(modelPath);
-            }
-
-            return ResolveCore(this.modelBinding, modelPath);
-        }
-
-        /// <inheritdoc />
-        public override bool TryResolveExact(ModelPath modelPath, out SqlExpression resolvedExpression)
-        {
-            if (this.selectList.Count > 0)
-            {
-                return this.TryResolveBySelectExact(modelPath, out resolvedExpression);
-            }
-            return this.modelBinding.TryResolveExact(modelPath, out resolvedExpression);
-        }
-
-        public SqlExpression ResolveByDataSourceAlias(Guid dataSourceAlias, ModelPath modelPath)
-        {
-            if (!this.dataSourceModelBinding.TryGetValue(dataSourceAlias, out var queryModelBinding))
-                throw new ArgumentException($"Data source with alias '{dataSourceAlias}' not found, modelPath = '{modelPath}'.", nameof(dataSourceAlias));
-
-            return ResolveCore(queryModelBinding, modelPath, dataSourceAlias);
-        }
-
-        public bool TryResolveExactByDataSourceAlias(Guid dataSourceAlias, ModelPath modelPath, out SqlExpression resolvedExpression)
-        {
-            if (!this.dataSourceModelBinding.TryGetValue(dataSourceAlias, out var queryModelBinding))
-                throw new ArgumentException($"Data source with alias '{dataSourceAlias}' not found.", nameof(dataSourceAlias));
-            return queryModelBinding.TryResolveExact(modelPath, out resolvedExpression);
-        }
-
-        public SqlExpression ResolveGroupBy(ModelPath modelPath)
-        {
-            if (this.TryResolveGroupByExact(modelPath, out var groupByExpression))
-            {
-                return groupByExpression;
-            }
-
-            var compositeBinding = this.ResolveGroupByPartial(modelPath);
-
-            return CreateCompositeBindingExpressionWithPathRemoved(compositeBinding.Bindings, pathToRemove: modelPath);
+            // TODO: check if below will work, because we are NOT using QueryShapeComposer
+            //var queryShape = this.QueryShape as SqlQueryShapeExpression
+            //                    ??
+            //                    throw new InvalidOperationException($"{nameof(SqlSelectExpression)}.{nameof(QueryShape)} is not of type {nameof(SqlQueryShapeExpression)}");
+            //queryShape.Reset(newQueryShape);
+            this.QueryShape = newQueryShape;
         }
 
 
 
 
-
-        private void AddQuerySourceColumnsInQueryModelBinding(AliasedDataSource aliasedDataSource, SqlQueryModelBinding queryModelBinding, ModelPath dataSourceModelPath)
+        private SqlDataSourceQueryShapeExpression AddJoinedSource(SqlQueryOperation newOperation, SqlQuerySourceExpression querySource, SqlJoinType joinType, SqlQueryShapeExpression parentShape = null, string navigationName = null, Guid? dataSourceAlias = null, SqlExpression joinCondition = null, string joinName = null)
         {
-            // when adding model binding in given queryModelBinding instance we usually
-            // create SqlDataSourceColumnExpression, however, in-case if the given binding
-            // contains QueryableColumnModelPath it means it has the Queryable Derived Table
-            // selected, so we'll set it as is, that is, we will not create SqlDataSourceColumnExpression
-            // for that binding
-            HashSet<ColumnModelPath> dataSourceColumns;
-            if (aliasedDataSource.QuerySource is SqlCteReferenceExpression cteRef)
-            {
-                var ds = this.cteDataSources.Where(x => x.CteAlias == cteRef.CteAlias).FirstOrDefault()
-                        ??
-                        throw new ArgumentException($"CTE Data source with alias '{cteRef.CteAlias}' not found.", nameof(aliasedDataSource));
-                dataSourceColumns = ds.CteBody.GetColumnModelMap();
-            }
-            else
-                dataSourceColumns = aliasedDataSource.QuerySource.GetColumnModelMap();
-            foreach (var querySourceColumn in dataSourceColumns)
-            {
-                SqlExpression expressionToAdd;
-                bool nonProjectable = false;
-                if (querySourceColumn is QueryableColumnModelPath queryableModelPath)
-                {
-                    expressionToAdd = queryableModelPath.Queryable;
-                    nonProjectable = true;
-                }
-                else
-                {
-                    expressionToAdd = new SqlDataSourceColumnExpression(aliasedDataSource.Alias, querySourceColumn.ColumnName);
-                }
-                queryModelBinding.AddBinding(expressionToAdd, dataSourceModelPath.Append(querySourceColumn.ModelPath), nonProjectable: nonProjectable);
-            }
-        }
-        private SqlCompositeBindingExpression CreateCompositeBindingExpressionWithPathRemoved(SqlExpressionBinding[] bindings, ModelPath pathToRemove)
-        {
-            var newBindings = bindings
-                                    .Select(binding => new SqlExpressionBinding(binding.SqlExpression, binding.ModelPath.RemoveFromLeft(pathToRemove)))
-                                    .ToArray();
-            return this.SqlFactory.CreateCompositeBindingForMultipleExpressions(newBindings);
-        }
-
-        private bool TryResolveBySelectExact(ModelPath modelPath, out SqlExpression resolvedExpression)
-        {
-            var item = this.selectList.Where(x => x.ModelPath.Equals(modelPath)).FirstOrDefault();
-            if (item != null)
-            {
-                resolvedExpression = item.ColumnExpression;
-                return true;
-            }
-            resolvedExpression = null;
-            return false;
-        }
-
-        private SqlExpression ResolveBySelect(ModelPath modelPath)
-        {
-            SqlExpression result;
-            if (this.TryResolveBySelectExact(modelPath, out var resolvedExpression))
-            {
-                result = resolvedExpression;
-            }
-            else
-            {
-                var items = this.selectList.Where(x => x.ModelPath.StartsWith(modelPath))
-                                           .Select(x => new SqlExpressionBinding(x.ColumnExpression, x.ModelPath))
-                                           .ToArray();
-                if (items.Length == 0)
-                    throw new UnresolvedMemberAccessException(modelPath);
-                result = new SqlCompositeBindingExpression(items);
-            }
-            return result;
-        }
-
-        private SqlExpression ResolveCore(SqlQueryModelBinding modelBinding, ModelPath modelPath, Guid? dataSourceAlias = null)
-        {
-            SqlExpression result;
-            if (modelPath.IsEmpty)
-                throw new ArgumentException($"Model path cannot be empty.", nameof(modelPath));
-
-            if (modelBinding.TryResolveExact(modelPath, out var sqlExpression))
-            {
-                result = sqlExpression;
-            }
-            else
-            {
-                var bindings = modelBinding.ResolvePartial(modelPath);
-                if (bindings.Length == 0)
-                {
-                    string errorForDataSource = dataSourceAlias.HasValue ? $" for data source with alias '{dataSourceAlias}'" : string.Empty;
-                    throw new InvalidOperationException($"No binding was found for path '{modelPath}'{errorForDataSource}");
-                }
-                var compositeBinding = CreateCompositeBindingExpressionWithPathRemoved(bindings, pathToRemove: modelPath);
-                result = compositeBinding;
-            }
-
-            if (result is SqlDerivedTableExpression derivedTable)
-            {
-                this.modelBinding.RemoveByPath(modelPath);
-                var dataSource = this.AddNavigationJoin(this, derivedTable, SqlJoinType.CrossApply, modelPath, modelPath.GetLastElementRequired());
-                var projections = derivedTable.GetColumnModelMap();
-                foreach (var projection in projections)
-                {
-                    var dsColumn = new SqlDataSourceColumnExpression(dataSource.DataSourceAlias, projection.ColumnName);
-                    this.modelBinding.AddBinding(dsColumn, modelPath.Append(projection.ModelPath));
-                }
-                result = dataSource;
-            }
-            else if (result is SqlQueryableExpression queryable)
-            {
-                result = queryable.Query;
-            }
-
-            return result;
-        }
-
-        private bool TryResolveGroupByExact(ModelPath modelPath, out SqlExpression groupByExpression)
-        {
-            // Case-1: GroupBy is multiple fields       new { C1 = x.Col1, C2 = x.Col2 }
-            //  Case-1-1: modelPath = Empty             x.Key
-            //      Result = this method will return false
-            //  Case-1-2: modelPath = is not empty      x.Key.Col1
-            //      Result = this method will return true if modelPath matches with exact binding
-            // Case-2: GroupBy is single field          .GroupBy(x => x.Col1)
-            //  Case-2-1: modelPath = Empty             x.Key
-            //      Result = this method will return true and expression
-            //  Case-2-2: modelPath = is not empty      x.Key.Col1
-            //      Result = this method will throw exception
-
-            // modelPath can be empty
-            if (this.GroupByClause is SqlCompositeBindingExpression compositeBinding)
-            {
-                var binding = compositeBinding.Bindings.Where(x => x.ModelPath.Equals(modelPath)).FirstOrDefault();
-                if (binding != null)
-                {
-                    groupByExpression = binding.SqlExpression;
-                    return true;
-                }
-            }
-            else
-            {
-                if (!modelPath.IsEmpty)
-                    throw new InvalidOperationException($"Grouping was performed on single column, but model path '{modelPath}' was provided.");
-                if (this.GroupByClause is null)
-                    throw new InvalidOperationException($"GroupByClause is null.");
-                groupByExpression = this.GroupByClause;
-                return true;
-            }
-            groupByExpression = null;
-            return false;
-        }
-
-        private SqlCompositeBindingExpression ResolveGroupByPartial(ModelPath modelPath)
-        {
-            if (this.GroupByClause is SqlCompositeBindingExpression compositeBinding)
-            {
-                var bindings = compositeBinding.Bindings.Where(x => x.ModelPath.StartsWith(modelPath)).ToArray();
-                if (bindings.Length == 0)
-                    throw new InvalidOperationException($"No grouping was found for model path '{modelPath}'.");
-                return this.SqlFactory.CreateCompositeBindingForMultipleExpressions(bindings);
-            }
-
-            throw new InvalidOperationException($"Grouping was performed on single column cannot use Resolve Partial.");
-        }
-
-        private SqlDataSourceExpression AddJoinedSource(SqlQueryOperation newOperation, SqlDataSourceReferenceExpression parentSource, SqlQuerySourceExpression querySource, SqlJoinType joinType, ModelPath? navigationPath, Guid? dataSourceAlias = null, SqlExpression joinCondition = null, string joinName = null)
-        {
-            if (parentSource == null)
-                throw new ArgumentNullException(nameof(parentSource));
             if (querySource is null)
                 throw new ArgumentNullException(nameof(querySource));
 
-            // It is important that we pass `NavigationJoin` as the next operation instead of `Join` when `navigationPath`
+            // It is important that we pass `NavigationJoin` as the next operation instead of `Join` when `navigationName`
             // is provided. This handles cases where a "Where" clause is applied to the query, followed by a projection
             // that involves navigation.
             // Example:
@@ -1031,35 +726,23 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                                 throw new InvalidOperationException($"Expected expression type is '{nameof(SqlQuerySourceExpression)}'.");
             joinCondition = expressionsToCheckIfWrappingOccurs.Length > 1 ? expressionsToCheckIfWrappingOccurs[1] : null;
 
-            var aliasedDataSource = new JoinDataSource(joinType, querySource, dataSourceAlias ?? Guid.NewGuid(), joinCondition: joinCondition, joinName: joinName, isNavigationJoin: newOperation == SqlQueryOperation.NavigationJoin, navigationParent: null);            
+            var aliasedDataSource = new JoinDataSource(joinType, querySource, dataSourceAlias ?? Guid.NewGuid(), joinCondition: joinCondition, joinName: joinName, isNavigationJoin: newOperation == SqlQueryOperation.NavigationJoin);            
             // here we will initialize new QueryModelBinding for the aliased data source and
             // add the data source's columns in it
             this.AddAliasedDataSource(aliasedDataSource);
 
-            // this variable will be used to set in the AddBinding method if navigationPath is given
-            var dataSource = this.CreateDataSource(aliasedDataSource.Alias);
+            var dsQueryShape = this.CreateDataSourceQueryShape(aliasedDataSource);
 
-            if (navigationPath != null)
+            if (!string.IsNullOrWhiteSpace(navigationName))
             {
-                SqlQueryModelBinding queryModelBinding;
-                if (parentSource == this)
-                {
-                    queryModelBinding = this.modelBinding;
-                }
-                else if (parentSource is SqlDataSourceExpression ds)
-                {
-                    if (!this.dataSourceModelBinding.TryGetValue(ds.DataSourceAlias, out queryModelBinding))
-                        throw new InvalidOperationException($"No Model Binding was found for Data Source '{ds.DataSourceAlias}'");
-                }
-                else
-                    throw new InvalidOperationException($"Argument '{nameof(parentSource)}' is neither data source nor current select expression.");
-
-                queryModelBinding.AddBinding(dataSource, navigationPath.Value, nonProjectable: newOperation == SqlQueryOperation.NavigationJoin);
+                if (parentShape is null)
+                    throw new InvalidOperationException($"Action is NavigationJoin, parentShape is required");
+                parentShape.AddMemberAssignment(navigationName, dsQueryShape, projectable: false);
             }
 
             this.OnAfterApply(newOperation);
 
-            return dataSource;
+            return dsQueryShape;
         }
 
         private SqlExpression ReplaceDataSourceAccessingSingle(SqlExpression sqlExpression)
@@ -1113,18 +796,22 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             return sqlExpressions;
         }
 
-        private string GenerateUniqueColumnAlias(Dictionary<string, SelectColumn> columns, string columnAlias)
+        private SqlDataSourceQueryShapeExpression CreateDataSourceQueryShape(AliasedDataSource aliasedDataSource)
         {
-            int i = 1;
-            var newColumnAlias = $"{columnAlias}_{i}";
-            while (columns.ContainsKey(newColumnAlias))
+            if (aliasedDataSource is null)
+                throw new ArgumentNullException(nameof(aliasedDataSource));
+            if (aliasedDataSource.QuerySource is SqlCteReferenceExpression cteRef)
             {
-                i++;
-                newColumnAlias = $"{columnAlias}_{i}";
+                var cteDataSource = this.cteDataSources.Where(x => x.CteAlias == cteRef.CteAlias).FirstOrDefault()
+                                    ??
+                                    throw new InvalidOperationException($"CTE Data Source with alias {cteRef.CteAlias} not found.");
+                return cteDataSource.CteBody.CreateQueryShape(aliasedDataSource.Alias);
             }
-            return newColumnAlias;
+            else
+                return aliasedDataSource.QuerySource.CreateQueryShape(aliasedDataSource.Alias);
         }
 
+        
         private (AliasedDataSource DataSource, int Index) GetAliasedDataSourceRequired(Guid dataSourceAlias)
         {
             var indexOfDataSource = this.dataSources.FindIndex(x => x.Alias == dataSourceAlias);
@@ -1137,64 +824,38 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         {
             // add newly created aliased data source in our data source collection
             this.dataSources.Add(aliasedDataSource);
-
-            var dataSourceModelBinding = new SqlQueryModelBinding();
-            this.dataSourceModelBinding.Add(aliasedDataSource.Alias, dataSourceModelBinding);
-            // here we are filling the data source's column list in `dataSourceModelBinding` with ModelPath.Empty because
-            // if we want to access data source related binding we will provide relative path not full path
-            AddQuerySourceColumnsInQueryModelBinding(aliasedDataSource, dataSourceModelBinding, ModelPath.Empty);
-        }
-
-        private SqlDataSourceExpression CreateDataSource(Guid dataSourceAlias)
-        {
-            return new SqlDataSourceExpression(this, dataSourceAlias);
         }
 
         private bool ApplyAutoProjectionIfPossible(bool applyAll)
         {
             if (this.selectList.Count > 0)
                 return false;
-
-            if (this.GroupByClause != null)
-            {
-                SqlExpressionBinding[] bindings;
-                var groupBindingExpression = this.ResolveGroupBy(ModelPath.Empty);
-                if (groupBindingExpression is SqlCompositeBindingExpression groupBindings)
-                {
-                    bindings = groupBindings.Bindings;
-                }
-                else
-                {
-                    bindings = new[] { new SqlExpressionBinding(groupBindingExpression, ModelPath.Empty) };
-                }
-                this.modelBinding.Reset();
-                this.modelBinding.AddBindings(bindings);
-            }
-            this.ApplyProjectionFromModelBinding(applyAll: applyAll);
+            this.ApplyProjectionFromQueryShape(this.GroupByClause ?? this.QueryShape, applyAll: applyAll);
             this.AutoProjection = true;
             return true;
         }
 
-        private void ApplyProjectionFromModelBinding(bool applyAll)
+        private void ApplyProjectionFromQueryShape(SqlExpression queryShape, bool applyAll)
         {
             if (this.selectList.Count != 0)
                 throw new InvalidOperationException($"Projection has already been applied");
-
-            SqlExpressionBinding[] bindings;
-            if (!applyAll)
-                bindings = this.modelBinding.GetProjectableBindings();
-            else
-                bindings = this.modelBinding.CreateCopy();
-                //bindings = bindings.Where(x => !IsAutoJoinedDataSource(x.SqlExpression)).ToArray();
-
-            var projection = bindings;
-            var expandedBindings = this.ExpandBindings(projection).ToList();
-
-            var duplicationRemoved = this.FixDuplicateColumns(expandedBindings.ToArray());
-            this.selectList.AddRange(duplicationRemoved);
-
+            var selectList = ExtensionMethods.ConvertQueryShapeToSelectList(queryShape, applyAll);
+            // after this we must NOT have any SqlMemberInitExpression and SqlDataSourceQueryShapeExpression
+            // within select expression
+            this.selectList.AddRange(selectList);
             this.OnAfterApply(SqlQueryOperation.Select);
         }
+
+        //public IReadOnlyList<SelectColumn> GetProjection()
+        //{
+        //    if (this.HasProjectionApplied || this.GroupByClause == null)
+        //        return ExtensionMethods.ConvertQueryShapeToSelectList(this.QueryShape, applyAll: false);
+        //    else
+        //    {
+        //        return ExtensionMethods.ConvertQueryShapeToSelectList(this.GroupByClause, applyAll: false);
+        //    }
+        //}
+
 
         private void AppendSelectListWithColumnsUsedInSubQuery()
         {
@@ -1236,63 +897,9 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             foreach (var col in newEntries)
             {
                 string alias = $"SubQueryCol{colIndex++}";
-                var binding = new SqlExpressionBinding(col, new ModelPath(alias));
-                var selectItem = new SelectColumn(binding.SqlExpression, alias, binding.ModelPath, scalarColumn: false);
+                var selectItem = new SelectColumn(col, alias, scalarColumn: false);
                 this.selectList.Add(selectItem);
             }
-        }
-
-
-        private bool IsAutoJoinedDataSource(SqlExpression sqlExpression)
-        {
-            if (!(sqlExpression is SqlDataSourceExpression ds))
-                return false;
-            var aliasedDataSource = this.dataSources.Where(x => x.Alias == ds.DataSourceAlias).FirstOrDefault();
-            if (aliasedDataSource == null)
-                return false;
-            if (!(aliasedDataSource is JoinDataSource joinDs))
-                return false;
-            return joinDs.IsNavigationJoin;
-        }
-
-        private SqlExpressionBinding[] ExpandBindings(SqlExpressionBinding[] bindings)
-        {
-            var expandedBindings = new List<SqlExpressionBinding>();
-            foreach (var binding in bindings)
-            {
-                if (binding.SqlExpression is SqlDataSourceExpression ds)
-                {
-                    if (ds.SelectQuery != this)
-                        throw new InvalidOperationException($"Data source '{ds.DataSourceAlias}' is not part of this select query.");
-                    if (!this.dataSourceModelBinding.TryGetValue(ds.DataSourceAlias, out var queryModelBinding))
-                        throw new InvalidOperationException($"QueryModelBinding was not found for Data source '{ds.DataSourceAlias}'.");
-                    //var dataSourceBindings = queryModelBinding.GetBindings().Select(x => new SqlExpressionBinding(x.SqlExpression, binding.ModelPath.Append(x.ModelPath))).ToArray();
-                    var dataSourceBindings = queryModelBinding.PrependPath(binding.ModelPath);  
-                    expandedBindings.AddRange(dataSourceBindings);
-                }
-                else
-                {
-                    expandedBindings.Add(binding);
-                }
-            }
-            return expandedBindings.ToArray();
-        }
-
-        private IEnumerable<SelectColumn> FixDuplicateColumns(SqlExpressionBinding[] bindings)
-        {
-            var selectItems = new Dictionary<string, SelectColumn>();
-            foreach (var binding in bindings)
-            {
-                var columnAlias = binding.ModelPath.IsEmpty ? "Col1" : binding.ModelPath.GetLastElementRequired();
-                if (selectItems.ContainsKey(columnAlias))
-                {
-                    columnAlias = this.GenerateUniqueColumnAlias(selectItems, columnAlias);
-                }
-                var selectItem = new SelectColumn(binding.SqlExpression, columnAlias, binding.ModelPath, scalarColumn: binding.ModelPath.IsEmpty);
-                selectItems.Add(columnAlias, selectItem);
-            }
-
-            return selectItems.Values;
         }
 
         private SqlExpression[] WrapQueryIfCteReferencesExist(SqlExpression[] sqlExpressions)
@@ -1419,201 +1026,87 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             }
         }
 
-        private class SubQueryProjectionReplacementVisitor : SqlExpressionVisitor
+        // This class is only intended to be used on the SqlSelectExpression's constructor
+        // when we receive the Sql Sub-Queries / Tables to create the SqlSelectExpression.
+        // It adds the given sub-query as join in the given `selectQuery` while in normal
+        // cases we don't add the data source as joined because it usually has already
+        // been added
+        private class QueryShapeComposer
         {
-            private class ReferenceReplacementFlag
+            private readonly SqlSelectExpression selectQuery;
+
+            public QueryShapeComposer(SqlSelectExpression selectQuery)
             {
-                public bool IsReplaced { get; set; }
+                this.selectQuery = selectQuery;
             }
 
-            //private readonly SelectColumn[] subQueryProjections;
-            private readonly AliasedDataSource subQueryDataSource;
-            private readonly Guid subQueryDataSourceAlias;
-            private readonly SqlExpressionHashGenerator hashGenerator;
-            private readonly List<(int, SelectColumn)> subQueryProjectionHashMap;
-            private readonly Stack<ReferenceReplacementFlag> referenceReplaced = new Stack<ReferenceReplacementFlag>();
-            private readonly Stack<SqlExpression> sqlExpressionStack = new Stack<SqlExpression>();
-            private readonly Stack<bool> visitingCteDataSource = new Stack<bool>();
-
-            public static SqlExpression FindAndReplace(SelectColumn[] subQueryProjections, AliasedDataSource ds, SqlExpression toFindIn)
+            public SqlQueryShapeExpression ComposeQueryShape(SqlExpression sqlExpression)
             {
-                if (toFindIn is null)
-                    throw new ArgumentNullException(nameof(toFindIn));
-                if (subQueryProjections is null)
-                    throw new ArgumentNullException(nameof(subQueryProjections));
-                if (ds is null)
-                    throw new ArgumentNullException(nameof(ds));
-                var visitor = new SubQueryProjectionReplacementVisitor(subQueryProjections, ds);
-                var visited = visitor.Visit(toFindIn);
-                return visited;
-            }
-
-            public SubQueryProjectionReplacementVisitor(SelectColumn[] subQueryProjections, AliasedDataSource ds)
-            {
-                //this.subQueryProjections = subQueryProjections ?? throw new ArgumentNullException(nameof(subQueryProjections));
-                this.subQueryDataSource = ds ?? throw new ArgumentNullException(nameof(ds));
-                this.subQueryDataSourceAlias = ds.Alias;
-                this.hashGenerator = new SqlExpressionHashGenerator();
-                this.subQueryProjectionHashMap = subQueryProjections.Select(x => (this.hashGenerator.Generate(x.ColumnExpression), x)).ToList();
-            }
-
-            protected internal override SqlExpression VisitSqlDerivedTable(SqlDerivedTableExpression node)
-            {
-                referenceReplaced.Push(new ReferenceReplacementFlag { IsReplaced = false });
-                var visitedNode = base.VisitSqlDerivedTable(node) as SqlDerivedTableExpression
-                                    ??
-                                    throw new InvalidOperationException($"Expected expression type is '{nameof(SqlDerivedTableExpression)}'.");
-                var popped = referenceReplaced.Pop();
-                if (popped.IsReplaced && this.visitingCteDataSource.Count > 0 && this.visitingCteDataSource.Peek())
+                if (sqlExpression is SqlMemberInitExpression queryShape)
                 {
-                    // it means in the current derived table an outer data source reference was used
-                    // so we need to see if that data source is a CTE reference we need to add it as cross join
-                    if (this.subQueryDataSource.QuerySource is SqlCteReferenceExpression sourceCteRef)
+                    return this.ComposeQueryShapeByMemberInit(queryShape);
+                }
+                else if (sqlExpression is SqlQuerySourceExpression querySource)
+                {
+                    return this.ComposeQueryShapeByQuerySource(querySource);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Cannot compose query shape for '{sqlExpression.GetType().Name}' expression.");
+                }
+            }
+
+            private SqlMemberInitExpression ComposeQueryShapeByMemberInit(SqlMemberInitExpression queryShape)
+            {
+                if (queryShape is null)
+                    throw new ArgumentNullException(nameof(queryShape));
+                var expandedBindings = new List<SqlMemberAssignment>();
+                foreach (var binding in queryShape.Bindings)
+                {
+                    SqlExpression memberValue = this.ComposeQueryShape(binding.SqlExpression);
+                    var memberAssignment = new SqlMemberAssignment(binding.MemberName, memberValue);
+                    expandedBindings.Add(memberAssignment);
+                }
+                return new SqlMemberInitExpression(expandedBindings);
+            }
+
+            private SqlDataSourceQueryShapeExpression ComposeQueryShapeByQuerySource(SqlQuerySourceExpression dataSource)
+            {
+                if (dataSource is null)
+                    throw new ArgumentNullException(nameof(dataSource));
+
+                if (dataSource is SqlDerivedTableExpression derivedTable)
+                {
+                    derivedTable = this.ExtractCteSourcesFromDerivedTableIfAvailable(derivedTable);
+                    dataSource = derivedTable.ConvertToTableIfPossible();
+                }
+
+                var dataSourceAlias = Guid.NewGuid();
+                AliasedDataSource aliasedDataSource;
+                var firstEntry = this.selectQuery.dataSources.Count == 0;
+                if (firstEntry)
+                    aliasedDataSource = new AliasedDataSource(dataSource, dataSourceAlias);
+                else
+                    aliasedDataSource = new JoinDataSource(SqlJoinType.Cross, dataSource, dataSourceAlias, joinCondition: null, joinName: null, isNavigationJoin: false);
+                this.selectQuery.AddAliasedDataSource(aliasedDataSource);
+                return this.selectQuery.CreateDataSourceQueryShape(aliasedDataSource);
+            }
+
+            private SqlDerivedTableExpression ExtractCteSourcesFromDerivedTableIfAvailable(SqlDerivedTableExpression derivedTableSource)
+            {
+                if (derivedTableSource is null)
+                    throw new ArgumentNullException(nameof(derivedTableSource));
+                if (derivedTableSource.CteDataSources.Length > 0)
+                {
+                    var cteDsList = derivedTableSource.CteDataSources;
+                    foreach (var cteDs in cteDsList)
                     {
-                        if (!visitedNode.Joins.Any(x => x.QuerySource is SqlCteReferenceExpression cteRef && cteRef.CteAlias == sourceCteRef.CteAlias))
-                        {
-                            var cteReference = new SqlCteReferenceExpression(sourceCteRef.CteAlias);
-                            var join = new SqlAliasedJoinSourceExpression(SqlJoinType.Cross, cteReference, this.subQueryDataSource.Alias, joinCondition: null, joinName: null, isNavigationJoin: false, navigationParent: null);
-                            var newJoins = visitedNode.Joins.Concat(new[] { join }).ToArray();
-                            visitedNode = visitedNode.Update(visitedNode.CteDataSources, visitedNode.FromSource, newJoins, visitedNode.WhereClause, visitedNode.GroupByClause, visitedNode.HavingClause, visitedNode.OrderByClause, visitedNode.SelectColumnCollection);
-                        }
+                        this.selectQuery.cteDataSources.Add(new CteDataSource(cteDs.CteBody, cteDs.CteAlias));
                     }
+                    var d = derivedTableSource;
+                    derivedTableSource = derivedTableSource.Update(null, d.FromSource, d.Joins, d.WhereClause, d.GroupByClause, d.HavingClause, d.OrderByClause, d.SelectColumnCollection);
                 }
-                return visitedNode;
-            }
-
-            private ReferenceReplacementFlag CurrentFlag => referenceReplaced.Count > 0 ? referenceReplaced.Peek() : null;
-
-            protected internal override SqlExpression VisitSqlAliasedCteSource(SqlAliasedCteSourceExpression node)
-            {
-                this.visitingCteDataSource.Push(true);
-                var visitedNode = base.VisitSqlAliasedCteSource(node);
-                this.visitingCteDataSource.Pop();
-                return visitedNode;
-            }
-
-            public override SqlExpression Visit(SqlExpression node)
-            {
-                if (node is null) return null;
-                try
-                {
-                    this.sqlExpressionStack.Push(node);
-                        var nodeHash = this.hashGenerator.Generate(node);
-                    if (this.subQueryProjectionHashMap.Where(x => x.Item1 == nodeHash).Any())
-                    {
-                        /*
-                            here we are handling the case if inner query is using same expression in 2 columns with different aliases,
-                            we want to pick the exact alias, even though it would work but still we want to make query 100% correct
-                            e.g.
-
-                         var q = (from e in employees
-                                    let result1 = e.Name
-                                    let result2 = e.Department
-                                    orderby result1, result2
-                                    select new { result1, result2, e.Name })
-                                    .Select(x=>new { x.result1, x.result2, x.Name });
-
-                        In above example `x.result1` and `x.Name` both are pointing to same column `Name` in inner query
-                        which could lead to it to render something like this
-
-                                                                            this should be a_2.Name
-                                                                               _____|_____
-                                                                              |           |
-                        select a_2.result1 as result1, a_2.result2 as result2, a_2.result1 as Name          
-                        from (
-                                select a_1.Name as result1, a_1.Department as result2, a_1.Name as Name
-                                from Employee as a_1
-                                order by a_1.Name asc, a_1.Department asc
-                            ) as a_2
-
-                        As we can see it is selecting `a_2.result1 as Name` which is *correct* as far as results are concern but
-                        does not look right from LINQ to SQL conversion. 
-                        This selection is happening because Hash of inner SqlExpression (a_1.Name) is same, so system is 
-                        picking first matched.
-
-                        But below we are checking if multiple expressions are matched and parent is SqlCompositeBindingExpression
-                        then match the alias as well.
-
-                         */
-
-                        var parentNode = this.sqlExpressionStack.Count > 1 ? this.sqlExpressionStack.ElementAt(1) : null;
-                        string parentAlias = null;
-                        if (parentNode is SqlCompositeBindingExpression parentCompositeBinding)
-                        {
-                            var nodeInCompositeBinding = parentCompositeBinding.Bindings.Where(x => x.SqlExpression == node).FirstOrDefault();
-                            if (nodeInCompositeBinding != null && !nodeInCompositeBinding.ModelPath.IsEmpty)
-                                parentAlias = nodeInCompositeBinding.ModelPath.GetLastElementRequired();
-                        }
-                        var subQueryProjectionMatched = this.subQueryProjectionHashMap.Where(x => x.Item1 == nodeHash).OrderBy(x => x.Item2.Alias == parentAlias ? 0 : 1).First();
-                        if (CurrentFlag != null)
-                            CurrentFlag.IsReplaced = true;
-                        return new SqlDataSourceColumnExpression(subQueryDataSourceAlias, subQueryProjectionMatched.Item2.Alias);
-                    }
-                    return base.Visit(node);
-                }
-                finally
-                {
-                    this.sqlExpressionStack.Pop();
-                }
-            }
-        }
-
-        private class DataSourceColumnUsageExtractor : SqlExpressionVisitor
-        {
-            private readonly HashSet<SqlDataSourceColumnExpression> dataSourceColumnUsages = new HashSet<SqlDataSourceColumnExpression>();
-            private readonly HashSet<Guid> dataSourcesToSearch;
-            private SqlExpression targetExpression;
-
-            public DataSourceColumnUsageExtractor(HashSet<Guid> dataSourcesToSearch)
-            {
-                this.dataSourcesToSearch = dataSourcesToSearch ?? throw new ArgumentNullException(nameof(dataSourcesToSearch));
-            }
-
-            public static DataSourceColumnUsageExtractor FindDataSources(HashSet<Guid> dataSourcesToSearch)
-            {
-                return new DataSourceColumnUsageExtractor(dataSourcesToSearch);
-            }
-
-            public DataSourceColumnUsageExtractor In(SqlExpression sqlExpression)
-            {
-                if (sqlExpression is null)
-                    throw new ArgumentNullException(nameof(sqlExpression));
-                this.targetExpression = sqlExpression;
-                return this;
-            }
-
-            public IReadOnlyCollection<SqlDataSourceColumnExpression> ExtractDataSourceColumnExpressions()
-            {
-                if (this.targetExpression is null)
-                    throw new InvalidOperationException($"SqlExpression is not set, please call In method to set it.");
-                this.dataSourceColumnUsages.Clear();
-                this.Visit(this.targetExpression);
-                return this.ConvertDataSourceColumnUsageToDataSourceColumnExpressions();
-            }
-
-            public static IReadOnlyCollection<SqlDataSourceColumnExpression> ExtractDataSourceColumnUsages(SqlExpression sqlExpression, HashSet<Guid> dataSourcesToSearch)
-            {
-                if (sqlExpression is null)
-                    throw new ArgumentNullException(nameof(sqlExpression));
-                if (dataSourcesToSearch is null)
-                    throw new ArgumentNullException(nameof(dataSourcesToSearch));
-                var extractor = new DataSourceColumnUsageExtractor(dataSourcesToSearch);
-                extractor.Visit(sqlExpression);
-                return extractor.ConvertDataSourceColumnUsageToDataSourceColumnExpressions();
-            }
-
-            private IReadOnlyCollection<SqlDataSourceColumnExpression> ConvertDataSourceColumnUsageToDataSourceColumnExpressions()
-            {
-                return this.dataSourceColumnUsages.ToArray();
-            }
-
-            protected internal override SqlExpression VisitSqlDataSourceColumn(SqlDataSourceColumnExpression node)
-            {
-                if (this.dataSourcesToSearch.Contains(node.DataSourceAlias))
-                {
-                    this.dataSourceColumnUsages.Add(node);
-                }
-                return base.VisitSqlDataSourceColumn(node);
+                return derivedTableSource;
             }
         }
     }

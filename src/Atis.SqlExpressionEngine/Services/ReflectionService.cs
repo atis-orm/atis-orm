@@ -42,11 +42,6 @@ namespace Atis.SqlExpressionEngine.Services
         }
 
 
-        public virtual Expression GetQueryExpressionFromQueryable(object queryableObject)
-        {
-            return (queryableObject as IQueryable)?.Expression;
-        }
-
         public virtual Type GetEntityTypeFromQueryableType(Type queryableType)
         {
             return queryableType.GetInterfaces()
@@ -65,7 +60,7 @@ namespace Atis.SqlExpressionEngine.Services
             return type.GetProperties(BindingFlags.Instance | BindingFlags.Public);
         }
 
-        public virtual object Evalulate(Expression expression)
+        public virtual object Evaluate(Expression expression)
         {
             return this.expressionEvaluator.Evaluate(expression);
         }
@@ -164,13 +159,22 @@ namespace Atis.SqlExpressionEngine.Services
             return value is System.Collections.IEnumerable && !(value is string);
         }
 
-        public bool IsProjectionContextMethod(MethodInfo method)
+        public bool IsGroupingType(Type type)
         {
-            var methodName = method?.Name;
-            return methodName == nameof(Queryable.Select) || methodName == nameof(Queryable.OrderBy) ||
-                            methodName == nameof(Queryable.OrderByDescending) || methodName == nameof(Queryable.ThenBy) ||
-                            methodName == nameof(Queryable.ThenByDescending) || methodName == nameof(Queryable.GroupBy) ||
-                            methodName == nameof(QueryExtensions.OrderByDesc);
+            if (type is null)
+                return false;
+            return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IGrouping<,>);
+        }
+
+        private readonly static string[] aggregateMethodNames = new[] { nameof(Queryable.Count), nameof(Queryable.Max), nameof(Queryable.Min), nameof(Queryable.Sum) };
+
+        public bool IsAggregateMethod(MethodCallExpression methodCallExpression)
+        {
+            return (methodCallExpression.Method.DeclaringType == typeof(Enumerable)
+                    ||
+                    methodCallExpression.Method.DeclaringType == typeof(Queryable))
+                    &&
+                    aggregateMethodNames.Contains(methodCallExpression.Method.Name);
         }
     }
 }

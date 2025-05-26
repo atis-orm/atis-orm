@@ -38,50 +38,19 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         }
     }
 
-    public class LetLinqKeywordConverter : LinqToSqlQueryConverterBase<MethodCallExpression>
+    public class LetLinqKeywordConverter : QueryMethodExpressionConverterBase
     {
-        private readonly ILambdaParameterToDataSourceMapper lambdaParameterMap;
-        private ParameterExpression lambdaParameterMapped;
-
         public LetLinqKeywordConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
         {
-            lambdaParameterMap = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
-
+        
         /// <inheritdoc />
-        public override void OnConversionCompletedByChild(ExpressionConverterBase<Expression, SqlExpression> childConverter, Expression childNode, SqlExpression convertedExpression)
+        protected override SqlExpression Convert(SqlSelectExpression sqlQuery, SqlExpression[] arguments)
         {
-            if (childNode == this.Expression.Arguments[0])
-            {
-                // query converted
-                this.lambdaParameterMapped = this.Expression.GetArgLambdaParameterRequired(1, 0);
-                this.lambdaParameterMap.TrySetParameterMap(this.lambdaParameterMapped, convertedExpression);
-            }
-            base.OnConversionCompletedByChild(childConverter, childNode, convertedExpression);
-        }
-
-        /// <inheritdoc />
-        public override void OnAfterVisit()
-        {
-            if (this.lambdaParameterMapped != null)
-                this.lambdaParameterMap.RemoveParameterMap(this.lambdaParameterMapped);
-        }
-
-        /// <inheritdoc />
-        public override SqlExpression Convert(SqlExpression[] convertedChildren)
-        {
-            var sqlQuery = convertedChildren[0] as SqlSelectExpression
-                            ??
-                            throw new InvalidOperationException($"The first argument of the Select method must be a {nameof(SqlSelectExpression)}, but got {convertedChildren[0].GetType().Name}.");
-            var compositeBinding = convertedChildren[1] as SqlCompositeBindingExpression
-                                   ??
-                                   throw new InvalidOperationException($"The second argument of the Select method must be a {nameof(SqlCompositeBindingExpression)}, but got {convertedChildren[1].GetType().Name}.");
+            var compositeBinding = arguments[0].CastTo<SqlQueryShapeExpression>();
             sqlQuery.UpdateModelBinding(compositeBinding);
-            sqlQuery.MarkModelBindingAsNonProjectable(compositeBinding.Bindings[1].ModelPath);
+            // TODO: check if we need to mark the newly added binding as "non-projectable"
             return sqlQuery;
         }
-
-        /// <inheritdoc />
-        public override bool IsChainedQueryArgument(Expression childNode) => childNode == this.Expression.Arguments[0];
     }
 }

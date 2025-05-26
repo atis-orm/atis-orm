@@ -54,7 +54,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Preprocessors
                 {
                     joinedSource = relation.FromParentToChild(this.queryProvider);
                 }
-                var navigationInfo = new NavigationInfo(relationAttribute.NavigationType, relationLambda, joinedSource);
+                var navigationInfo = new NavigationInfo(relationAttribute.NavigationType, relationLambda, joinedSource, memberExpression.Member.Name);
                 return navigationInfo;
             }
             return null;

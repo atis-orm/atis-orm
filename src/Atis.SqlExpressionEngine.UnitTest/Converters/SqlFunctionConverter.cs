@@ -30,11 +30,8 @@ namespace Atis.SqlExpressionEngine.UnitTest.Converters
 
     public class SqlFunctionConverter : LinqToNonSqlQueryConverterBase<MethodCallExpression>
     {
-        private readonly ILambdaParameterToDataSourceMapper parameterMapper;
-
         public SqlFunctionConverter(IConversionContext context, MethodCallExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converters) : base(context, expression, converters)
         {
-            this.parameterMapper = this.Context.GetExtensionRequired<ILambdaParameterToDataSourceMapper>();
         }
 
         private SqlSelectExpression sqlQuerySource;
@@ -56,7 +53,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Converters
                             // we need to map the parameter with the query
                             // and set the sqlQuerySource
                             this.sqlQuerySource = sqlQuery;
-                            this.parameterMapper.TrySetParameterMap(parameterExpression, sqlQuery);
+                            this.MapParameter(parameterExpression, () => sqlQuery.GetQueryShapeForFieldMapping());
                         }
                     }
                 }

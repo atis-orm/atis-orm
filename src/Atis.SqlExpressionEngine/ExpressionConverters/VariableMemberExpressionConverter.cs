@@ -57,8 +57,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
     /// </summary>
     public class VariableMemberExpressionConverter : LinqToNonSqlQueryConverterBase<MemberExpression>
     {
-        private readonly IReflectionService reflectionService;
-
         /// <summary>
         ///     <para>
         ///         Initializes a new instance of the <see cref="VariableMemberExpressionConverter"/> class.
@@ -70,7 +68,6 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         public VariableMemberExpressionConverter(IConversionContext context, MemberExpression expression, ExpressionConverterBase<Expression, SqlExpression>[] converterStack)
             : base(context, expression, converterStack)
         {
-            this.reflectionService = context.GetExtensionRequired<IReflectionService>();
         }
 
         /// <inheritdoc />
@@ -102,7 +99,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
         /// <returns>Value from the specified member expression.</returns>
         protected virtual object GetVariableValue(MemberExpression memberExpression)
         {
-            return this.reflectionService.Evalulate(memberExpression);
+            return this.ReflectionService.Evaluate(memberExpression);
         }
 
         /// <inheritdoc />
@@ -115,7 +112,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
 
         private bool IsEnumerable(object value)
         {
-            return this.reflectionService.IsEnumerable(value);
+            return this.ReflectionService.IsEnumerable(value);
         }
     }
 }
