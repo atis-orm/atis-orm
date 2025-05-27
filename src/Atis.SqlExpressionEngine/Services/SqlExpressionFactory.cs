@@ -154,7 +154,7 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlLiteralExpression(value);
         }
 
-        public SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, SqlExpression[] arguments)
+        public SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, IReadOnlyList<SqlExpression> arguments)
         {
             return new SqlStringFunctionExpression(stringFunction, stringExpression, arguments);
         }

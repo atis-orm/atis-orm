@@ -9,10 +9,10 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
     {
         public override SqlExpressionType NodeType => SqlExpressionType.StringFunction;
         public SqlExpression StringExpression { get; }
-        public SqlExpression[] Arguments { get; }
+        public IReadOnlyList<SqlExpression> Arguments { get; }
         public SqlStringFunction StringFunction { get; }
 
-        public SqlStringFunctionExpression(SqlStringFunction stringFunction, SqlExpression stringExpression, SqlExpression[] arguments)
+        public SqlStringFunctionExpression(SqlStringFunction stringFunction, SqlExpression stringExpression, IReadOnlyList<SqlExpression> arguments)
         {
             this.StringFunction = stringFunction;
             this.StringExpression = stringExpression ?? throw new ArgumentNullException(nameof(stringExpression));
@@ -24,7 +24,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             return sqlExpressionVisitor.VisitSqlStringFunction(this);
         }
 
-        public SqlStringFunctionExpression Update(SqlExpression stringExpression, SqlExpression[] arguments)
+        public SqlStringFunctionExpression Update(SqlExpression stringExpression, IReadOnlyList<SqlExpression> arguments)
         {
             if (stringExpression == this.StringExpression && ArgumentsSame(arguments))
             {
@@ -33,12 +33,12 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             return new SqlStringFunctionExpression(this.StringFunction, stringExpression, arguments);
         }
 
-        private bool ArgumentsSame(SqlExpression[] arguments)
+        private bool ArgumentsSame(IReadOnlyList<SqlExpression> arguments)
         {
-            if (this.Arguments?.Length != arguments?.Length)
+            if (this.Arguments?.Count != arguments?.Count)
                 return false;
 
-            for (int i = 0; i < arguments.Length; i++)
+            for (int i = 0; i < arguments.Count; i++)
             {
                 if (arguments[i] != this.Arguments[i])
                     return false;
