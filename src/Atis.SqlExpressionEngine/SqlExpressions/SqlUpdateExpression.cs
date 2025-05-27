@@ -1,19 +1,20 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Atis.SqlExpressionEngine.SqlExpressions
 {
     public class SqlUpdateExpression : SqlExpression
     {
-        public SqlUpdateExpression(SqlDerivedTableExpression source, Guid updatingDataSource, string[] columns, SqlExpression[] values)
+        public SqlUpdateExpression(SqlDerivedTableExpression source, Guid updatingDataSource, IReadOnlyList<string> columns, IReadOnlyList<SqlExpression> values)
         {
             this.Source = source ?? throw new ArgumentNullException(nameof(source));
             this.DataSource = updatingDataSource;
             this.Columns = columns ?? throw new ArgumentNullException(nameof(columns));
             this.Values = values ?? throw new ArgumentNullException(nameof(values));
-            if (columns.Length == 0)
+            if (columns.Count == 0)
                 throw new ArgumentException("At least one column must be specified.", nameof(columns));
-            if (columns.Length != values.Length)
+            if (columns.Count != values.Count)
                 throw new ArgumentException("The number of columns must match the number of values.", nameof(columns));
             if (!this.Source.AllDataSources.Where(x => x.Alias == updatingDataSource).Any())
                 throw new ArgumentException("The updating data source must be part of the query.", nameof(updatingDataSource));
@@ -21,8 +22,8 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         public SqlDerivedTableExpression Source { get; }
         public Guid DataSource { get; }
-        public string[] Columns { get; }
-        public SqlExpression[] Values { get; }
+        public IReadOnlyList<string> Columns { get; }
+        public IReadOnlyList<SqlExpression> Values { get; }
 
         /// <inheritdoc />
         public override SqlExpressionType NodeType => SqlExpressionType.Update;
@@ -33,11 +34,11 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             return sqlExpressionVisitor.VisitSqlUpdate(this);
         }
 
-        public SqlExpression Update(SqlDerivedTableExpression sqlQuery, SqlExpression[] values)
+        public SqlExpression Update(SqlDerivedTableExpression sqlQuery, IReadOnlyList<SqlExpression> values)
         {
             if (values is null)
                 throw new ArgumentNullException(nameof(values));
-            if (this.Source == Source && (this.Values == values || this.Values.SequenceEqual(this.Values)))
+            if (this.Source == sqlQuery && (this.Values == values || this.Values.SequenceEqual(values)))
             {
                 return this;
             }
