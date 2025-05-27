@@ -1,4 +1,5 @@
 ﻿using Atis.Expressions;
+using Atis.SqlExpressionEngine.Abstractions;
 using Atis.SqlExpressionEngine.Preprocessors;
 using Atis.SqlExpressionEngine.Services;
 using Atis.SqlExpressionEngine.SqlExpressions;
@@ -47,7 +48,15 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
                 {
                     IsRowNumberSupported = false,
                 };
-                resultQuery = translator.Translate(result);
+                try
+                {
+                    resultQuery = translator.Translate(result);
+                }
+                catch
+                {
+                    printExpressions();
+                    throw;
+                }
                 Console.WriteLine($"+++++++++++++++++++++++++ {testHeading} ++++++++++++++++++++++++");
                 Console.WriteLine(resultQuery);
                 Console.WriteLine("-----------------------------------------------------------------");
@@ -73,9 +82,8 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
 
         private SqlExpression? ConvertExpressionToSqlExpression(Expression queryExpression, out Expression updatedQueryExpression)
         {
-            updatedQueryExpression = PreprocessExpression(queryExpression);
-
             var model = new Model();
+            updatedQueryExpression = PreprocessExpression(queryExpression, model);
             var sqlDataTypeFactory = new SqlDataTypeFactory();
             var reflectionService = new ReflectionService(new ExpressionEvaluator());
             var parameterMapper = new LambdaParameterToDataSourceMapper();
@@ -91,7 +99,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         }
 
 
-        protected Expression PreprocessExpression(Expression expression)
+        protected Expression PreprocessExpression(Expression expression, IModel model)
         {
             //var stringLengthReplacementVisitor = new StringLengthReplacementVisitor();
             //expression = stringLengthReplacementVisitor.Visit(expression);
@@ -110,7 +118,9 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             //var concreteParameterPreprocessor = new ConcreteParameterReplacementPreprocessor(new QueryPartsIdentifier(), reflectionService);
             var methodInterfaceTypeReplacementPreprocessor = new QueryMethodGenericTypeReplacementPreprocessor(reflectionService);
             var customMethodReplacementPreprocessor = new CustomBusinessMethodPreprocessor();
-            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, /*childJoinReplacementPreprocessor, */calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor, customMethodReplacementPreprocessor
+            var navigationEqualityPreprocessor = new NavigationNullEqualityPreprocessor(model);
+            var preprocessor = new ExpressionPreprocessorProvider([queryVariablePreprocessor, methodInterfaceTypeReplacementPreprocessor, navigateToManyPreprocessor, navigateToOnePreprocessor, /*childJoinReplacementPreprocessor, */calculatedPropertyReplacementPreprocessor, specificationPreprocessor, convertPreprocessor, allToAnyRewriterPreprocessor, inValuesReplacementPreprocessor, customMethodReplacementPreprocessor,
+                navigationEqualityPreprocessor
                 /*, concreteParameterPreprocessor*/]);
             expression = preprocessor.Preprocess(expression);
             return expression;

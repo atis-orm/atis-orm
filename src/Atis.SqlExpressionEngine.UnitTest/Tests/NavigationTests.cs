@@ -350,5 +350,29 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
 ";
             Test("Navigation to Child with More than 1 Lines Outer Apply Test", q.Expression, expectedResult);
         }
+
+
+        [TestMethod]
+        public void Navigation_is_not_null()
+        {
+            var employee = new Queryable<Employee>(this.queryProvider);
+            var q = employee.Where(x => x.NavManager() != null);
+            string expectedResult = @"
+select a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
+	from Employee as a_1
+			inner join Employee as NavManager_2 on (NavManager_2.EmployeeId = a_1.ManagerId)
+	where (NavManager_2.RowId is not null)
+";
+            Test("Navigation Is Not Null Test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Navigation_outer_apply_not_null()
+        {
+            var invoices = new Queryable<Invoice>(this.queryProvider);
+            var q = invoices.Where(x => x.NavFirstLine() != null);
+            string expectedResult = null;
+            Test("Navigation Outer Apply Is Not Null Test", q.Expression, expectedResult);
+        }
     }
 }

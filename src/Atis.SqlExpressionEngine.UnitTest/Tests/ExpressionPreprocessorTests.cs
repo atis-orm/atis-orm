@@ -79,7 +79,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => values.Contains(x.Department));
 
-            var result = this.PreprocessExpression(q.Expression);
+            var result = this.PreprocessExpression(q.Expression, new Atis.SqlExpressionEngine.UnitTest.Services.Model());
 
             AssertHasInValuesExpression(result);
         }
@@ -90,7 +90,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => new[] { "HR", "Finance" }.Contains(x.Department));
 
-            var result = this.PreprocessExpression(q.Expression);
+            var result = this.PreprocessExpression(q.Expression, new Atis.SqlExpressionEngine.UnitTest.Services.Model());
 
             AssertHasInValuesExpression(result);
         }
@@ -102,7 +102,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => obj.Departments.Contains(x.Department));
 
-            var result = this.PreprocessExpression(q.Expression);
+            var result = this.PreprocessExpression(q.Expression, new Atis.SqlExpressionEngine.UnitTest.Services.Model());
 
             AssertHasInValuesExpression(result);
         }
@@ -113,7 +113,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => new[] { "HR", "Finance" }.Any(y => y == x.Department));
 
-            var result = this.PreprocessExpression(q.Expression);
+            var result = this.PreprocessExpression(q.Expression, new Atis.SqlExpressionEngine.UnitTest.Services.Model());
 
             Console.WriteLine(ExpressionPrinter.PrintExpression(result));
 
@@ -127,7 +127,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => obj.Departments.Any(y => y == x.Department));
 
-            var result = this.PreprocessExpression(q.Expression);
+            var result = this.PreprocessExpression(q.Expression, new Atis.SqlExpressionEngine.UnitTest.Services.Model());
 
             AssertHasInValuesExpression(result);
         }
@@ -139,7 +139,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => departments.Any(y => y == x.Department));
 
-            var result = this.PreprocessExpression(q.Expression);
+            var result = this.PreprocessExpression(q.Expression, new Atis.SqlExpressionEngine.UnitTest.Services.Model());
 
             AssertHasInValuesExpression(result);
         }
@@ -151,7 +151,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => obj.Departments.Any(y => x.Department == y));
 
-            var result = this.PreprocessExpression(q.Expression);
+            var result = this.PreprocessExpression(q.Expression, new Atis.SqlExpressionEngine.UnitTest.Services.Model());
 
             AssertHasInValuesExpression(result);
         }
@@ -163,7 +163,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => departments.Any(y => x.Department == y));
 
-            var result = this.PreprocessExpression(q.Expression);
+            var result = this.PreprocessExpression(q.Expression, new Atis.SqlExpressionEngine.UnitTest.Services.Model());
 
             AssertHasInValuesExpression(result);
         }
