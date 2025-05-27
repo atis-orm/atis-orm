@@ -62,7 +62,7 @@ order by (a_1.StudentId + '3') asc, Id desc";
                 .Select(e => new { e.InvoiceId, LineTotal = e.UnitPrice * e.Quantity })
                 .OrderBy(x => x.LineTotal);
 
-            string? expectedResult = @"    
+            string expectedResult = @"    
 	select	a_1.InvoiceId as InvoiceId, (a_1.UnitPrice * a_1.Quantity) as LineTotal
 	from	InvoiceDetail as a_1
 	order by LineTotal asc
@@ -77,7 +77,7 @@ order by (a_1.StudentId + '3') asc, Id desc";
             var students = new Queryable<Student>(queryProvider);
             var q = students.Select(x => x.Age).OrderBy(x => x.Value + 5);
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Age as Col1
 	from	Student as a_1
 	order by (a_1.Age + 5) asc
@@ -92,7 +92,7 @@ select	a_1.Age as Col1
             var students = new Queryable<Student>(queryProvider);
             var q = students.Select(x => x.RecordUpdateDate).OrderBy(x => x.Value.AddDays(3));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RecordUpdateDate as Col1
 	from	Student as a_1
 	order by dateadd(day, 3, a_1.RecordUpdateDate) asc
@@ -107,7 +107,7 @@ select	a_1.RecordUpdateDate as Col1
             var students = new Queryable<Student>(queryProvider);
             var q = students.Select(x => x.Age).OrderBy(x => x);
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Age as Col1
 	from	Student as a_1
 	order by Col1 asc
@@ -122,7 +122,7 @@ select	a_1.Age as Col1
             var students = new Queryable<Student>(queryProvider);
             var q = students.Select(x => x.Age).OrderBy(x => x.GetValueOrDefault());
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	a_1.Age as Col1
 	from	Student as a_1
 	order by isnull(a_1.Age, 0) asc
@@ -139,7 +139,7 @@ select	a_1.Age as Col1
             var q = students.Select(x => new Student() { StudentId = x.StudentId, Name = x.Name })
                                 .OrderBy(x => x.Address)
                                 ;
-            string? expectedResult = null;
+            string expectedResult = null;
             
             Test("OrderBy member not selected in Select should throw exception", q.Expression, expectedResult);
         }

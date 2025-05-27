@@ -8,7 +8,7 @@
         {
             var q = queryProvider.Select(() => new { n = 1 })
                             .Where(x => x.n > 5);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.n as n
 from	(
 	select	1 as n
@@ -23,7 +23,7 @@ where	(a_1.n > 5)
         {
             var q = queryProvider.Select(() => 1)
                             .Where(x => x > 5);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Col1 as Col1
 	from	(
 		select	1 as Col1
@@ -39,7 +39,7 @@ select	a_1.Col1 as Col1
             var invoices = new Queryable<Invoice>(this.queryProvider);
             var q = queryProvider.Select(() => invoices.Count())
                             .Where(x => x > 5);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.Col1 as Col1
 from	(
 	select	(
@@ -58,7 +58,7 @@ where	(a_2.Col1 > 5)
             var invoices = new Queryable<Invoice>(this.queryProvider);
             var q = queryProvider.Select(() => new { InvoiceCount = invoices.Count() })
                             .Where(x => x.InvoiceCount > 5);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.InvoiceCount as InvoiceCount
 from	(
 	select	(
@@ -80,7 +80,7 @@ where	(a_2.InvoiceCount > 5)
                                             .Where(anchorMember => anchorMember.n < 10)
                                             .Select(anchorMember => new { n = anchorMember.n + 1 })
                             );
-            string? expectedResult = @"
+            string expectedResult = @"
 with cte_1 as
 (
 	select a_2.n as n
@@ -116,7 +116,7 @@ from cte_1 as a_4
                     join invoice in invoices on date.Date equals invoice.InvoiceDate into invoiceGroup
                     select new { date.Date, InvoiceCount = invoiceGroup.Count(), TotalSales = invoiceGroup.SelectMany(x => x.NavLines).Sum(y => y.LineTotal) };
 
-            string? expectedResult = @"
+            string expectedResult = @"
 with cte_1 as
 	(
 		select a_2.DayOffset as DayOffset

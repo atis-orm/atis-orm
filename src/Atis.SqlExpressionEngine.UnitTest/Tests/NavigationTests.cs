@@ -18,7 +18,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
 
 
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	NavItem_2.ItemId as ItemId, NavItem_2.UnitPrice as UnitPrice, a_1.EquipId as EquipId
 	from	Equipment as a_1
 		left join ItemExtension as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)
@@ -31,7 +31,7 @@ select	NavItem_2.ItemId as ItemId, NavItem_2.UnitPrice as UnitPrice, a_1.EquipId
         {
             var inventoryTransactions = new Queryable<ItemInventoryTransaction>(new QueryProvider());
             var q = inventoryTransactions.Select(x => new { x.TransactionId, x.ItemId, x.NavSummaryLine().TotalCapturedQty, x.NavSummaryLine().TotalQtyGained, x.NavSummaryLine().TotalQtyLost });
-            string? expectedResult = @"
+            string expectedResult = @"
 select a_1.TransactionId as TransactionId, a_1.ItemId as ItemId, NavSummaryLine_2.TotalCapturedQty as TotalCapturedQty, NavSummaryLine_2.TotalQtyGained as TotalQtyGained, NavSummaryLine_2.TotalQtyLost as TotalQtyLost
 	from ItemInventoryTransaction as a_1
 			left join (
@@ -49,7 +49,7 @@ select a_1.TransactionId as TransactionId, a_1.ItemId as ItemId, NavSummaryLine_
         {
             var inventoryTransactionLines = new Queryable<ItemInventoryTransactionDetail>(new QueryProvider());
             var q = inventoryTransactionLines.Select(x => new { x.NavParentTransaction().TransactionId, x.NavParentTransaction().ItemId, x.CapturedQty, x.NewQty, x.LineStatus });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	NavParentTransaction_2.TransactionId as TransactionId, NavParentTransaction_2.ItemId as ItemId, a_1.CapturedQty as CapturedQty, a_1.NewQty as NewQty, a_1.LineStatus as LineStatus
 	from	ItemInventoryTransactionDetail as a_1
 		inner join ItemInventoryTransaction as NavParentTransaction_2 on (NavParentTransaction_2.RowId = a_1.TransactionRowId)
@@ -67,7 +67,7 @@ select	NavParentTransaction_2.TransactionId as TransactionId, NavParentTransacti
             .Select(x => new { x.NavItem().ItemId })
             ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	NavItem_3.ItemId as ItemId
 	from	(
 		select	top (50)	a_1.EquipId as EquipId, a_1.Model as Model, a_1.ItemId as ItemId
@@ -86,7 +86,7 @@ select	NavItem_3.ItemId as ItemId
             .Select(x => x.NavItem())
             ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	NavItem_2.ItemId as ItemId, NavItem_2.UnitPrice as UnitPrice
 	from	Equipment as a_1
 		left join ItemExtension as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)
@@ -103,7 +103,7 @@ select	NavItem_2.ItemId as ItemId, NavItem_2.UnitPrice as UnitPrice
             .Select(x => x.UnitPrice)
             ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_3.UnitPrice as Col1
 	from	(
 		select	NavItem_2.ItemId as ItemId, NavItem_2.UnitPrice as UnitPrice
@@ -134,7 +134,7 @@ select	a_3.UnitPrice as Col1
                         })
             ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	NavItemMoreInfo_4.TrackingType as TrackingType, NavItemMoreInfo_4.ItemId as ItemId, NavItemBase_3.ItemDescription as ItemDescription
     	from	Equipment as a_1
     		left join ItemExtension as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)
@@ -155,7 +155,7 @@ select	NavItemMoreInfo_4.TrackingType as TrackingType, NavItemMoreInfo_4.ItemId 
             .Select(x => new { x.ds.c.CompId, CompItem = x.ds.c.ItemId, x.ds.c.NavItem.UnitPrice, x.ds.c.EquipId, x.e.Model, EquipItemDesc = x.e.NavItem().NavItemBase().ItemDescription })
             ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
  select	a_1.CompId as CompId, a_1.ItemId as CompItem, NavItem_4.UnitPrice as UnitPrice, a_1.EquipId as EquipId, a_3.Model as Model, NavItemBase_6.ItemDescription as EquipItemDesc
 	from	Component as a_1
 		left join ItemBase as a_2 on (a_1.ItemId = a_2.ItemId)
@@ -173,7 +173,7 @@ select	NavItemMoreInfo_4.TrackingType as TrackingType, NavItemMoreInfo_4.ItemId 
         {
             IQueryable<StudentGrade> studentGrades = new Queryable<StudentGrade>(new QueryProvider());
             var q = studentGrades.Where(x => x.NavStudentGradeDetails.Any(y => y.MarksGained > 50));
-            string? expectedResult = @"
+            string expectedResult = @"
     select a_1.RowId as RowId, a_1.StudentId as StudentId, a_1.Grade as Grade
 	from StudentGrade as a_1
 	where exists(
@@ -191,7 +191,7 @@ select	NavItemMoreInfo_4.TrackingType as TrackingType, NavItemMoreInfo_4.ItemId 
         {
             IQueryable<ItemBase> items = new Queryable<ItemBase>(new QueryProvider());
             var q = items.Where(x => x.NavItemExt().NavParts.Any(y => y.PartNumber == "123"));
-            string? expectedResult = $@"
+            string expectedResult = $@"
 	select	a_1.ItemId as ItemId, a_1.ItemDescription as ItemDescription
 	from	ItemBase as a_1
 		left join ItemExtension as NavItemExt_2 on (a_1.ItemId = NavItemExt_2.ItemId)
@@ -215,7 +215,7 @@ select	NavItemMoreInfo_4.TrackingType as TrackingType, NavItemMoreInfo_4.ItemId 
                 x.Name,
                 DegreeCount = x.NavDegrees.Count()
             });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
 		select	Count(1) as Col1
 		from	EmployeeDegree as a_2
@@ -236,7 +236,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
                 x.Name,
                 DegreeCount = x.NavDegrees.GroupBy(y => y.EmployeeId).Select(y => new { E_ID = y.Key, MaxDeg = y.Max(z => z.Degree) }).Count()
             });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
 		select	Count(1) as Col1
 		from	(
@@ -261,7 +261,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
                 x.Name,
                 DegreeCount = x.NavDegrees.SelectMany(y => y.NavMarksheets).Count()
             });
-            string? expectedResult = @"
+            string expectedResult = @"
    	select a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
 			select Count(1) as Col1
 			from EmployeeDegree as a_2
@@ -285,7 +285,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
                     x.EmployeeId,
                     x.Name,
                 });
-            string? expectedResult = @"
+            string expectedResult = @"
     select a_1.EmployeeId as EmployeeId, a_1.Name as Name
 	from Employee as a_1
 	where exists(
@@ -318,7 +318,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
                             x.NavFirstLine().UnitPrice
                         });
 
-            string? expectedResult = @"
+            string expectedResult = @"
     	select a_1.InvoiceId as InvoiceId, NavFirstLine_2.ItemId as Item, NavItem_4.ItemDescription as ItemDescription, NavFirstLine_2.UnitPrice as UnitPrice
 	from Invoice as a_1
 			outer apply (
@@ -339,7 +339,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, (
             var invoices = new Queryable<Invoice>(queryProvider);
             var invoiceDetails = new Queryable<InvoiceDetail>(queryProvider);
             var q = invoices.Select(x => new { x.InvoiceId, x.NavTop2Lines().ItemId, x.NavTop2Lines().UnitPrice });
-            string? expectedResult = @"
+            string expectedResult = @"
    	select a_1.InvoiceId as InvoiceId, NavTop2Lines_2.ItemId as ItemId, NavTop2Lines_2.UnitPrice as UnitPrice
 	from Invoice as a_1
 			outer apply (

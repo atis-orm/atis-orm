@@ -8,7 +8,7 @@
         {
             var date = new DateTime(2024, 1, 1, 10, 5, 30);
             var q = this.queryProvider.Select(() => new { date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second, date.Millisecond, date.Ticks });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Year as Year, a_1.Month as Month, a_1.Day as Day, a_1.Hour as Hour, 
         a_1.Minute as Minute, a_1.Second as Second, a_1.Millisecond as Millisecond, 
         a_1.Ticks as Ticks
@@ -49,7 +49,7 @@ from	(
                 S5 = date.Subtract(d2).Milliseconds,
                 S6 = date.Subtract(d2).Ticks,
             });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Y as Y, a_1.M as M, a_1.D as D, a_1.H as H, a_1.MN as MN, 
         a_1.S as S, a_1.MS as MS, a_1.NS as NS, a_1.S1 as S1, a_1.S2 as S2, 
         a_1.S3 as S3, a_1.S4 as S4, a_1.S5 as S5, a_1.S6 as S6
@@ -79,7 +79,7 @@ select	a_1.Y as Y, a_1.M as M, a_1.D as D, a_1.H as H, a_1.MN as MN,
         {
             var students = new Queryable<Student>(queryProvider);
             var q = students.Select(x => new { C1 = x.RecordUpdateDate.Value.Date, C2 = x.RecordUpdateDate.Value.AddDays(3) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	cast(a_1.RecordUpdateDate as Date) as C1, dateAdd(Day, 3, a_1.RecordUpdateDate) as C2
 	from	Student as a_1
 ";

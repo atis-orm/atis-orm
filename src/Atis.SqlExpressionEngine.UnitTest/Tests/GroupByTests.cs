@@ -22,7 +22,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
                 CL = queryProvider.DataSet<StudentGrade>().Where(y => y.StudentId == x.Max(z => z.StudentId)).Select(y => y.Grade).FirstOrDefault()
             })
             ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Address as G1, a_1.Age as G2, Max(a_1.StudentId) as MaxStudentId, Count(1) as TotalLines, (
 		select	top (1)	a_2.Grade as Col1
 		from	StudentGrade as a_2
@@ -41,7 +41,7 @@ select	a_1.Address as G1, a_1.Age as G2, Max(a_1.StudentId) as MaxStudentId, Cou
             queryProvider.DataSet<Student>()
             .GroupBy(x => x.Address)
             .Select(x => new { Add = x.Key, TotalLines = x.Count(), MaxLine = x.Max(y => y.StudentId) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select  a_1.Address as Add, count(1) as TotalLines, max(a_1.StudentId) as MaxLine
 from    Student as a_1
 group by a_1.Address
@@ -57,7 +57,7 @@ group by a_1.Address
             .GroupBy(x => x.StudentId)
             .Select(x => x.Key)
             .LeftJoin(queryProvider.DataSet<Student>(), (g, s) => new { g, s }, j => j.g == j.s.StudentId);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
 		select	a_1.StudentId as Col1
@@ -78,7 +78,7 @@ select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address 
             .GroupBy(x => x.StudentId)
             .Select(x => x.Key)
             .LeftJoin(queryProvider.DataSet<Student>(), (g, s) => new { g, s }, j => j.g.Substring(0, 5) == j.s.StudentId);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
 		select	a_1.StudentId as Col1
@@ -100,7 +100,7 @@ select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address 
                 s = QueryExtensions.Table<Student>(),
             })
             .LeftJoin(x => x.s, x => x.g == x.s.StudentId);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
 		select	a_1.StudentId as Col1
@@ -122,7 +122,7 @@ select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address 
                                 .Select(b => new { b.Key.ManagerId, b.Key.Department, TotalLines = b.Count(), MaxV = b.Max(y => y.EmployeeId) })
                                 .Select(c => c.MaxV)
                                 ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.MaxV as Col1
 	from	(
 		select	a_1.ManagerId as ManagerId, a_1.Department as Department, Count(1) as TotalLines, Max(a_1.EmployeeId) as MaxV
@@ -149,7 +149,7 @@ select	a_2.MaxV as Col1
                         .Where(x => x.SType == "345")
                         .Select(x => x.CountryID)
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.CountryID as Col1
 	from	(
 		select	a_1.CountryID as CountryID, a_1.StudentType as SType, Max(a_1.AdmissionDate) as MaxAdmDate
@@ -174,7 +174,7 @@ select	a_2.CountryID as Col1
                         .Where(x => x.Max(y => y.Age) > 20)
                         .Select(x => new { Name = x.Key, TotalLines = x.Count() })
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Name as Name, Count(1) as TotalLines
 from	Student as a_1
 where	(a_1.Address like '%' + 'City' + '%')
@@ -192,7 +192,7 @@ having	(Max(a_1.Age) > 20)";
                 .SelectMany(s => s.NavDegrees)
                 .GroupBy(c => c.University);
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	NavDegrees_2.University as Col1
 	from	Employee as a_1
 		    inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -211,7 +211,7 @@ having	(Max(a_1.Age) > 20)";
                 .SelectMany(s => s.NavDegrees)
                 .GroupBy(c => new { g1 = c.University, g2 = c.Degree } );
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	NavDegrees_2.University as g1, NavDegrees_2.Degree as g2
 	from	Employee as a_1
 		    inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -231,7 +231,7 @@ having	(Max(a_1.Age) > 20)";
                 .Select(g => new { Department = g.Key, Count = g.Count() })
                 .Where(x => x.Count > 2);
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	a_2.Department as Department, a_2.Count as Count
 	from	(
 		select	a_1.Department as Department, Count(1) as Count
@@ -255,7 +255,7 @@ having	(Max(a_1.Age) > 20)";
                 .GroupBy(x => x.Department)
                 .Select(g => new { Department = g.Key, Count = g.Count() });
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	a_2.Department as Department, Count(1) as Count
 	from	(
 		select	a_1.Name as Name, a_1.Department as Department
@@ -283,7 +283,7 @@ having	(Max(a_1.Age) > 20)";
                     TotalAmount = g.Sum(x => x.UnitPrice * x.Quantity)
                 });
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	a_1.InvoiceId as InvoiceId, a_1.ItemId as ItemId,
             sum(a_1.Quantity) as TotalQty,
             sum((a_1.UnitPrice * a_1.Quantity)) as TotalAmount
@@ -312,7 +312,7 @@ having	(Max(a_1.Age) > 20)";
                         .FirstOrDefault()
                 });
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select a_1.Name as Name, DegreeGroups_2.University as University, DegreeGroups_2.TotalDegrees as TotalDegrees
 	from Employee as a_1
 			outer apply (
@@ -336,7 +336,7 @@ having	(Max(a_1.Age) > 20)";
                         .Select(b => new { b.Key.Year, b.Key.Day, TotalLines = b.Count(), MaxDate = b.Max(y => y.AttendanceDate) })
                         .Select(c => c.MaxDate)
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.MaxDate as Col1
 	from	(
 		select	datepart(year, a_1.AttendanceDate) as Year, datepart(day, a_1.AttendanceDate) as Day, Count(1) as TotalLines, Max(a_1.AttendanceDate) as MaxDate
@@ -363,7 +363,7 @@ select	a_2.MaxDate as Col1
                         .Where(x => x.SType == "345")
                         .Select(x => x.CountryID)
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.CountryID as Col1
 	from	(
 		select	a_1.CountryID as CountryID, a_1.StudentType as SType, Max(a_1.AdmissionDate) as MaxAdmDate
@@ -387,7 +387,7 @@ select	a_2.CountryID as Col1
                         .Select(x => new { x.Key.Year, x.Key.Month, TotalLines = x.Count() })
                         ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	datePart(Year, a_1.AttendanceDate) as Year, datePart(Month, a_1.AttendanceDate) as Month, Count(1) as TotalLines
 	from	StudentAttendance as a_1
 	group by datePart(Year, a_1.AttendanceDate), datePart(Month, a_1.AttendanceDate)
@@ -408,7 +408,7 @@ select	datePart(Year, a_1.AttendanceDate) as Year, datePart(Month, a_1.Attendanc
                         .Select(x => new { ID = x.Key.StudentId, TotalLines = x.Count() })
                         ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.StudentId as ID, Count(1) as TotalLines
 	from	(
 		select	a_1.StudentId as StudentId, datePart(Year, a_1.AttendanceDate) as Year, datePart(Month, a_1.AttendanceDate) as Month
@@ -430,7 +430,7 @@ select	a_2.StudentId as ID, Count(1) as TotalLines
                         .Select(x => x.Key)
                         .OrderBy(x => x.CountryID);
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentType as StudentType, a_1.CountryID as CountryID
 	from	Student as a_1
 	group by a_1.StudentType, a_1.CountryID
@@ -446,7 +446,7 @@ select	a_1.StudentType as StudentType, a_1.CountryID as CountryID
             var q = students
                         .GroupBy(x => x.CountryID)
                         .Select(g => new { CountryId = g.Key, StudentTypes = string.Join(", ", g.Select(y => y.StudentType)) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.CountryID as CountryId, JoinAggregate(a_1.StudentType, ', ') as StudentTypes
 	from	Student as a_1
 	group by a_1.CountryID
@@ -461,7 +461,7 @@ select	a_1.CountryID as CountryId, JoinAggregate(a_1.StudentType, ', ') as Stude
             var q = students
                         .GroupBy(x => x.CountryID)
                         .Select(g => new { CountryId = g.Key, StudentTypes = g.String_Agg(y => y.StudentType, ", ") });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.CountryID as CountryId, string_agg(a_1.StudentType, ', ') as StudentTypes
 	from	Student as a_1
 	group by a_1.CountryID
@@ -477,7 +477,7 @@ select	a_1.CountryID as CountryId, string_agg(a_1.StudentType, ', ') as StudentT
             var q = students
                         .GroupBy(x => x.CountryID)
                         .Select(g => new { CountryId = g.Key, StudentTypes = string.Concat(g.Select(y => y.StudentType)) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.CountryID as CountryId, ConcatAggregate(a_1.StudentType) as StudentTypes
 	from	Student as a_1
 	group by a_1.CountryID

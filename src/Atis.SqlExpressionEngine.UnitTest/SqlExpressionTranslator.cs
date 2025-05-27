@@ -11,7 +11,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
         private Dictionary<Guid, string> aliasCache = new Dictionary<Guid, string>();
         private Dictionary<Guid, int> expressionIdCache = new Dictionary<Guid, int>();
 
-        private string GetSimpleAlias(Guid aliasGuid, string? prefix = null)
+        private string GetSimpleAlias(Guid aliasGuid, string prefix = null)
         {
             if (!this.aliasCache.TryGetValue(aliasGuid, out var alias))
             {
@@ -414,7 +414,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
             var havingClause = JoinPredicate(node.HavingClause, "having");
             var top = node.Top > 0 ? $" top ({node.Top})" : string.Empty;
             var distinct = node.IsDistinct ? " distinct " : string.Empty;
-            string? selectList = null;
+            string selectList = null;
             if (node.SelectColumnCollection != null)
                 selectList = this.TranslateSelectColumns(node.SelectColumnCollection.SelectColumns);
             string orderByClause;

@@ -25,7 +25,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         protected readonly DataContext dataContext = new();
 
         #region base methods
-        protected void Test(string testHeading, Expression queryExpression, string? expectedResult)
+        protected void Test(string testHeading, Expression queryExpression, string expectedResult)
         {
             SqlExpression? result = null;
             Expression updatedQueryExpression = queryExpression;
@@ -40,7 +40,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
                 throw;
             }
 
-            string? resultQuery = null;
+            string resultQuery = null;
             if (result != null)
             {
                 var translator = new SqlExpressionTranslator()

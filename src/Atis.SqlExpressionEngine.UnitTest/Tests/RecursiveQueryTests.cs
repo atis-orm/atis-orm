@@ -18,7 +18,7 @@
                                                             newShape => newShape.anchor.EmployeeId == newShape.recursive.ManagerId)
                                                 .Select(newShape => new { newShape.recursive.EmployeeId, newShape.recursive.Name, newShape.recursive.ManagerId }))
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
    	with cte_1 as
 	(
 		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
@@ -49,7 +49,7 @@
                                                             newShape => newShape.anchor.EmployeeId == newShape.recursive.ManagerId)
                                                 .Select(newShape => new { newShape.recursive.EmployeeId, newShape.recursive.Name, newShape.recursive.ManagerId }))
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 with cte_1 as
 (
 	select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
@@ -78,7 +78,7 @@ from cte_1 as a_5
                                                 .Where(o1 => anchorSource.Any(y => y.EmployeeId == o1.ManagerId))
                                                 .Select(o2 => new { o2.EmployeeId, o2.Name, o2.ManagerId }))
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
    	with cte_1 as
 	(
 		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
@@ -128,7 +128,7 @@ from cte_1 as a_5
                                         .FirstOrDefault()
                         })
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
    	with cte_1 as
 	(
 		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
@@ -175,7 +175,7 @@ from cte_1 as a_5
                                                     join anchorMember in anchorSource on subOrdinate.ManagerId equals anchorMember.EmployeeId
                                                     select new { subOrdinate.EmployeeId, subOrdinate.Name, subOrdinate.ManagerId })
                     .Select(outer => new { outer.EmployeeId, outer.Name, outer.ManagerId });
-            string? expectedResult = @"
+            string expectedResult = @"
    	with cte_1 as
 	(
 		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
@@ -215,7 +215,7 @@ from cte_1 as a_5
                     select degree;
 
 
-            string? expectedResult = @"
+            string expectedResult = @"
 with cte_1 as
 	(
 		select a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.ManagerId as ManagerId
@@ -251,7 +251,7 @@ with cte_1 as
                         .RecursiveUnion(anchor => anchor.SelectMany(anchorMember => anchorMember.NavSubOrdinates))
                         .Select(x => new { x.EmployeeId, x.Name, x.ManagerId });
 
-            string? expectedResult = @"
+            string expectedResult = @"
     with cte_1 as
 	(
 		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
@@ -292,7 +292,7 @@ with cte_1 as
                                                         .FirstOrDefault(),
 
                     };
-            string? expectedResult = @"
+            string expectedResult = @"
     with cte_1 as
 	(
 		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a_2.University as University, NavEmployee_3.RowId as RowId_1, NavEmployee_3.EmployeeId as EmployeeId_1, NavEmployee_3.Name as Name, NavEmployee_3.Department as Department, NavEmployee_3.ManagerId as ManagerId
@@ -337,7 +337,7 @@ with cte_1 as
                     };
 
 
-            string? expectedResult = @"
+            string expectedResult = @"
     with cte_1 as
 	(
 		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
@@ -377,7 +377,7 @@ with cte_1 as
                     };
 
 
-            string? expectedResult = @"
+            string expectedResult = @"
     with cte_1 as
 	(
 		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
@@ -424,7 +424,7 @@ with cte_1 as
                                                         )
                                                         .Select(newShape => newShape.recursive))
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
     with cte_1 as
 	(
 		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
@@ -451,7 +451,7 @@ with cte_1 as
                 t1 = QueryExtensions.Table<EmployeeExtension>(),
                 t2 = employees.Where(m1 => m1.ManagerId == null).RecursiveUnion(anchor => anchor.SelectMany(m2 => m2.NavSubOrdinates)).Schema(),
             });
-            string? expectedResult = @"
+            string expectedResult = @"
     with cte_1 as
 	(
 		select a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Name as Name, a_2.Department as Department, a_2.ManagerId as ManagerId
