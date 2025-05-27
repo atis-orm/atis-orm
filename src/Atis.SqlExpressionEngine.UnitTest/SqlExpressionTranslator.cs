@@ -194,7 +194,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 if (!(derivedTable.WhereClause?.FilterConditions.Length > 0)    // must have filter condition
                     ||
-                    derivedTable.GroupByClause?.Length > 0 ||                   // must not have grouping
+                    derivedTable.GroupByClause?.Count > 0 ||                   // must not have grouping
                     derivedTable.HavingClause?.FilterConditions.Length > 0      // or having
                     ||
                     !(derivedTable.QueryShape is SqlQueryShapeExpression)       // either shape is not Query Shape
