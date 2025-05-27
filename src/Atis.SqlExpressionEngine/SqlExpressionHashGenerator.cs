@@ -111,7 +111,6 @@ namespace Atis.SqlExpressionEngine
         protected internal override SqlExpression VisitSqlDateAdd(SqlDateAddExpression node)
         {
             this.hashCode.Add(node.DatePart);
-            this.hashCode.Add(node.Interval);
             return base.VisitSqlDateAdd(node);
         }
 
@@ -124,8 +123,6 @@ namespace Atis.SqlExpressionEngine
         protected internal override SqlExpression VisitSqlDateSubtract(SqlDateSubtractExpression node)
         {
             this.hashCode.Add(node.DatePart);
-            this.hashCode.Add(node.StartDate);
-            this.hashCode.Add(node.EndDate);
             return base.VisitSqlDateSubtract(node);
         }
 
