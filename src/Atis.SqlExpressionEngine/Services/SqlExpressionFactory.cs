@@ -159,7 +159,7 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlStringFunctionExpression(stringFunction, stringExpression, arguments);
         }
 
-        public SqlTableExpression CreateTable(string tableName, TableColumn[] tableColumns)
+        public SqlTableExpression CreateTable(string tableName, IReadOnlyList<TableColumn> tableColumns)
         {
             return new SqlTableExpression(tableName, tableColumns);
         }

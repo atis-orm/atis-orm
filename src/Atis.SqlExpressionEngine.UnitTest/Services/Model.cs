@@ -2,6 +2,7 @@
 using Atis.SqlExpressionEngine.SqlExpressions;
 using Atis.SqlExpressionEngine.UnitTest.Metadata;
 using System.Reflection;
+using System.Collections.Generic;
 
 namespace Atis.SqlExpressionEngine.UnitTest.Services
 {
@@ -23,7 +24,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Services
                             .ToArray();
         }
 
-        public override TableColumn[] GetTableColumns(Type type)
+        public override IReadOnlyList<TableColumn> GetTableColumns(Type type)
         {
             return this.GetColumnMembers(type)
                             .Select(x => new TableColumn(x.Name, x.Name)).ToArray();

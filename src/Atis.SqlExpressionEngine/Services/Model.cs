@@ -36,7 +36,7 @@ namespace Atis.SqlExpressionEngine.Services
         }
 
         /// <inheritdoc />
-        public virtual TableColumn[] GetTableColumns(Type type)
+        public virtual IReadOnlyList<TableColumn> GetTableColumns(Type type)
         {
             return type.GetProperties().Select(x => new TableColumn(x.Name, x.Name)).ToArray();
         }

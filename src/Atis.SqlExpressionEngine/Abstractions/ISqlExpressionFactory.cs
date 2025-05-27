@@ -9,7 +9,7 @@ namespace Atis.SqlExpressionEngine.Abstractions
     {
         SqlBinaryExpression CreateBinary(SqlExpression left, SqlExpression right, SqlExpressionType sqlExpressionType);
         SqlLiteralExpression CreateLiteral(object value);
-        SqlTableExpression CreateTable(string tableName, TableColumn[] tableColumns);
+        SqlTableExpression CreateTable(string tableName, IReadOnlyList<TableColumn> tableColumns);
         SqlDerivedTableExpression ConvertSelectQueryToDeriveTable(SqlSelectExpression selectQuery);
         SqlDerivedTableExpression ConvertSelectQueryToUnwrappableDeriveTable(SqlSelectExpression selectQuery);
         SqlDerivedTableExpression ConvertSelectQueryToDataManipulationDerivedTable(SqlSelectExpression selectQuery);
