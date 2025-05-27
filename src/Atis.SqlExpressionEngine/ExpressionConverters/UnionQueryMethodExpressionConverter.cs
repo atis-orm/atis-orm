@@ -91,7 +91,7 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
             }
             else if (convertedExpression is SqlUnionQueryExpression unionQuery)
             {
-                unionItems = unionQuery.Unions;
+                unionItems = unionQuery.Unions.ToArray();
                 // The unions coming from a union query might have a different union type
                 // than the first union. When combining both in this union, we need to
                 // ensure the union type provided in this method is applied consistently.

@@ -24,16 +24,16 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
     public class SqlUnionQueryExpression : SqlSubQuerySourceExpression
     {
-        public SqlUnionQueryExpression(UnionItem[] unions)
+        public SqlUnionQueryExpression(IReadOnlyList<UnionItem> unions)
         {
-            if (!(unions?.Length > 1))
+            if (unions is null || unions.Count <= 1)
                 throw new ArgumentException("Minimum 2 items are required.", nameof(unions));
             this.Unions = unions;
         }
 
         /// <inheritdoc />
         public override SqlExpressionType NodeType => SqlExpressionType.Union;
-        public UnionItem[] Unions { get; }
+        public IReadOnlyList<UnionItem> Unions { get; }
 
         /// <inheritdoc />
         public override SqlDataSourceQueryShapeExpression CreateQueryShape(Guid dataSourceAlias)
@@ -47,7 +47,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             return visitor.VisitUnionQuery(this);
         }
 
-        public SqlUnionQueryExpression Update(UnionItem[] unionItems)
+        public SqlUnionQueryExpression Update(IReadOnlyList<UnionItem> unionItems)
         {
             if (this.Unions.AllEqual(unionItems))
                 return this;
