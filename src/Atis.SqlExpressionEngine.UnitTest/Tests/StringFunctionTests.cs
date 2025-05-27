@@ -13,7 +13,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void String_Concat_method_test()
         {
             var q = queryProvider.Select(() => new { C1 = string.Concat(new object[] { "1", 2, "3" }), C2 = string.Concat("abc", "def") });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.C1 as C1, a_1.C2 as C2
 from	(
     select	Concat('1', 2, '3') as C1, Concat('abc', 'def') as C2
@@ -26,7 +26,7 @@ from	(
         public void String_Join_method_test()
         {
             var q = queryProvider.Select(() => new { C1 = string.Join(", ", new object[] { "1", 2, "3" }), C2 = string.Join(", ", "abc", "def") });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.C1 as C1, a_1.C2 as C2
 from	(
     select	Join('1', 2, '3', ', ') as C1, Join('abc', 'def', ', ') as C2    		
@@ -39,7 +39,7 @@ from	(
         public void ToString_method_should_translate_to_cast_test()
         {
             var q = queryProvider.Select(() => new { C1 = 123.ToString(), C2 = 123.456.ToString() });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.C1 as C1, a_1.C2 as C2
 from	(
     select	cast(123 as NonUnicodeString(max)) as C1, cast(123.456 as NonUnicodeString(max)) as C2    		
@@ -53,7 +53,7 @@ from	(
         {
             var students = new Queryable<Student>(queryProvider);
             var q = students.Where(x => string.Compare(x.Name, "A") > 0);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
 	where	(a_1.Name > 'A')
@@ -67,7 +67,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
         {
             var students = new Queryable<Student>(queryProvider);
             var q = students.Where(x => x.Name.CompareTo("A") >= 0);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
 	where	(a_1.Name >= 'A')
@@ -92,7 +92,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
                 C9 = x.Name.Substring(4),
                 C10 = x.Name.Substring(6, 3),
             });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	Trim(a_1.Name) as C1, TrimStart(a_1.Name) as C2, TrimEnd(a_1.Name) as C3, CharIndex(a_1.Name, 'a') as C4, CharLength(a_1.Name) as C5, Replace(a_1.Name, 'a', 'b') as C6, ToUpper(a_1.Name) as C7, ToLower(a_1.Name) as C8, SubString(a_1.Name, 4) as C9, SubString(a_1.Name, 6, 3) as C10
 	from	Student as a_1
 ";
@@ -111,7 +111,7 @@ select	Trim(a_1.Name) as C1, TrimStart(a_1.Name) as C2, TrimEnd(a_1.Name) as C3,
                                     .Select(x => new { EmployeeId = x.Key, Degrees = string.Join(", ", x.Select(y => y.Degree)) })
                                     on e.EmployeeId equals ed.EmployeeId
                     select new { e.EmployeeId, e.Name, ed.Degrees };
-            string? expectedResult = null;
+            string expectedResult = null;
             Test("String Aggregate function test", q.Expression, expectedResult);
         }
     }

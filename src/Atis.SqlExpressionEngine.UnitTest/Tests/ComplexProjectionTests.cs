@@ -15,7 +15,7 @@
                             .Select(x => new { x.FullDetail.Employee.RowId, x.FullDetail.Employee.Name, EmployeeDegreeRowId = x.RowId, ManagerName = x.m.Name })
 
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_4.RowId as RowId, a_4.Name as Name, a_4.RowId_1 as EmployeeDegreeRowId, a_4.Name_2 as ManagerName
 	from	(
 		select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId, a_1.Name as Name_1, a_2.RowId as RowId_1, a_3.RowId as RowId_2, a_3.EmployeeId as EmployeeId_1, a_3.Name as Name_2, a_3.Department as Department_1, a_3.ManagerId as ManagerId_1
@@ -43,7 +43,7 @@ select	a_4.RowId as RowId, a_4.Name as Name, a_4.RowId_1 as EmployeeDegreeRowId,
                             .Select(x => new MultiLevelResult { Employee = x.o.e, EmployeeDegree = x.o.ed })
                             .Select(x => new { EmployeeRowId = x.Employee.RowId, DegreeRowId = x.EmployeeDegree.RowId, x.Employee.Name })
                             ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_4.RowId as EmployeeRowId, a_4.RowId_1 as DegreeRowId, a_4.Name as Name
 	from	(
 		select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId, a_2.RowId as RowId_1, a_2.EmployeeId as EmployeeId_1, a_2.Degree as Degree, a_2.University as University
@@ -67,7 +67,7 @@ select	a_4.RowId as EmployeeRowId, a_4.RowId_1 as DegreeRowId, a_4.Name as Name
                 .Select(x => new { x.e.EmployeeId, x.e.Name, x.ed.Degree })
                 .Select(x => new { x.EmployeeId, x.Name })
                 ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_3.EmployeeId as EmployeeId, a_3.Name as Name
 	from	(
 		select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree
@@ -87,7 +87,7 @@ select	a_3.EmployeeId as EmployeeId, a_3.Name as Name
                     .LeftJoin(queryProvider.DataSet<Employee>(), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
                     .Select(x => new { t = x.o })
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId, a_2.RowId as RowId_1, a_2.EmployeeId as EmployeeId_1, a_2.Degree as Degree, a_2.University as University
 	from	Employee as a_1
 		left join EmployeeDegree as a_2 on (a_1.EmployeeId = a_2.EmployeeId)
@@ -104,7 +104,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
                     .LeftJoin(queryProvider.DataSet<Employee>(), (o, m) => new { o, m }, n => n.o.e.ManagerId == n.m.EmployeeId)
                     .Select(x => x.o)
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId, a_2.RowId as RowId_1, a_2.EmployeeId as EmployeeId_1, a_2.Degree as Degree, a_2.University as University
 	from	Employee as a_1
 		left join EmployeeDegree as a_2 on (a_1.EmployeeId = a_2.EmployeeId)
@@ -119,7 +119,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
         {
             var assets = new Queryable<Asset>(new QueryProvider());
             var q = assets.Where(p1 => p1.NavItem().ItemId == "333" || p1.NavItem().ItemId == "111").Select(p2 => p2).Select(p3 => new { p3.NavItem().ItemId, p3.NavItem().ItemDescription });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	NavItem_4.ItemId as ItemId, NavItem_4.ItemDescription as ItemDescription
 	from	(
 		select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
@@ -141,7 +141,7 @@ select	NavItem_4.ItemId as ItemId, NavItem_4.ItemDescription as ItemDescription
                             .Where(x => x.C1 > 5)
                             .Select(x => new { x.C1 })
                             ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_3.C1 as C1
     	from	(
     		select	(

@@ -22,7 +22,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
                 CL = queryProvider.DataSet<StudentGrade>().Where(y => y.StudentId == x.Max(z => z.StudentId)).Select(y => y.Grade).FirstOrDefault()
             })
             ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Address as G1, a_1.Age as G2, Max(a_1.StudentId) as MaxStudentId, Count(1) as TotalLines, (
 		select	top (1)	a_2.Grade as Col1
 		from	StudentGrade as a_2
@@ -41,7 +41,7 @@ select	a_1.Address as G1, a_1.Age as G2, Max(a_1.StudentId) as MaxStudentId, Cou
             queryProvider.DataSet<Student>()
             .GroupBy(x => x.Address)
             .Select(x => new { Add = x.Key, TotalLines = x.Count(), MaxLine = x.Max(y => y.StudentId) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select  a_1.Address as Add, count(1) as TotalLines, max(a_1.StudentId) as MaxLine
 from    Student as a_1
 group by a_1.Address
@@ -57,7 +57,7 @@ group by a_1.Address
             .GroupBy(x => x.StudentId)
             .Select(x => x.Key)
             .LeftJoin(queryProvider.DataSet<Student>(), (g, s) => new { g, s }, j => j.g == j.s.StudentId);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
 		select	a_1.StudentId as Col1
@@ -78,7 +78,7 @@ select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address 
             .GroupBy(x => x.StudentId)
             .Select(x => x.Key)
             .LeftJoin(queryProvider.DataSet<Student>(), (g, s) => new { g, s }, j => j.g.Substring(0, 5) == j.s.StudentId);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
 		select	a_1.StudentId as Col1
@@ -100,7 +100,7 @@ select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address 
                 s = QueryExtensions.Table<Student>(),
             })
             .LeftJoin(x => x.s, x => x.g == x.s.StudentId);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address as Address, a_3.Age as Age, a_3.AdmissionDate as AdmissionDate, a_3.RecordCreateDate as RecordCreateDate, a_3.RecordUpdateDate as RecordUpdateDate, a_3.StudentType as StudentType, a_3.CountryID as CountryID, a_3.HasScholarship as HasScholarship
 	from	(
 		select	a_1.StudentId as Col1
@@ -122,7 +122,7 @@ select	a_2.Col1 as g, a_3.StudentId as StudentId, a_3.Name as Name, a_3.Address 
                                 .Select(b => new { b.Key.ManagerId, b.Key.Department, TotalLines = b.Count(), MaxV = b.Max(y => y.EmployeeId) })
                                 .Select(c => c.MaxV)
                                 ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.MaxV as Col1
 	from	(
 		select	a_1.ManagerId as ManagerId, a_1.Department as Department, Count(1) as TotalLines, Max(a_1.EmployeeId) as MaxV
@@ -149,7 +149,7 @@ select	a_2.MaxV as Col1
                         .Where(x => x.SType == "345")
                         .Select(x => x.CountryID)
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.CountryID as Col1
 	from	(
 		select	a_1.CountryID as CountryID, a_1.StudentType as SType, Max(a_1.AdmissionDate) as MaxAdmDate
@@ -174,7 +174,7 @@ select	a_2.CountryID as Col1
                         .Where(x => x.Max(y => y.Age) > 20)
                         .Select(x => new { Name = x.Key, TotalLines = x.Count() })
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Name as Name, Count(1) as TotalLines
 from	Student as a_1
 where	(a_1.Address like '%' + 'City' + '%')
@@ -192,7 +192,7 @@ having	(Max(a_1.Age) > 20)";
                 .SelectMany(s => s.NavDegrees)
                 .GroupBy(c => c.University);
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	NavDegrees_2.University as Col1
 	from	Employee as a_1
 		    inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -211,7 +211,7 @@ having	(Max(a_1.Age) > 20)";
                 .SelectMany(s => s.NavDegrees)
                 .GroupBy(c => new { g1 = c.University, g2 = c.Degree } );
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	NavDegrees_2.University as g1, NavDegrees_2.Degree as g2
 	from	Employee as a_1
 		    inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -231,7 +231,7 @@ having	(Max(a_1.Age) > 20)";
                 .Select(g => new { Department = g.Key, Count = g.Count() })
                 .Where(x => x.Count > 2);
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	a_2.Department as Department, a_2.Count as Count
 	from	(
 		select	a_1.Department as Department, Count(1) as Count
@@ -255,7 +255,7 @@ having	(Max(a_1.Age) > 20)";
                 .GroupBy(x => x.Department)
                 .Select(g => new { Department = g.Key, Count = g.Count() });
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	a_2.Department as Department, Count(1) as Count
 	from	(
 		select	a_1.Name as Name, a_1.Department as Department
@@ -283,7 +283,7 @@ having	(Max(a_1.Age) > 20)";
                     TotalAmount = g.Sum(x => x.UnitPrice * x.Quantity)
                 });
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	a_1.InvoiceId as InvoiceId, a_1.ItemId as ItemId,
             sum(a_1.Quantity) as TotalQty,
             sum((a_1.UnitPrice * a_1.Quantity)) as TotalAmount
@@ -312,7 +312,7 @@ having	(Max(a_1.Age) > 20)";
                         .FirstOrDefault()
                 });
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select a_1.Name as Name, DegreeGroups_2.University as University, DegreeGroups_2.TotalDegrees as TotalDegrees
 	from Employee as a_1
 			outer apply (
@@ -336,7 +336,7 @@ having	(Max(a_1.Age) > 20)";
                         .Select(b => new { b.Key.Year, b.Key.Day, TotalLines = b.Count(), MaxDate = b.Max(y => y.AttendanceDate) })
                         .Select(c => c.MaxDate)
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.MaxDate as Col1
 	from	(
 		select	datepart(year, a_1.AttendanceDate) as Year, datepart(day, a_1.AttendanceDate) as Day, Count(1) as TotalLines, Max(a_1.AttendanceDate) as MaxDate
@@ -363,7 +363,7 @@ select	a_2.MaxDate as Col1
                         .Where(x => x.SType == "345")
                         .Select(x => x.CountryID)
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.CountryID as Col1
 	from	(
 		select	a_1.CountryID as CountryID, a_1.StudentType as SType, Max(a_1.AdmissionDate) as MaxAdmDate
@@ -387,7 +387,7 @@ select	a_2.CountryID as Col1
                         .Select(x => new { x.Key.Year, x.Key.Month, TotalLines = x.Count() })
                         ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	datePart(Year, a_1.AttendanceDate) as Year, datePart(Month, a_1.AttendanceDate) as Month, Count(1) as TotalLines
 	from	StudentAttendance as a_1
 	group by datePart(Year, a_1.AttendanceDate), datePart(Month, a_1.AttendanceDate)
@@ -408,7 +408,7 @@ select	datePart(Year, a_1.AttendanceDate) as Year, datePart(Month, a_1.Attendanc
                         .Select(x => new { ID = x.Key.StudentId, TotalLines = x.Count() })
                         ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.StudentId as ID, Count(1) as TotalLines
 	from	(
 		select	a_1.StudentId as StudentId, datePart(Year, a_1.AttendanceDate) as Year, datePart(Month, a_1.AttendanceDate) as Month
@@ -430,7 +430,7 @@ select	a_2.StudentId as ID, Count(1) as TotalLines
                         .Select(x => x.Key)
                         .OrderBy(x => x.CountryID);
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentType as StudentType, a_1.CountryID as CountryID
 	from	Student as a_1
 	group by a_1.StudentType, a_1.CountryID
@@ -446,7 +446,7 @@ select	a_1.StudentType as StudentType, a_1.CountryID as CountryID
             var q = students
                         .GroupBy(x => x.CountryID)
                         .Select(g => new { CountryId = g.Key, StudentTypes = string.Join(", ", g.Select(y => y.StudentType)) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.CountryID as CountryId, JoinAggregate(a_1.StudentType, ', ') as StudentTypes
 	from	Student as a_1
 	group by a_1.CountryID
@@ -461,7 +461,7 @@ select	a_1.CountryID as CountryId, JoinAggregate(a_1.StudentType, ', ') as Stude
             var q = students
                         .GroupBy(x => x.CountryID)
                         .Select(g => new { CountryId = g.Key, StudentTypes = g.String_Agg(y => y.StudentType, ", ") });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.CountryID as CountryId, string_agg(a_1.StudentType, ', ') as StudentTypes
 	from	Student as a_1
 	group by a_1.CountryID
@@ -477,7 +477,7 @@ select	a_1.CountryID as CountryId, string_agg(a_1.StudentType, ', ') as StudentT
             var q = students
                         .GroupBy(x => x.CountryID)
                         .Select(g => new { CountryId = g.Key, StudentTypes = string.Concat(g.Select(y => y.StudentType)) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.CountryID as CountryId, ConcatAggregate(a_1.StudentType) as StudentTypes
 	from	Student as a_1
 	group by a_1.CountryID
@@ -486,6 +486,228 @@ select	a_1.CountryID as CountryId, ConcatAggregate(a_1.StudentType) as StudentTy
         }
 
 
+
+
+        [TestMethod]
+        public void Queryable_Selecting_Grouped_row()
+        {
+            var people = new Queryable<Person>(queryProvider);
+            var q = people
+                        .GroupBy(e => e.FirstName)
+                        .Select(
+                            g => g.OrderBy(e => e.FirstName)
+                                    .ThenBy(e => e.LastName)
+                                    .FirstOrDefault())
+                                    ;
+            //.SelectMany(e => e.Select(z => z.GoodsSerial));
+            string expectedResult = @"
+select a_3.Id as Id, a_3.Age as Age, a_3.FirstName as FirstName, a_3.LastName as LastName, a_3.MiddleInitial as MiddleInitial
+	from (
+			select a_1.FirstName as Col1
+			from Person as a_1
+			group by a_1.FirstName
+		) as a_2
+			outer apply (
+				select top (1) a_4.Id as Id, a_4.Age as Age, a_4.FirstName as FirstName, a_4.LastName as LastName, a_4.MiddleInitial as MiddleInitial
+				from Person as a_4
+				where (a_2.Col1 = a_4.FirstName)
+				order by a_4.FirstName asc, a_4.LastName asc
+			) as a_3
+";
+            Test("Queryable Selecting Grouped Row Test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Queryable_Selecting_Grouped_1()
+        {
+            var people = new Queryable<Person>(queryProvider);
+            var q = people
+                        .Select(
+                            p => new
+                            {
+                                p.FirstName,
+                                FullName = p.FirstName + " " + p.MiddleInitial + " " + p.LastName
+                            })
+                        .GroupBy(p => p.FirstName)
+                        .Select(g => g.First())
+                        .Take(1);
+            string expectedResult = @"
+select top (1) a_4.FirstName as FirstName, a_4.FullName as FullName
+	from (
+			select a_2.FirstName as Col1
+			from (
+					select a_1.FirstName as FirstName, ((((a_1.FirstName + ' ') + a_1.MiddleInitial) + ' ') + a_1.LastName) as FullName
+					from Person as a_1
+				) as a_2
+			group by a_2.FirstName
+		) as a_3
+			outer apply (
+				select top (1) a_5.FirstName as FirstName, a_5.FullName as FullName
+				from (
+						select a_1.FirstName as FirstName, ((((a_1.FirstName + ' ') + a_1.MiddleInitial) + ' ') + a_1.LastName) as FullName
+						from Person as a_1
+					) as a_5
+				where (a_3.Col1 = a_5.FirstName)
+			) as a_4
+";
+            Test("Queryable Selecting Grouped Row Test-1", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Queryable_Selecting_Grouped_2()
+        {
+            var people = new Queryable<Person>(queryProvider);
+            var q = people
+                        .Where(e => e.MiddleInitial == "Q" && e.Age == 20)
+                        .Select(p1 => new { p1.LastName, CP = new { p1.FirstName, p1.Id } })
+                        .GroupBy(e => e.LastName)
+                        .Select(g => g.First().CP.FirstName)
+                        .OrderBy(e => e.Length);
+            string expectedResult = @"
+select (
+			select top (1) a_4.FirstName as Col1
+			from (
+					select a_3.FirstName as FirstName, a_3.Id as Id
+					from (
+							select a_1.LastName as LastName, a_1.FirstName as FirstName, a_1.Id as Id
+							from Person as a_1
+							where ((a_1.MiddleInitial = 'Q') and (a_1.Age = 20))
+						) as a_3
+					where (a_2.LastName = a_3.LastName)
+				) as a_4
+		) as Col1
+	from (
+			select a_1.LastName as LastName, a_1.FirstName as FirstName, a_1.Id as Id
+			from Person as a_1
+			where ((a_1.MiddleInitial = 'Q') and (a_1.Age = 20))
+		) as a_2
+	group by a_2.LastName
+	order by CharLength((
+			select top (1) a_4.FirstName as Col1
+			from (
+					select a_3.FirstName as FirstName, a_3.Id as Id
+					from (
+							select a_1.LastName as LastName, a_1.FirstName as FirstName, a_1.Id as Id
+							from Person as a_1
+							where ((a_1.MiddleInitial = 'Q') and (a_1.Age = 20))
+						) as a_3
+					where (a_2.LastName = a_3.LastName)
+				) as a_4
+		)) asc
+";
+            Test("Queryable Selecting Grouped Row Test-2", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Queryable_Selecting_Grouped_3()
+        {
+            var peopleList = new Queryable<Person>(queryProvider);
+            var shoeList = new Queryable<Shoes>(queryProvider);
+            var q = (from person in peopleList
+                     join shoes in shoeList on person.Age equals shoes.Age
+                     group shoes by shoes.Style
+                    into people
+                     select new
+                     {
+                         people.Key,
+                         Style = people.Select(p => p.Style).FirstOrDefault(),
+                         Count = people.Count()
+                     });
+            string expectedResult = @"
+select a_2.Style as Key, (
+			select top (1) a_5.Style as Col1
+			from (
+					select a_4.Id as Id, a_4.Age as Age, a_4.Style as Style, a_4.PersonId as PersonId
+					from Person as a_3
+							inner join Shoes as a_4 on (a_3.Age = a_4.Age)
+					where (a_2.Style = a_4.Style)
+				) as a_5
+		) as Style, Count(1) as Count
+	from Person as a_1
+			inner join Shoes as a_2 on (a_1.Age = a_2.Age)
+	group by a_2.Style
+";
+            Test("Queryable Selecting Grouped Row Test-3", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Queryable_Selecting_Grouped_4()
+        {
+            var people = new Queryable<Person>(queryProvider);
+            var q = people
+                    .GroupBy(e => e.FirstName)
+                    .Select(g => g.First().LastName)
+                    .OrderBy(e => e);
+            string expectedResult = @"
+select (
+			select top (1) a_2.LastName as Col1
+			from Person as a_2
+			where (a_1.FirstName = a_2.FirstName)
+		) as Col1
+	from Person as a_1
+	group by a_1.FirstName
+	order by Col1 asc
+";
+            Test("Queryable Selecting Grouped Row Test-4", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Queryable_Selecting_Grouped_5()
+        {
+            var people = new Queryable<Person>(queryProvider);
+            var q = people
+                        .Where(e => e.Age == 20)
+                        .GroupBy(e => e.Id)
+                        .Select(g => g.First().MiddleInitial)
+                        .OrderBy(e => e);
+            string expectedResult = @"
+select (
+			select top (1) a_2.MiddleInitial as Col1
+			from Person as a_2
+			where (a_2.Age = 20)
+				 and (a_1.Id = a_2.Id)
+		) as Col1
+	from Person as a_1
+	where (a_1.Age = 20)
+	group by a_1.Id
+	order by Col1 asc
+";
+            Test("Queryable Selecting Grouped Row Test-5", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Queryable_Selecting_Grouped_6()
+        {
+            var people = new Queryable<Person>(queryProvider);
+            var size = 11;
+            var q = people
+                        .Where(
+                            p1 => p1.NavFeet().Size == size
+                                 && p1.MiddleInitial != null
+                                 && p1.NavFeet().Id != 1)
+                        .GroupBy(
+                            p2 => new
+                            {
+                                p2.NavFeet().Size,
+                                p2.NavFeet().Person.LastName
+                            })
+                        .Select(
+                            g => new
+                            {
+                                g.Key.LastName,
+                                g.Key.Size,
+                                Min = g.Min(p3 => p3.NavFeet().Size),
+                            });
+            string expectedResult = @"
+select Person_3.LastName as LastName, NavFeet_2.Size as Size, Min(NavFeet_2.Size) as Min
+	from Person as a_1
+			left join Feet as NavFeet_2 on (a_1.Id = NavFeet_2.PersonId)
+			left join Person as Person_3 on (Person_3.Id = NavFeet_2.Id)
+	where (((NavFeet_2.Size = 11) and (a_1.MiddleInitial is not null)) and (NavFeet_2.Id <> 1))
+	group by NavFeet_2.Size, Person_3.LastName
+";
+            Test("Queryable Selecting Grouped Row Test-6", q.Expression, expectedResult);
+        }
 
         [TestMethod]
         public void Queryable_Selecting_Grouped_9()
@@ -524,7 +746,28 @@ select	a_1.CountryID as CountryId, ConcatAggregate(a_1.StudentType) as StudentTy
                                              }
                         };
 
-            string? expectedResult = null;
+            string expectedResult = @"
+select a_2.Id as Id, a_3.Age as Age, a_3.Style as Style, Queryable: {
+		(
+				select a_6.Id as Id, a_6.Style as Style, a_6.Age as Age
+				from (
+						select a_5.Id as Id, a_5.Age as Age, a_5.Style as Style, a_5.PersonId as PersonId
+						from (
+								select a_1.Id as Id, a_1.Age as Age, a_1.FirstName as FirstName, a_1.LastName as LastName, a_1.MiddleInitial as MiddleInitial
+								from Person as a_1
+							) as a_4
+								inner join Shoes as a_5 on (a_4.Age = a_5.Age)
+						where (((a_2.Id = a_4.Id) and (a_3.Style = a_5.Style)) and (a_3.Age = a_5.Age))
+					) as a_6
+			)
+		} as Values
+	from (
+			select a_1.Id as Id, a_1.Age as Age, a_1.FirstName as FirstName, a_1.LastName as LastName, a_1.MiddleInitial as MiddleInitial
+			from Person as a_1
+		) as a_2
+			inner join Shoes as a_3 on (a_2.Age = a_3.Age)
+	group by a_2.Id, a_3.Style, a_3.Age
+";
             Test("Queryable Selecting Grouped Row Test-9", q.Expression, expectedResult);
         }
     }

@@ -117,7 +117,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             .Select(x2 => new { x2.e.EquipId, x2.i.ItemDescription })
             ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select a_1.EquipId as EquipId, a_2.ItemDescription as ItemDescription
 	from Equipment as a_1
 			cross apply (
@@ -138,7 +138,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             .Select(x => new { x.e.EquipId, x.i.ItemDescription })
             ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
    	select a_1.EquipId as EquipId, a_2.ItemDescription as ItemDescription
 	from Equipment as a_1
 			outer apply (
@@ -158,7 +158,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             var studentGrades = new Queryable<StudentGrade>(new QueryProvider());
             var q = students.FullOuterJoin(studentGrades, (x, y) => new { x, y }, (r) => r.x.StudentId == r.y.StudentId)
                             .Select(f => new { StudentTableStudentId = f.x.StudentId, StudentGradeTableStudentId = f.y.StudentId });
-            string? expectedResult = @"select	a_1.StudentId as StudentTableStudentId, a_2.StudentId as StudentGradeTableStudentId
+            string expectedResult = @"select	a_1.StudentId as StudentTableStudentId, a_2.StudentId as StudentGradeTableStudentId
 	from	Student as a_1
 		full outer join StudentGrade as a_2 on (a_1.StudentId = a_2.StudentId)";
             Test("Full Outer Join Test", q.Expression, expectedResult);

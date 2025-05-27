@@ -5,16 +5,16 @@ namespace Atis.SqlExpressionEngine.UnitTest
 {
     public class Student
     {
-        public string? StudentId { get; set; }
-        public string? Name { get; set; }
-        public string? Address { get; set; }
+        public string StudentId { get; set; }
+        public string Name { get; set; }
+        public string Address { get; set; }
         public int? Age { get; set; }
 
         public DateTime AdmissionDate { get; set; }
         public DateTime RecordCreateDate { get; set; }
         public DateTime? RecordUpdateDate { get; set; }
-        public string? StudentType { get; set; }
-        public string? CountryID { get; set; }
+        public string StudentType { get; set; }
+        public string CountryID { get; set; }
 
         public bool? HasScholarship { get; set; }
     }
@@ -27,7 +27,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
     class StudentAttendance
     {
         public Guid RowID { get; set; }
-        public string? StudentId { get; set; }
+        public string StudentId { get; set; }
         public DateTime? AttendanceDate { get; set; }
         public TimeSpan? TimeIn { get; set; }
         public TimeSpan? TimeOut { get; set; }
@@ -36,9 +36,9 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
     public class StudentGrade
     {
-        public string? RowId { get; set; }
-        public string? StudentId { get; set; }
-        public string? Grade { get; set; }
+        public string RowId { get; set; }
+        public string StudentId { get; set; }
+        public string Grade { get; set; }
 
         [NavigationProperty(NavigationType.ToParent, typeof(StudentWithStudentGradeRelation))]
         public Student? NavParentStudent { get; set; }
@@ -48,17 +48,17 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
     public class StudentGradeDetail
     {
-        public string? RowId { get; set; }
-        public string? StudentGradeRowId { get; set; }
-        public string? SubjectId { get; set; }
+        public string RowId { get; set; }
+        public string StudentGradeRowId { get; set; }
+        public string SubjectId { get; set; }
         public int? MarksGained { get; set; }
         public int? TotalMarks { get; set; }
     }
 
     public class ItemBase
     {
-        public string? ItemId { get; set; }
-        public string? ItemDescription { get; set; }
+        public string ItemId { get; set; }
+        public string ItemDescription { get; set; }
         [NavigationProperty(NavigationType.ToSingleChild, typeof(ItemBaseWithItemMoreInfoRelation))]
         public Func<ItemMoreInfo> NavItemMoreInfo { get; set; }
         [NavigationProperty(NavigationType.ToSingleChild, typeof(ItemBaseWithItemExtensionRelation))]
@@ -67,7 +67,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
     public class ItemExtension
     {
-        public string? ItemId { get; set; }
+        public string ItemId { get; set; }
         public decimal? UnitPrice { get; set; }
         [NavigationProperty(NavigationType.ToParent, typeof(ItemBaseWithItemExtensionRelation))]
         public Func<ItemBase>? NavItemBase { get; set; }
@@ -87,15 +87,15 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
     public class ItemMoreInfo
     {
-        public string? ItemId { get; set; }
-        public string? TrackingType { get; set; }
+        public string ItemId { get; set; }
+        public string TrackingType { get; set; }
     }
 
     public class Equipment
     {
-        public string? EquipId { get; set; }
-        public string? Model { get; set; }
-        public string? ItemId { get; set; }
+        public string EquipId { get; set; }
+        public string Model { get; set; }
+        public string ItemId { get; set; }
 
         [NavigationProperty(NavigationType.ToParentOptional, typeof(ItemExtensionWithEquipmentRelation))]
         public Func<ItemExtension>? NavItem { get; set; }
@@ -103,11 +103,11 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
     public class Component
     {
-        public string? CompId { get; set; }
-        public string? Name { get; set; }
-        public string? Description { get; set; }
-        public string? EquipId { get; set; }
-        public string? ItemId { get; set; }
+        public string CompId { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string EquipId { get; set; }
+        public string ItemId { get; set; }
         [NavigationProperty(NavigationType.ToParent, typeof(ItemExtensionWithComponentRelation))]
         public ItemExtension? NavItem { get; set; }
     }
@@ -121,10 +121,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
     public class Employee : IFullName
     {
         public Guid RowId { get; set; }
-        public string? EmployeeId { get; set; }
-        public string? Name { get; set; }
-        public string? Department { get; set; }
-        public string? ManagerId { get; set; }
+        public string EmployeeId { get; set; }
+        public string Name { get; set; }
+        public string Department { get; set; }
+        public string ManagerId { get; set; }
 
         [NavigationProperty(NavigationType.ToChildren, typeof(EmployeeWithEmployeeDegreeRelation))]
         public IQueryable<EmployeeDegree> NavDegrees { get; set; }
@@ -150,9 +150,9 @@ namespace Atis.SqlExpressionEngine.UnitTest
     public class EmployeeDegree
     {
         public Guid RowId { get; set; }
-        public string? EmployeeId { get; set; }
-        public string? Degree { get; set; }
-        public string? University { get; set; }
+        public string EmployeeId { get; set; }
+        public string Degree { get; set; }
+        public string University { get; set; }
         [NavigationProperty(NavigationType.ToChildren, typeof(EmployeeDegreeWithMarksheetRelation))]
         public IQueryable<Marksheet> NavMarksheets { get; set; }
         [NavigationLink(NavigationType.ToParent, nameof(Employee.EmployeeId), nameof(EmployeeDegree.EmployeeId))]
@@ -163,10 +163,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
     {
         public Guid RowId { get; set; }
         public Guid EmployeeDegreeRowId { get; set; }
-        public string? Course { get; set; }
+        public string Course { get; set; }
         public int? TotalMarks { get; set; }
         public int? MarksGained { get; set; }
-        public string? Grade { get; set; }
+        public string Grade { get; set; }
 
 
         [CalculatedProperty(nameof(CalcPercentageExpression))]

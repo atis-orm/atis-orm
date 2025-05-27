@@ -12,7 +12,7 @@
             var q = employees
                     .SelectMany(e => employeeDegrees)
                     ;
-            string? expectedResult = $@"
+            string expectedResult = $@"
 select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a_2.University as University
 	from	Employee as a_1
 		cross join EmployeeDegree as a_2
@@ -28,7 +28,7 @@ select	a_2.RowId as RowId, a_2.EmployeeId as EmployeeId, a_2.Degree as Degree, a
             var q = employees
                     .SelectMany(e => employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId).Select(x => new { x.EmployeeId, x.Degree }))
                     ;
-            string? expectedResult = $@"
+            string expectedResult = $@"
 select a_2.EmployeeId as EmployeeId, a_2.Degree as Degree
 	from Employee as a_1
 			inner join (
@@ -46,7 +46,7 @@ select a_2.EmployeeId as EmployeeId, a_2.Degree as Degree
             var q = employees
                     .SelectMany(e => e.NavDegrees)
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	NavDegrees_2.RowId as RowId, NavDegrees_2.EmployeeId as EmployeeId, NavDegrees_2.Degree as Degree, NavDegrees_2.University as University
     	from	Employee as a_1
     		inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -64,7 +64,7 @@ select	NavDegrees_2.RowId as RowId, NavDegrees_2.EmployeeId as EmployeeId, NavDe
                     .OrderBy(x => x.University)
                     .Select(x => new { x.Degree, x.University })
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	NavDegrees_2.Degree as Degree, NavDegrees_2.University as University
 	from	Employee as a_1
 		inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -81,7 +81,7 @@ select	NavDegrees_2.Degree as Degree, NavDegrees_2.University as University
             var q = employees
                     .SelectMany(e => e.NavDegrees, (e, ed) => new { e.EmployeeId, e.Name, ed.Degree, ed.University })
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as Degree, NavDegrees_2.University as University
     	from	Employee as a_1
     		inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -98,7 +98,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
             var q = employees
                     .SelectMany(e => employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId), (e, ed) => new { e.EmployeeId, e.Name, ed.Degree, ed.University })
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
 	from Employee as a_1
 			inner join EmployeeDegree as a_2 on (a_2.EmployeeId = a_1.EmployeeId)

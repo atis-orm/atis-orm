@@ -24,7 +24,19 @@ namespace Atis.SqlExpressionEngine.Services
     public class Model : IModel
     {
         /// <inheritdoc />
-        public virtual TableColumn[] GetTableColumns(Type type)
+        public virtual IReadOnlyList<MemberInfo> GetPrimaryKeys(Type type)
+        {
+            return type.GetProperties();
+        }
+
+        /// <inheritdoc />
+        public virtual IReadOnlyList<MemberInfo> GetColumnMembers(Type type)
+        {
+            return type.GetProperties().ToList();
+        }
+
+        /// <inheritdoc />
+        public virtual IReadOnlyList<TableColumn> GetTableColumns(Type type)
         {
             return type.GetProperties().Select(x => new TableColumn(x.Name, x.Name)).ToArray();
         }

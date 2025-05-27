@@ -87,7 +87,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
         public void DataContext_basic_test()
         {
             var q = this.dataContext.Invoices.Select(x => new { x.InvoiceId, x.InvoiceDate });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.InvoiceId as InvoiceId, a_1.InvoiceDate as InvoiceDate
 	from	Invoice as a_1
 ";
@@ -245,9 +245,9 @@ where ((a_2.Id = '123')
 
         private class StudentQueryResult
         {
-            public string? StudentId { get; set; }
-            public string? StudentName { get; set; }
-            public string? Grade { get; set; }
+            public string StudentId { get; set; }
+            public string StudentName { get; set; }
+            public string Grade { get; set; }
         }
 
         [TestMethod]
@@ -261,7 +261,7 @@ where ((a_2.Id = '123')
                 StudentName = x.Name,
                 Grade = queryProvider.DataSet<StudentGrade>().Where(y => y.StudentId == x.StudentId).Select(y => y.Grade).FirstOrDefault()
             });
-            string? expectedResult = @"
+            string expectedResult = @"
 select  a_1.StudentId as StudentId, a_1.Name as StudentName, (
                 select  top (1) a_2.Grade as Col1
                 from    StudentGrade as a_2
@@ -280,7 +280,7 @@ from    Student as a_1
             queryStudent = queryStudent.Where(x => x.Name.Contains("Abc"));
             queryStudent = queryStudent.Where(x => queryGrade.Any(y => y.StudentId == x.StudentId));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
 	where	(a_1.Name like '%' + 'Abc' + '%') and exists(
@@ -300,7 +300,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             var studentGrades = new Queryable<StudentGrade>(new QueryProvider());
             var q = s.Where(x => studentGrades.Where(y => y.StudentId == x.StudentId).Having(y => y.Count() > 1).Any());
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
 	where	exists(
@@ -320,7 +320,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
                         .Select(x => new { x.Name, Id = x.StudentId })
                         .UnionAll(s.Where(x => x.Address.Contains("Town")).Select(x => new { x.Name, Id = x.StudentId }))
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
 where	(a_1.Address like '%' + 'City' + '%')
@@ -339,7 +339,7 @@ where	(a_2.Address like '%' + 'Town' + '%')";
                         .Select(x => new { x.Name, Id = x.StudentId })
                         .Union(students.Where(x => x.Address.Contains("Town")).Select(x => new { x.Name, Id = x.StudentId }))
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
 where	(a_1.Address like '%' + 'City' + '%')
@@ -357,7 +357,7 @@ where	(a_2.Address like '%' + 'Town' + '%')
         {
             var students = new Queryable<Student>(new QueryProvider());
             var q = students.Where(x => x.HasScholarship ?? false).Select(x => new { x.StudentId, x.Name });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name
 	from	Student as a_1
 	where	(isnull(a_1.HasScholarship, 0) = 1)";
@@ -373,7 +373,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name
             q = q.WhereOr(x => x.CountryID == "1");
             q = q.WhereOr(x => x.CountryID == "2");
             q = q.Where(x => x.HasScholarship == true);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, 
         a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, 
         a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
@@ -401,7 +401,7 @@ where	(a_1.Name like '555' + '%') and
                 if (query is IQueryable<IModelWithItem>)
                 {
                     var q = query.Where(x => ((IModelWithItem)x).NavItem().ItemDescription.Contains("Abc"));
-                    string? expectedResult = @"
+                    string expectedResult = @"
 select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
 	from	Asset as a_1
 		inner join ItemBase as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)
@@ -417,7 +417,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
                 {
                     var q = equipment.Where(e => queryWithItem.Where(x => e.ItemId == x.NavItem().ItemId).Where(x => x.NavItem().ItemDescription.Contains("Abc")).Any());
                     // Where(Where(queryWithItem, x => 5 > 1), x => x.NavItem().ItemDescription.Contains("Abc"))
-                    string? expectedResult = @"
+                    string expectedResult = @"
 select	a_1.EquipId as EquipId, a_1.Model as Model, a_1.ItemId as ItemId
 	from	Equipment as a_1
 	where	exists(
@@ -434,7 +434,7 @@ select	a_1.EquipId as EquipId, a_1.Model as Model, a_1.ItemId as ItemId
             void internalMethod3<T>(IQueryable<T> query) where T : IModelWithItem
             {
                 var q = query.Where(x => x.NavItem().ItemDescription.Contains("Abc"));
-                string? expectedResult = @"
+                string expectedResult = @"
 select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
 	from	Asset as a_1
 		inner join ItemBase as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)
@@ -448,7 +448,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
                 if (query is IQueryable<IModelWithItem> queryWithItem)
                 {
                     var q = queryWithItem.Where(x => x.NavItem().ItemId == "333").Select(x => x).Select(x => new { x.NavItem().ItemId, x.NavItem().ItemDescription });
-                    string? expectedResult = @"
+                    string expectedResult = @"
 select	NavItem_4.ItemId as ItemId, NavItem_4.ItemDescription as ItemDescription
 	from	(
 		select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
@@ -472,7 +472,7 @@ select	NavItem_4.ItemId as ItemId, NavItem_4.ItemDescription as ItemDescription
                 .LeftJoin(items, (a, i) => new { a, i }, (j) => j.a.ItemId == j.i.ItemId)
                 .Select(x=> new { x.a.ItemId, x.a.SerialNumber, x.i.ItemDescription, i2 = x.i.ItemId });
             ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.ItemId as ItemId, a_2.SerialNumber as SerialNumber, a_3.ItemDescription as ItemDescription, a_3.ItemId as i2
 	from	(
 		select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
@@ -495,7 +495,7 @@ select	a_2.ItemId as ItemId, a_2.SerialNumber as SerialNumber, a_3.ItemDescripti
                     from item in itemGroup.DefaultIfEmpty()
                     select new { asset.ItemId, asset.SerialNumber, item.ItemDescription, i2 = item.ItemId };
             ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_2.ItemId as ItemId, a_2.SerialNumber as SerialNumber, a_3.ItemDescription as ItemDescription, a_3.ItemId as i2
 	from	(
 		select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
@@ -512,7 +512,7 @@ select	a_2.ItemId as ItemId, a_2.SerialNumber as SerialNumber, a_3.ItemDescripti
         {
             var assets = new Queryable<Asset>(this.queryProvider);
             var q = assets.Select(x => new { x.ItemId, x.SerialNumber }).Distinct();
-            string? expectedResult = @"
+            string expectedResult = @"
 select  distinct a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
     from	Asset as a_1
 ";
@@ -526,7 +526,7 @@ select  distinct a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
             var p = new { p1 = new { p2 = new { v = "555" } } };
             var assets = new Queryable<Asset>(this.queryProvider);
             var q = assets.Where(x => x.ItemId == p.p1.p2.v);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber
 	from	Asset as a_1
 	where	(a_1.ItemId = '555')
@@ -543,7 +543,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
                 .Select(p => p.Name)
                 .Where(name => name.StartsWith("A"));
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select	a_2.Col1 as Col1
 	from	(
 		select	a_1.Name as Col1
@@ -561,7 +561,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
         {
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => x.NavDegrees.All(y => y.University == "MIT"));
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	not exists(
@@ -584,7 +584,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
                         .OuterApply(e => employeeDegrees.Where(d => d.EmployeeId == e.EmployeeId).Take(1), (e, ed) => new { e, ed })
                         .Select(x => new { x.e.EmployeeId, x.e.Name, x.ed.Degree });
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree
 	from Employee as a_1
 			outer apply (
@@ -603,7 +603,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
             var pidMaster = new Queryable<PID_Master>(this.queryProvider);
             var q = pidMaster.Where(x => x.PID == "123")
                         .Select(x => new { x.PID, FullName = FullName(x.FNAME, x.LNAME) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.PID as PID, ((a_1.FNAME + ' ') + a_1.LNAME) as FullName
 from	PID_Master as a_1
 where	(a_1.PID = '123')
@@ -622,7 +622,7 @@ where	(a_1.PID = '123')
         {
             var invoiceDetails = new Queryable<InvoiceDetail>(queryProvider);
             var q = invoiceDetails.Where(x => x.LineTotal > -1).Select(x => new { C1 = -x.LineTotal * -1 });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	(-a_1.LineTotal * -1) as C1
 	from	InvoiceDetail as a_1
 	where	(a_1.LineTotal > -1)
@@ -653,7 +653,7 @@ select	(-a_1.LineTotal * -1) as C1
             var employees = new Queryable<EmployeeExtension>(queryProvider);
             var q = employees.Where(x => !IsValidDesignationForSoftwareEngineering(x.Designation) || x.ManagerId != null);
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Designation as Designation, a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	EmployeeExtension as a_1
 	where	(not a_1.Designation in ('Developer','Architect','Programmer') or (a_1.ManagerId is not null))
@@ -668,7 +668,7 @@ select	a_1.Designation as Designation, a_1.RowId as RowId, a_1.EmployeeId as Emp
             // this test is specially designed to be used with Sql Server
             var employees = new Queryable<Employee>(queryProvider);
             var q = employees.Where(x => x.NavDegrees.Any() == false);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	(case when exists(
@@ -695,7 +695,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
                         .Select(x => x)
                         .Where(x => studentGrades.Select(y => y.StudentId).Where(y => y == x).Any())
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select a_7.Col1 as Col1
 from (
 		select a_6.Col1 as Col1
@@ -751,7 +751,7 @@ where exists(
                 .Where(x => x.DegreeGroups.Where(z => z.TotalDegrees == 10).Where(z => z.University == "123").Any())
                 .Where(x => x.DegreeGroups.Where(z => z.University == "56").Any());
 
-            string? expectedResult = @"
+            string expectedResult = @"
   	select a_6.Name as Name, a_6.EmployeeId as EmployeeId, a_6.SubQueryCol1 as SubQueryCol1, Queryable: {
 		(
 				select a_3.University as University, Count(1) as TotalDegrees

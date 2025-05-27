@@ -13,7 +13,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
                         .Where(x => !x.IsDeleted && !(x.HasScholarship ?? false))
                         .Select(x => new { x.StudentId, x.Name });
 
-            string? expectedSql = @"
+            string expectedSql = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name
 	from	StudentExtension as a_1
 	where	(not (a_1.IsDeleted = 1) and not (isnull(a_1.HasScholarship, 0) = 1))
@@ -28,7 +28,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name
         {
             var students = new Queryable<Student>(queryProvider);
             var q = students.Where(x => x.HasScholarship ?? false).Select(x => new { x.StudentId, x.Name });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name
 	from	Student as a_1
 	where	(isnull(a_1.HasScholarship, 0) = 1)
@@ -43,7 +43,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name
             var q = students
                         .Where(x => x.CountryID == "123" && IsAsianCountry(x.CountryID, x.Age > 18))
                         .Select(x => new { x.StudentId, x.Name, IsAsianCountry = IsAsianCountry(x.CountryID, !(x.Age > 18)) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, dbo.FUNC_IS_ASIAN_COUNTRY(a_1.CountryID, case when not (a_1.Age > 18) then 1 else 0 end) as IsAsianCountry
 	from	Student as a_1
 	where	((a_1.CountryID = '123') and (dbo.FUNC_IS_ASIAN_COUNTRY(a_1.CountryID, case when (a_1.Age > 18) then 1 else 0 end) = 1))
@@ -52,7 +52,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, dbo.FUNC_IS_ASIAN_COUNTRY(a
         }
 
         [SqlFunction("dbo.FUNC_IS_ASIAN_COUNTRY")]
-        public static bool IsAsianCountry(string? countryId, bool useDefault)
+        public static bool IsAsianCountry(string countryId, bool useDefault)
         {
             throw new NotImplementedException();
         }
@@ -63,7 +63,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, dbo.FUNC_IS_ASIAN_COUNTRY(a
         {
             var studentExtensions = new Queryable<StudentExtension>(queryProvider);            
             var q = studentExtensions.Where(x => x.HasScholarship ?? false).Select(x=> new { x.StudentId, x.Name });
-            string? expectedResult = @"
+            string expectedResult = @"
 select  a_1.StudentId as StudentId, a_1.Name as Name
 from    StudentExtension as a_1
 where   (isnull(a_1.HasScholarship, 0) = 1)
@@ -78,7 +78,7 @@ where   (isnull(a_1.HasScholarship, 0) = 1)
         {
             var studentExtensions = new Queryable<StudentExtension>(queryProvider);
             var q = studentExtensions.Where(x => (x.HasScholarship ?? false) || x.IsDeleted == false).Select(x => new { x.StudentId, x.Name });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name
 	from	StudentExtension as a_1
 	where	((isnull(a_1.HasScholarship, 0) = 1) or (a_1.IsDeleted = 0))
@@ -93,7 +93,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name
             var studentExtensions = new Queryable<StudentExtension>(queryProvider);
             var q = studentExtensions.Select(x => new { Flag = x.IsDeleted });
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.IsDeleted as Flag
 	from	StudentExtension as a_1
 ";
@@ -108,7 +108,7 @@ select	a_1.IsDeleted as Flag
             var studentExtensions = new Queryable<StudentExtension>(queryProvider);
             var q = studentExtensions.OrderBy(x => x.HasScholarship).Select(x => new { x.StudentId, x.Name, x.IsDeleted }).OrderBy(x => x.IsDeleted);
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.IsDeleted as IsDeleted
 	from	StudentExtension as a_1
 	order by a_1.HasScholarship asc, IsDeleted asc
@@ -124,7 +124,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.IsDeleted as IsDeleted
             var studentExtensions = new Queryable<StudentExtension>(queryProvider);
             var q = studentExtensions.GroupBy(x => x.IsDeleted);
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.IsDeleted as Col1
 	from	StudentExtension as a_1
 	group by a_1.IsDeleted
@@ -139,7 +139,7 @@ select	a_1.IsDeleted as Col1
             var studentExtensions = new Queryable<StudentExtension>(queryProvider);
             var q = studentExtensions.Select(x => new { x.StudentId, x.Name, IsDeleted = x.IsDeleted ? "Valid" : "Invalid" });
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, case when (a_1.IsDeleted = 1) then 'Valid' else 'Invalid' end as IsDeleted
 	from	StudentExtension as a_1
 ";

@@ -11,7 +11,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
         private Dictionary<Guid, string> aliasCache = new Dictionary<Guid, string>();
         private Dictionary<Guid, int> expressionIdCache = new Dictionary<Guid, int>();
 
-        private string GetSimpleAlias(Guid aliasGuid, string? prefix = null)
+        private string GetSimpleAlias(Guid aliasGuid, string prefix = null)
         {
             if (!this.aliasCache.TryGetValue(aliasGuid, out var alias))
             {
@@ -192,10 +192,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 &&
                 node.QuerySource is SqlDerivedTableExpression derivedTable)
             {
-                if (!(derivedTable.WhereClause?.FilterConditions.Length > 0)    // must have filter condition
+                if (!(derivedTable.WhereClause?.FilterConditions.Count > 0)    // must have filter condition
                     ||
-                    derivedTable.GroupByClause?.Length > 0 ||                   // must not have grouping
-                    derivedTable.HavingClause?.FilterConditions.Length > 0      // or having
+                    derivedTable.GroupByClause?.Count > 0 ||                   // must not have grouping
+                    derivedTable.HavingClause?.FilterConditions.Count > 0      // or having
                     ||
                     !(derivedTable.QueryShape is SqlQueryShapeExpression)       // either shape is not Query Shape
                     ||                                                          // or it is query shape but it's a scalar
@@ -316,14 +316,14 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string JoinPredicate(SqlFilterClauseExpression filterClause, string method)
         {
-            if (filterClause is null || filterClause.FilterConditions.Length == 0)
+            if (filterClause is null || filterClause.FilterConditions.Count == 0)
                 return string.Empty;
 
             var predicateString = new StringBuilder();
 
-            for (var i = 0; i < filterClause.FilterConditions.Length; i++)
+            for (var i = 0; i < filterClause.FilterConditions.Count; i++)
             {
-                var isLastCondition = i == filterClause.FilterConditions.Length - 1;
+                var isLastCondition = i == filterClause.FilterConditions.Count - 1;
                 var condition = filterClause.FilterConditions[i];
 
                 var translated = Indent(this.TranslateLogicalExpression(condition.Predicate));
@@ -414,7 +414,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
             var havingClause = JoinPredicate(node.HavingClause, "having");
             var top = node.Top > 0 ? $" top ({node.Top})" : string.Empty;
             var distinct = node.IsDistinct ? " distinct " : string.Empty;
-            string? selectList = null;
+            string selectList = null;
             if (node.SelectColumnCollection != null)
                 selectList = this.TranslateSelectColumns(node.SelectColumnCollection.SelectColumns);
             string orderByClause;
@@ -453,7 +453,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
         private string TranslateSqlStringFunctionExpression(SqlStringFunctionExpression sqlStringFunctionExpression)
         {
             string arguments = string.Empty;
-            if (sqlStringFunctionExpression.Arguments?.Length > 0)
+            if (sqlStringFunctionExpression.Arguments?.Count > 0)
                 arguments = $", {string.Join(", ", sqlStringFunctionExpression.Arguments.Select(this.Translate))}";
             return $"{sqlStringFunctionExpression.StringFunction}({this.Translate(sqlStringFunctionExpression.StringExpression)}{arguments})";
         }

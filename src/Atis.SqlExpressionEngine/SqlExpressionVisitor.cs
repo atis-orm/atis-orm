@@ -134,7 +134,7 @@ namespace Atis.SqlExpressionEngine
                     newArguments.Add(this.Visit(argument));
                 }
             }
-            return node.Update(stringExpression, newArguments.ToArray());
+            return node.Update(stringExpression, newArguments);
         }
 
         protected virtual internal SqlExpression VisitSqlFunctionCall(SqlFunctionCallExpression node)
@@ -340,7 +340,7 @@ namespace Atis.SqlExpressionEngine
                     newValues.Add(setClause);
                 }
             }
-            return node.Update(newTable, newValues.ToArray());
+            return node.Update(newTable, newValues);
         }
 
         protected virtual internal SqlExpression VisitSqlDelete(SqlDeleteExpression node)

@@ -9,9 +9,9 @@ using System.Text;
 
 namespace Atis.SqlExpressionEngine.ExpressionConverters
 {
-    public class CastQueryMethoExpressionConverterFactory : QueryMethodExpressionConverterFactoryBase
+    public class CastQueryMethodExpressionConverterFactory : QueryMethodExpressionConverterFactoryBase
     {
-        public CastQueryMethoExpressionConverterFactory(IConversionContext context) : base(context)
+        public CastQueryMethodExpressionConverterFactory(IConversionContext context) : base(context)
         {
         }
 

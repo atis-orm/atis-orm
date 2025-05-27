@@ -17,7 +17,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <param name="tableName"></param>
         /// <param name="tableColumns"></param>
         /// <exception cref="ArgumentNullException"></exception>
-        public SqlTableExpression(string tableName, TableColumn[] tableColumns)
+        public SqlTableExpression(string tableName, IReadOnlyList<TableColumn> tableColumns)
         {
             this.TableName = tableName ?? throw new ArgumentNullException(nameof(tableName));
             this.TableColumns = tableColumns ?? throw new ArgumentNullException(nameof(tableColumns));
@@ -37,7 +37,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <summary>
         /// 
         /// </summary>
-        public TableColumn[] TableColumns { get; }
+        public IReadOnlyList<TableColumn> TableColumns { get; }
 
         /// <inheritdoc />
         public override SqlDataSourceQueryShapeExpression CreateQueryShape(Guid dataSourceAlias)

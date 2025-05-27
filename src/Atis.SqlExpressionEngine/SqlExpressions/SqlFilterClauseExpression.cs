@@ -16,9 +16,9 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 ? nodeType
                 : throw new InvalidOperationException($"SqlExpressionType '{nodeType}' is not a valid Filter Clause.");
 
-        public SqlFilterClauseExpression(FilterCondition[] filterConditions, SqlExpressionType nodeType)
+        public SqlFilterClauseExpression(IReadOnlyList<FilterCondition> filterConditions, SqlExpressionType nodeType)
         {
-            if (!(filterConditions?.Length > 0))
+            if (!(filterConditions?.Count > 0))
                 throw new ArgumentNullException(nameof(filterConditions), "Filter conditions cannot be null or empty.");
             this.FilterConditions = filterConditions;
             this.NodeType = ValidateNodeType(nodeType);
@@ -26,7 +26,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 
         /// <inheritdoc />
         public override SqlExpressionType NodeType { get; }
-        public FilterCondition[] FilterConditions { get; }
+        public IReadOnlyList<FilterCondition> FilterConditions { get; }
 
         /// <inheritdoc />
         protected internal override SqlExpression Accept(SqlExpressionVisitor visitor)
@@ -34,7 +34,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             return visitor.VisitFilterClause(this);
         }
 
-        public SqlFilterClauseExpression Update(FilterCondition[] filterConditions)
+        public SqlFilterClauseExpression Update(IReadOnlyList<FilterCondition> filterConditions)
         {
             if (this.FilterConditions.AllEqual(filterConditions))
                 return this;

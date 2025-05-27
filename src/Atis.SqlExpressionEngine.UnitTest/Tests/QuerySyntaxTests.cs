@@ -13,7 +13,7 @@
                     from ed in e.NavDegrees
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as Degree, NavDegrees_2.University as University
 	from	Employee as a_1
 		inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -30,7 +30,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
                     join ed in employeeDegrees on new { e.RowId, e.EmployeeId } equals new { ed.RowId, ed.EmployeeId }
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
 	from	Employee as a_1
 		inner join EmployeeDegree as a_2 on ((a_1.RowId = a_2.RowId) and (a_1.EmployeeId = a_2.EmployeeId))
@@ -54,7 +54,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2
                     select new { e.EmployeeId, e.Name, ed2.Degree, ed2.University, ManagerName = m2.Name }
                     ;
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University, a_3.Name as ManagerName
 	from	Employee as a_1
 		left join EmployeeDegree as a_2 on ((a_1.RowId = a_2.RowId) and (a_1.EmployeeId = a_2.EmployeeId))
@@ -73,7 +73,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2
                     join ed in employeeDegrees on e.EmployeeId equals ed.EmployeeId
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
 	from	Employee as a_1
 		inner join EmployeeDegree as a_2 on (a_1.EmployeeId = a_2.EmployeeId)
@@ -94,7 +94,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2
                     from m3 in managers
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University, ManagerName = m.Name, Manager2Name = m2.Name, Manager3Name = m3.Name }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University, a_3.Name as ManagerName, a_4.Name as Manager2Name, a_5.Name as Manager3Name
 	from	Employee as a_1
 		cross join EmployeeDegree as a_2
@@ -114,7 +114,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2
                     from ms in ed.NavMarksheets
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University, ms.Course, ms.Grade }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as Degree, NavDegrees_2.University as University, NavMarksheets_3.Course as Course, NavMarksheets_3.Grade as Grade
 	from	Employee as a_1
 		inner join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -133,7 +133,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
                     from ed in employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId)
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
     	select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
 	from Employee as a_1
 			inner join EmployeeDegree as a_2 on (a_2.EmployeeId = a_1.EmployeeId)
@@ -150,7 +150,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
                     from ed in employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId).Take(5)
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
     	select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
 	from Employee as a_1
 			cross apply (
@@ -171,7 +171,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
                     from ms in ed.NavMarksheets
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University, ms.Course, ms.Grade }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as Degree, NavDegrees_2.University as University, NavMarksheets_3.Course as Course, NavMarksheets_3.Grade as Grade
 	from	Employee as a_1
 		left join EmployeeDegree as NavDegrees_2 on (a_1.EmployeeId = NavDegrees_2.EmployeeId)
@@ -189,7 +189,7 @@ select	a_1.EmployeeId as EmployeeId, a_1.Name as Name, NavDegrees_2.Degree as De
                     from ed in employeeDegrees.Where(x => x.Degree == "123")
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
 	from Employee as a_1
 			cross join (
@@ -210,7 +210,7 @@ select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2
                     from ed in employeeDegrees.Where(x => x.Degree == "123").Select(x => new { x.Degree, x.University, e.Department })
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
 	from Employee as a_1
 			cross apply (
@@ -231,7 +231,7 @@ select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2
                     from ed in employeeDegrees.Where(x => x.Degree == "123").Select(x => new { x.Degree, x.University, e.Department }).DefaultIfEmpty()
                     select new { e.EmployeeId, e.Name, ed.Degree, ed.University }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2.University as University
 	from Employee as a_1
 			outer apply (
@@ -254,7 +254,7 @@ select a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_2.Degree as Degree, a_2
                     into r2
                     select new { r2.Col1, r2.Col2 }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_3.Col1 as Col1, a_3.Col2 as Col2
 	from	(
 		select	a_2.EmployeeId as Col1, a_2.Name as Col2
@@ -282,7 +282,7 @@ select	a_3.Col1 as Col1, a_3.Col2 as Col2
                     into next
                     select new { y = next.z.n1.ManagerId }
                     ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select a_5.ManagerId as y
 	from (
 			select NavSubOrdinates_3.RowId as RowId, NavSubOrdinates_3.EmployeeId as EmployeeId, NavSubOrdinates_3.Name as Name, NavSubOrdinates_3.Department as Department, NavSubOrdinates_3.ManagerId as ManagerId
@@ -307,7 +307,7 @@ select a_5.ManagerId as y
                     where asset.SerialNumber == "123"
                     select new { asset, item };
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId, a_1.SerialNumber as SerialNumber, a_2.ItemId as ItemId_1, a_2.ItemDescription as ItemDescription
 	from	Asset as a_1
 		inner join ItemBase as a_2 on (a_1.ItemId = a_2.ItemId)
@@ -331,7 +331,7 @@ select	a_1.RowId as RowId, a_1.Description as Description, a_1.ItemId as ItemId,
                     where g.Count() > 0
                     select new { o.OrderID, o.OrderDate, od.Quantity, od.UnitPrice, Count = g.Where(y => y.CustomerName.StartsWith("TT")).Count() };
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.OrderID as OrderID, a_1.OrderDate as OrderDate, a_2.Quantity as Quantity, a_2.UnitPrice as UnitPrice, (
 		select	Count(1) as Col1
 		from	Customer as a_4
@@ -366,7 +366,7 @@ select	a_1.OrderID as OrderID, a_1.OrderDate as OrderDate, a_2.Quantity as Quant
                     where t.g.Where(r => r.CustomerName.Contains("abc")).Count() > 0
                     select new { t.o.OrderID, t.o.OrderDate, t.od.Quantity, t.od.UnitPrice, Count = t.g.Where(y => y.CustomerName.StartsWith("TT")).Count() };
 
-            string? expectedResult = @"
+            string expectedResult = @"
     	select a_3.OrderID as OrderID, a_3.OrderDate as OrderDate, a_3.Quantity as Quantity, a_3.UnitPrice as UnitPrice, (
 			select Count(1) as Col1
 			from Customer as a_5
@@ -404,7 +404,7 @@ select	a_1.OrderID as OrderID, a_1.OrderDate as OrderDate, a_2.Quantity as Quant
                 orderby result.EmpName
                 select result;
 
-            string? expectedResult = @"
+            string expectedResult = @"
     select a_1.Name as EmpName, a_2.Degree as DegreeName
 	from Employee as a_1
 			inner join EmployeeDegree as a_2 on (a_1.EmployeeId = a_2.EmployeeId)

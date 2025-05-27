@@ -8,7 +8,7 @@
         public void From_multiple_data_sources()
         {
             var q = queryProvider.From(() => new { e = QueryExtensions.Table<Employee>(), ed = QueryExtensions.Table<EmployeeDegree>() });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId, a_2.RowId as RowId_1, a_2.EmployeeId as EmployeeId_1, a_2.Degree as Degree, a_2.University as University
 	from	Employee as a_1
 		cross join EmployeeDegree as a_2
@@ -86,7 +86,7 @@ select	a_4.StudentId as StudentId, a_4.Grade as Grade, a_4.StudentId_1 as SgStud
                             .LeftJoin(new Queryable<Employee>(queryProvider), (o, j3) => new { o, m2 = j3 }, n => n.o.q1.e.ManagerId == n.m2.EmployeeId)
                             .Select(x => new { EmRowId = x.o.q1.e.RowId, EdRowId = x.o.q1.ed.RowId, M1RowId = x.o.m.RowId, M2RowId = x.m2.RowId })
                             ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_3.RowId as EmRowId, a_3.RowId_1 as EdRowId, a_4.RowId as M1RowId, a_5.RowId as M2RowId
 	from	(
 		select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId, a_2.RowId as RowId_1, a_2.EmployeeId as EmployeeId_1, a_2.Degree as Degree, a_2.University as University

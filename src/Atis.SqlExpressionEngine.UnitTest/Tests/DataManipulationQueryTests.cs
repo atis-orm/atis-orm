@@ -11,7 +11,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var assets = new Queryable<Asset>(this.queryProvider);
             Expression<Func<int>> expr = () => assets.Update(x => new Asset { SerialNumber = "ABC", Description = "Check" }, x => x.SerialNumber == "123");
             var queryExpression = expr.Body;
-            string? expectedResult = @"
+            string expectedResult = @"
 update a_1
 	set SerialNumber = 'ABC',
 		Description = 'Check'
@@ -30,7 +30,7 @@ where	(a_1.SerialNumber = '123')
                                                         asset => new ItemBase { ItemDescription = asset.NavItem().ItemDescription + asset.SerialNumber },
                                                         asset => asset.SerialNumber == "123");
             var queryExpression = expr.Body;
-            string? expectedResult = @"
+            string expectedResult = @"
 update NavItem_2
 	set ItemDescription = (NavItem_2.ItemDescription + a_1.SerialNumber)
 from Asset as a_1
@@ -62,7 +62,7 @@ from Asset as a_1
                                                 );
 
             var queryExpression = expr.Body;
-            string? expectedResult = @"
+            string expectedResult = @"
 update a_2
 	set ItemDescription = (a_2.ItemDescription + a_1.SerialNumber)
 from Asset as a_1
@@ -82,7 +82,7 @@ from Asset as a_1
                                                     .Select(x => x.item)
                                                     .Update(ms => ms.NavItemMoreInfo(), ms => new ItemMoreInfo { TrackingType = "TT" }, ms => ms.ItemDescription.Contains("123"));
             var queryExpression = expr.Body;
-            string? expectedResult = @"
+            string expectedResult = @"
 update NavItemMoreInfo_4
 	set TrackingType = 'TT'
 from (
@@ -107,7 +107,7 @@ where (a_3.ItemDescription like '%' + '123' + '%')
                                                     .InnerJoin(moreInfo, (oldShape, joinedTable) => new { os1 = oldShape, j2 = joinedTable }, newShape => newShape.j2.ItemId == newShape.os1.j1.ItemId)
                                                     .Update(ms => ms.os1.j1, ms => new ItemBase { ItemDescription = ms.os1.a.SerialNumber + ms.os1.j1.ItemId }, ms => ms.os1.j1.ItemDescription.Contains("123"));
             var queryExpression = expr.Body;
-            string? expectedResult = @"
+            string expectedResult = @"
 update a_2
 	set ItemDescription = (a_1.SerialNumber + a_2.ItemId)
 from Asset as a_1
@@ -124,7 +124,7 @@ from Asset as a_1
             var assets = new Queryable<Asset>(this.queryProvider);
             Expression<Func<int>> expr = () => assets.Delete(x => x.SerialNumber == "123");
             var queryExpression = expr.Body;
-            string? expectedResult = @"
+            string expectedResult = @"
 delete a_1
 from	Asset as a_1
 where	(a_1.SerialNumber = '123')
@@ -139,7 +139,7 @@ where	(a_1.SerialNumber = '123')
             Expression<Func<int>> expr = () => assets.Delete(asset => asset.NavItem(),
                                                                 asset => asset.SerialNumber == "123");
             var queryExpression = expr.Body;
-            string? expectedResult = @"
+            string expectedResult = @"
 delete NavItem_2
 from Asset as a_1
 			inner join ItemBase as NavItem_2 on (NavItem_2.ItemId = a_1.ItemId)

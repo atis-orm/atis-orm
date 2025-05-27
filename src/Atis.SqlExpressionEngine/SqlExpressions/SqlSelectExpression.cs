@@ -1096,7 +1096,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             {
                 if (derivedTableSource is null)
                     throw new ArgumentNullException(nameof(derivedTableSource));
-                if (derivedTableSource.CteDataSources.Length > 0)
+                if (derivedTableSource.CteDataSources.Count > 0)
                 {
                     var cteDsList = derivedTableSource.CteDataSources;
                     foreach (var cteDs in cteDsList)

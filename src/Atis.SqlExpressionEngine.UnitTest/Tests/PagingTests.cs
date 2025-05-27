@@ -14,7 +14,7 @@
                             .Select(x => new { x.Name, Id = x.StudentId })
                             .Paging(2, 10);
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
 where	(a_1.Address like '%' + 'City' + '%')
@@ -35,7 +35,7 @@ offset 10 rows fetch next 10 rows only";
                         .Skip((pageNumber - 1) * pageSize)
                         .Take(pageSize)
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
 where	(a_1.Address like '%' + 'City' + '%')
@@ -52,7 +52,7 @@ offset 40 rows fetch next 10 rows only";
                         .Select(x => new { x.Name, Id = x.StudentId })
                         .Paging(2, 10)
                         ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.Name as Name, a_1.StudentId as Id
 from	Student as a_1
 where	(a_1.Address like '%' + 'City' + '%')

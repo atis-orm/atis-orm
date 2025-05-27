@@ -67,15 +67,15 @@ namespace Atis.SqlExpressionEngine.Internal
                    //this.derivedTable.AllDataSources.Count == 1 &&
                    //this.derivedTable.Joins.Length == 0 &&
                    //this.derivedTable.CteDataSources.Length == 0 &&
-                    !(this.derivedTable.HavingClause?.FilterConditions.Length > 0) &&
-                    this.derivedTable.GroupByClause.Length == 0 &&
-                    !(this.derivedTable.OrderByClause?.OrderByColumns.Length > 0) &&
+                    !(this.derivedTable.HavingClause?.FilterConditions.Count > 0) &&
+                    this.derivedTable.GroupByClause.Count == 0 &&
+                    !(this.derivedTable.OrderByClause?.OrderByColumns.Count > 0) &&
                     this.derivedTable.Top == null &&
                     this.derivedTable.IsDistinct == false &&
                     this.derivedTable.RowOffset == null &&
                     this.derivedTable.RowsPerPage == null;
                     //&&
-                    //this.derivedTable.WhereClause?.FilterConditions.Length > 0;
+                    //this.derivedTable.WhereClause?.FilterConditions.Count > 0;
         }
 
         public bool TryBuild(out JoinableQueryBuilderResult result)

@@ -22,7 +22,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                 ? nodeType
                 : throw new InvalidOperationException($"SqlExpressionType '{nodeType}' is not a valid Derived Table Type.");
 
-        public SqlDerivedTableExpression(SqlAliasedCteSourceExpression[] cteDataSources, SqlAliasedFromSourceExpression fromSource, SqlAliasedJoinSourceExpression[] joinedDataSources, SqlFilterClauseExpression whereClause, SqlExpression[] groupByClause, SqlFilterClauseExpression havingClause, SqlOrderByClauseExpression orderByClause, SqlSelectListExpression selectColumnCollection, bool isDistinct, int? top, int? rowOffset, int? rowsPerPage, bool autoProjection, string tag, SqlExpression queryShape, SqlExpressionType nodeType)
+        public SqlDerivedTableExpression(IReadOnlyList<SqlAliasedCteSourceExpression> cteDataSources, SqlAliasedFromSourceExpression fromSource, IReadOnlyList<SqlAliasedJoinSourceExpression> joinedDataSources, SqlFilterClauseExpression whereClause, IReadOnlyList<SqlExpression> groupByClause, SqlFilterClauseExpression havingClause, SqlOrderByClauseExpression orderByClause, SqlSelectListExpression selectColumnCollection, bool isDistinct, int? top, int? rowOffset, int? rowsPerPage, bool autoProjection, string tag, SqlExpression queryShape, SqlExpressionType nodeType)
         {
             if (fromSource is null)
                 throw new ArgumentNullException(nameof(fromSource));
@@ -48,21 +48,21 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             this.Tag = tag;
             this.QueryShape = queryShape ?? throw new ArgumentNullException(nameof(queryShape));
 
-            this.IsCte = this.CteDataSources.Length > 0;
+            this.IsCte = this.CteDataSources.Count > 0;
 
             this.IsTableOnly = this.AutoProjection &&
                                 (this.FromSource.QuerySource is SqlTableExpression ||
                                     this.FromSource.QuerySource is SqlCteReferenceExpression) &&
-                                this.Joins.Length == 0 &&
-                                this.CteDataSources.Length == 0 &&
-                                !(this.HavingClause?.FilterConditions.Length > 0) &&
-                                this.GroupByClause.Length == 0 &&
-                                !(this.OrderByClause?.OrderByColumns.Length > 0) &&
+                                this.Joins.Count == 0 &&
+                                this.CteDataSources.Count == 0 &&
+                                !(this.HavingClause?.FilterConditions.Count > 0) &&
+                                this.GroupByClause.Count == 0 &&
+                                !(this.OrderByClause?.OrderByColumns.Count > 0) &&
                                 this.Top == null &&
                                 this.IsDistinct == false &&
                                 this.RowOffset == null &&
                                 this.RowsPerPage == null &&
-                               !(this.WhereClause?.FilterConditions?.Length > 0);
+                               !(this.WhereClause?.FilterConditions?.Count > 0);
 
             this.AllDataSources = ((IEnumerable<SqlAliasedDataSourceExpression>)new[] { this.FromSource })
                                         .Concat(this.Joins)
@@ -74,13 +74,13 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         public bool IsCte { get; }
         public bool IsTableOnly { get; }
         public SqlAliasedFromSourceExpression FromSource { get; }
-        public SqlAliasedJoinSourceExpression[] Joins { get; }
-        public SqlAliasedCteSourceExpression[] CteDataSources { get; }
+        public IReadOnlyList<SqlAliasedJoinSourceExpression> Joins { get; }
+        public IReadOnlyList<SqlAliasedCteSourceExpression> CteDataSources { get; }
         public int? Top { get; }
         public bool IsDistinct { get; }
         public SqlSelectListExpression SelectColumnCollection { get; }
         public SqlFilterClauseExpression WhereClause { get; }
-        public SqlExpression[] GroupByClause { get; }
+        public IReadOnlyList<SqlExpression> GroupByClause { get; }
         public SqlFilterClauseExpression HavingClause { get; }
         public SqlOrderByClauseExpression  OrderByClause { get; }
         public int? RowOffset { get; }
@@ -131,11 +131,11 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         }
 
         public SqlDerivedTableExpression Update(
-            SqlAliasedCteSourceExpression[] cteDataSources,
+            IReadOnlyList<SqlAliasedCteSourceExpression> cteDataSources,
             SqlAliasedFromSourceExpression fromSource,
-            SqlAliasedJoinSourceExpression[] joinedDataSources,
+            IReadOnlyList<SqlAliasedJoinSourceExpression> joinedDataSources,
             SqlFilterClauseExpression whereClause,
-            SqlExpression[] groupByClause,
+            IReadOnlyList<SqlExpression> groupByClause,
             SqlFilterClauseExpression havingClause,
             SqlOrderByClauseExpression orderByClause,
             SqlSelectListExpression selectColumnCollection)

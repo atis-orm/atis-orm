@@ -154,12 +154,12 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlLiteralExpression(value);
         }
 
-        public SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, SqlExpression[] arguments)
+        public SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, IReadOnlyList<SqlExpression> arguments)
         {
             return new SqlStringFunctionExpression(stringFunction, stringExpression, arguments);
         }
 
-        public SqlTableExpression CreateTable(string tableName, TableColumn[] tableColumns)
+        public SqlTableExpression CreateTable(string tableName, IReadOnlyList<TableColumn> tableColumns)
         {
             return new SqlTableExpression(tableName, tableColumns);
         }
@@ -299,12 +299,12 @@ namespace Atis.SqlExpressionEngine.Services
                 throw new ArgumentNullException(nameof(derivedTable));
             return derivedTable.AutoProjection &&
                     //derivedTable.CteDataSources.Length == 0 &&
-                    (derivedTable.Joins.Length == 0 ||     // either there are no joins
+                    (derivedTable.Joins.Count == 0 ||     // either there are no joins
                                                            // or all the joins are navigation joins
                     derivedTable.Joins.All(x => x.IsNavigationJoin)) &&
-                    !(derivedTable.HavingClause?.FilterConditions.Length > 0) &&
-                    derivedTable.GroupByClause.Length == 0 &&
-                    !(derivedTable.OrderByClause?.OrderByColumns.Length > 0) &&
+                    !(derivedTable.HavingClause?.FilterConditions.Count > 0) &&
+                    derivedTable.GroupByClause.Count == 0 &&
+                    !(derivedTable.OrderByClause?.OrderByColumns.Count > 0) &&
                     derivedTable.Top == null &&
                     derivedTable.IsDistinct == false &&
                     derivedTable.RowOffset == null &&
@@ -386,7 +386,7 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlNotExpression(sqlExpression);
         }
 
-        public SqlUpdateExpression CreateUpdate(SqlDerivedTableExpression source, Guid dataSourceToUpdate, string[] columns, SqlExpression[] values)
+        public SqlUpdateExpression CreateUpdate(SqlDerivedTableExpression source, Guid dataSourceToUpdate, IReadOnlyList<string> columns, IReadOnlyList<SqlExpression> values)
         {
             return new SqlUpdateExpression(source, dataSourceToUpdate, columns, values);
         }

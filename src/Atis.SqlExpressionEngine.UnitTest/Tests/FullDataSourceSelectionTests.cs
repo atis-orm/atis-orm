@@ -13,7 +13,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             queryProvider.DataSet<Student>()
             .Where(x => x.StudentId == "123")
             .Select(f => f);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
 	where	(a_1.StudentId = '123')";
@@ -27,7 +27,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             queryProvider.DataSet<Student>()
             .Where(x => x.StudentId == "123")
             .Select(x => new { Std = x, STD_ID = x.StudentId });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship, a_1.StudentId as STD_ID
 	from	Student as a_1
 	where	(a_1.StudentId = '123')";
@@ -45,7 +45,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             })
             .Where(x => x.s.StudentId == "123")
             .Select(x => new { x.s, x.sg.Grade });
-            string? expectedResult = @$"
+            string expectedResult = @$"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship, a_2.Grade as Grade
 	from	Student as a_1
 		cross join StudentGrade as a_2
@@ -65,7 +65,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             })
             .Where(x => x.s.StudentId == "123")
             .Select(x => x.s);
-            string? expectedResult = @$"
+            string expectedResult = @$"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
 	from	Student as a_1
 		cross join StudentGrade as a_2
@@ -85,7 +85,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
             })
             .Where(x => x.s.StudentId == "123")
             .Select(f => f);
-            string? expectedResult = @$"
+            string expectedResult = @$"
 select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship, a_2.RowId as RowId, a_2.StudentId as StudentId_1, a_2.Grade as Grade
 	from	Student as a_1
 		cross join StudentGrade as a_2
@@ -99,7 +99,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1
         {
             var studentExtensions = new Queryable<StudentExtension>(queryProvider);
             var q = studentExtensions.Where(x => x.IsDeleted).Select(x => x as Student);
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.IsDeleted as IsDeleted, a_1.StudentId as StudentId, a_1.Name as Name, a_1.Address as Address, a_1.Age as Age, 
         a_1.AdmissionDate as AdmissionDate, a_1.RecordCreateDate as RecordCreateDate, a_1.RecordUpdateDate as RecordUpdateDate, 
         a_1.StudentType as StudentType, a_1.CountryID as CountryID, a_1.HasScholarship as HasScholarship
@@ -118,7 +118,7 @@ select	a_1.IsDeleted as IsDeleted, a_1.StudentId as StudentId, a_1.Name as Name,
                                 .Top(5)
                                 .Select(x => x.NavManager().EmployeeId)
                                 ;
-            string? expectedResult = @"
+            string expectedResult = @"
 select NavManager_4.EmployeeId as Col1
 from (
 		select top (5) a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId

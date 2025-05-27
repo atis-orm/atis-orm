@@ -11,7 +11,7 @@
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => values.Contains(x.Department));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	a_1.Department in ('HR','Finance')
@@ -26,7 +26,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => new[] { "HR", "Finance" }.Contains(x.Department));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	a_1.Department in ('HR', 'Finance')
@@ -42,7 +42,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => obj.Departments.Contains(x.Department));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	a_1.Department in ('HR','Finance')
@@ -57,7 +57,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => new[] { "HR", "Finance" }.Any(y => y == x.Department));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	a_1.Department in ('HR', 'Finance')
@@ -73,7 +73,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => obj.RowIds.Any(y => y == x.RowId));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	a_1.RowId in ('34878994-7241-4ebb-870f-186a9494f7c1','6a8844fa-66ba-4319-8b8a-d9b03787b512')
@@ -90,7 +90,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => departments.Any(y => y == x.Department));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	a_1.Department in ('HR','Finance')
@@ -107,7 +107,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => obj.Departments.Any(y => x.Department == y));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	a_1.Department in ('HR','Finance')
@@ -124,7 +124,7 @@ select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
             var employees = new Queryable<Employee>(this.queryProvider);
             var q = employees.Where(x => departments.Any(y => x.Department == y));
 
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.Department as Department, a_1.ManagerId as ManagerId
 	from	Employee as a_1
 	where	a_1.Department in ('HR','Finance')

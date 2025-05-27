@@ -148,9 +148,9 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
     public class EmployeeWithTopManagerDto
     {
-        public string? EmployeeId { get; set; }
-        public string? ImmediateManagerId { get; set; }
-        public string? TopManagerId { get; set; }
+        public string EmployeeId { get; set; }
+        public string ImmediateManagerId { get; set; }
+        public string TopManagerId { get; set; }
 
         [NavigationLink(NavigationType.ToParent, nameof(Employee.EmployeeId), nameof(EmployeeId))]
         public Func<Employee> NavEmployee { get; set; }

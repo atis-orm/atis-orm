@@ -12,7 +12,7 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var q = studentExtensions
                         .Select(x => new { x.StudentId, IsActive = !x.IsDeleted, NoScholarship = !x.HasScholarship });
 
-            string? expectedSql = @"
+            string expectedSql = @"
 select	a_1.StudentId as StudentId, 
             case when not (a_1.IsDeleted = 1) then 1 else 0 end as IsActive,
             case when not (a_1.HasScholarship = 1) then 1 else 0 end as NoScholarship
@@ -28,7 +28,7 @@ select	a_1.StudentId as StudentId,
             var students = new Queryable<StudentExtension>(queryProvider);
             var q = students.Select(x => x.Age > 18);
 
-            string? expectedSql = @"
+            string expectedSql = @"
 select	case when (a_1.Age > 18) then 1 else 0 end as Col1
 	from	StudentExtension as a_1
 ";
@@ -46,7 +46,7 @@ select	case when (a_1.Age > 18) then 1 else 0 end as Col1
                 IsAdult = x.Age >= 18
             });
 
-            string? expectedSql = @"
+            string expectedSql = @"
 select	a_1.StudentId as StudentId, case when (a_1.Age >= 18) then 1 else 0 end as IsAdult
 	from	Student as a_1
 ";
@@ -64,7 +64,7 @@ select	a_1.StudentId as StudentId, case when (a_1.Age >= 18) then 1 else 0 end a
                 IsAllowed = x.Age > 18 && (x.HasScholarship ?? false)
             });
 
-            string? expectedSql = @"
+            string expectedSql = @"
 select	a_1.StudentId as StudentId, case when ((a_1.Age > 18) and (isnull(a_1.HasScholarship, 0) = 1)) then 1 else 0 end as IsAllowed
 	from	StudentExtension as a_1
 ";
@@ -82,7 +82,7 @@ select	a_1.StudentId as StudentId, case when ((a_1.Age > 18) and (isnull(a_1.Has
                 Flag = x.StudentType == "Open" ? x.Age > 18 : x.Age > 10
             });
 
-            string? expectedSql = @"
+            string expectedSql = @"
 select	a_1.StudentId as StudentId, case when (a_1.StudentType = 'Open') then 
                                         case when (a_1.Age > 18) then 1 else 0 end 
                                     else 
@@ -105,7 +105,7 @@ select	a_1.StudentId as StudentId, case when (a_1.StudentType = 'Open') then
                 Flag = outsideVariable ?? (x.HasScholarship ?? (x.Age > 10))
             });
 
-            string? expectedSql = @"
+            string expectedSql = @"
 select	a_1.StudentId as StudentId, isnull(null, isnull(a_1.HasScholarship, case when (a_1.Age > 10) then 1 else 0 end)) as Flag
 	from	StudentExtension as a_1
 ";
@@ -118,7 +118,7 @@ select	a_1.StudentId as StudentId, isnull(null, isnull(a_1.HasScholarship, case 
         {
             var students = new Queryable<Student>(queryProvider);
             var q = students.Select(x => new { Flag = new[] { "Type1", "Type2" }.Contains(x.StudentType) == true });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	case when (case when a_1.StudentType in ('Type1', 'Type2') then 1 else 0 end = 1) then 1 else 0 end as Flag
 	from	Student as a_1
 ";
@@ -131,7 +131,7 @@ select	case when (case when a_1.StudentType in ('Type1', 'Type2') then 1 else 0 
         {
             var students = new Queryable<Student>(queryProvider);
             var q = students.Select(x => new { Flag = !(new[] { "Type1", "Type2" }.Contains(x.StudentType)) });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	case when not a_1.StudentType in ('Type1', 'Type2') then 1 else 0 end as Flag
 	from	Student as a_1
 ";
@@ -144,7 +144,7 @@ select	case when not a_1.StudentType in ('Type1', 'Type2') then 1 else 0 end as 
         {
             var students = new Queryable<StudentExtension>(queryProvider);
             var q = students.Select(x => new { x.StudentId, x.Name, NotEndsWith123 = x.Name.EndsWith("123") == false });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, a_1.Name as Name, case when (case when (a_1.Name like '%' + '123') then 1 else 0 end = 0) then 1 else 0 end as NotEndsWith123
 	from	StudentExtension as a_1
 ";
@@ -158,7 +158,7 @@ select	a_1.StudentId as StudentId, a_1.Name as Name, case when (case when (a_1.N
             var students = new Queryable<StudentExtension>(queryProvider);
             var studentAttendance = new Queryable<StudentAttendance>(queryProvider);
             var q = students.Select(x => new { x.StudentId, Flag = studentAttendance.Where(y => y.StudentId == x.StudentId).Any() == x.IsDeleted });
-            string? expectedResult = @"
+            string expectedResult = @"
 select	a_1.StudentId as StudentId, case when (case when exists(
 		select	1 as Col1
 		from	StudentAttendance as a_2

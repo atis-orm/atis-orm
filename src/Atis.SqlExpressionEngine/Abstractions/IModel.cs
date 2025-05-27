@@ -13,13 +13,27 @@ namespace Atis.SqlExpressionEngine.Abstractions
     public interface IModel
     {
         /// <summary>
+        /// Gets the list of members from type that represent database columns.
+        /// </summary>
+        /// <param name="type">Type of table source.</param>
+        /// <returns>List of members representing columns.</returns>
+        IReadOnlyList<MemberInfo> GetColumnMembers(Type type);
+
+        /// <summary>
+        /// Gets the first primary key member of the specified type.
+        /// </summary>
+        /// <param name="type">Type of the table source.</param>
+        /// <returns>List of primary key members.</returns>
+        IReadOnlyList<MemberInfo> GetPrimaryKeys(Type type);
+
+        /// <summary>
         ///     <para>
-        ///         Gets an array of table columns corresponding to the specified type.
+        ///         Gets a list of table columns corresponding to the specified type.
         ///     </para>
         /// </summary>
         /// <param name="type">The type of the model.</param>
-        /// <returns>An array of <see cref="TableColumn"/> objects.</returns>
-        TableColumn[] GetTableColumns(Type type);
+        /// <returns>A list of <see cref="TableColumn"/> objects.</returns>
+        IReadOnlyList<TableColumn> GetTableColumns(Type type);
 
         /// <summary>
         ///     <para>
