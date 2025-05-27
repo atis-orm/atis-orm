@@ -7,16 +7,16 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
 {
     public class SqlOrderByClauseExpression : SqlExpression
     {
-        public SqlOrderByClauseExpression(OrderByColumn[] orderByColumns)
+        public SqlOrderByClauseExpression(IReadOnlyList<OrderByColumn> orderByColumns)
         {
-            if (!(orderByColumns?.Length > 0))
+            if (!(orderByColumns?.Count > 0))
                 throw new ArgumentNullException(nameof(orderByColumns), "Order by columns cannot be null or empty.");
             this.OrderByColumns = orderByColumns;
         }
 
         /// <inheritdoc />
         public override SqlExpressionType NodeType => SqlExpressionType.OrderByClause;
-        public OrderByColumn[] OrderByColumns { get; }
+        public IReadOnlyList<OrderByColumn> OrderByColumns { get; }
 
         /// <inheritdoc />
         protected internal override SqlExpression Accept(SqlExpressionVisitor visitor)
@@ -24,7 +24,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
             return visitor.VisitSqlOrderByClause(this);
         }
 
-        public SqlOrderByClauseExpression Update(OrderByColumn[] orderByColumns)
+        public SqlOrderByClauseExpression Update(IReadOnlyList<OrderByColumn> orderByColumns)
         {
             if (this.OrderByColumns.AllEqual(orderByColumns))
                 return this;
