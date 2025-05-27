@@ -28,12 +28,12 @@ namespace Atis.SqlExpressionEngine.Abstractions
 
         /// <summary>
         ///     <para>
-        ///         Gets an array of table columns corresponding to the specified type.
+        ///         Gets a list of table columns corresponding to the specified type.
         ///     </para>
         /// </summary>
         /// <param name="type">The type of the model.</param>
-        /// <returns>An array of <see cref="TableColumn"/> objects.</returns>
-        TableColumn[] GetTableColumns(Type type);
+        /// <returns>A list of <see cref="TableColumn"/> objects.</returns>
+        IReadOnlyList<TableColumn> GetTableColumns(Type type);
 
         /// <summary>
         ///     <para>
