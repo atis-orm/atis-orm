@@ -340,7 +340,7 @@ namespace Atis.SqlExpressionEngine
                     newValues.Add(setClause);
                 }
             }
-            return node.Update(newTable, newValues.ToArray());
+            return node.Update(newTable, newValues);
         }
 
         protected virtual internal SqlExpression VisitSqlDelete(SqlDeleteExpression node)
