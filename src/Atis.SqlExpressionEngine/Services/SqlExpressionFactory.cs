@@ -302,7 +302,7 @@ namespace Atis.SqlExpressionEngine.Services
                     (derivedTable.Joins.Count == 0 ||     // either there are no joins
                                                            // or all the joins are navigation joins
                     derivedTable.Joins.All(x => x.IsNavigationJoin)) &&
-                    !(derivedTable.HavingClause?.FilterConditions.Length > 0) &&
+                    !(derivedTable.HavingClause?.FilterConditions.Count > 0) &&
                     derivedTable.GroupByClause.Count == 0 &&
                     !(derivedTable.OrderByClause?.OrderByColumns.Count > 0) &&
                     derivedTable.Top == null &&
