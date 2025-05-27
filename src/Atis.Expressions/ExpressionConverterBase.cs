@@ -19,7 +19,9 @@ namespace Atis.Expressions
         /// </summary>
         /// <param name="expression">The source expression that will be converted.</param>
         /// <param name="converterStack">The stack of converters representing the parent chain for context-aware conversion.</param>
-        protected ExpressionConverterBase(TSourceExpression expression, ExpressionConverterBase<TSourceExpression, TDestinationExpression>[] converterStack)
+        protected ExpressionConverterBase(
+            TSourceExpression expression,
+            IReadOnlyList<ExpressionConverterBase<TSourceExpression, TDestinationExpression>> converterStack)
         {
             this.Expression = expression;
             this.ConverterStack = converterStack;
@@ -28,7 +30,7 @@ namespace Atis.Expressions
         /// <summary>
         /// Gets the stack of converters representing the context hierarchy of the current conversion.
         /// </summary>
-        public virtual ExpressionConverterBase<TSourceExpression, TDestinationExpression>[] ConverterStack { get; }
+        public virtual IReadOnlyList<ExpressionConverterBase<TSourceExpression, TDestinationExpression>> ConverterStack { get; }
 
         /// <summary>
         /// Gets the source expression that is currently being converted.
