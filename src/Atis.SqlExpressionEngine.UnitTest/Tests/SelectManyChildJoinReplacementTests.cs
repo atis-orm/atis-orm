@@ -13,11 +13,8 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employeeDegrees = new Queryable<EmployeeDegree>(this.queryProvider);
             var q = employees.SelectMany(e => employeeDegrees.Where(x => x.EmployeeId == e.EmployeeId).Where(x => x.Degree == "123" || x.University == "55" && x.RowId == e.RowId));
             var updatedExpression = PreprocessExpression(q.Expression);
-            Console.WriteLine(updatedExpression);
-            if (((((updatedExpression as MethodCallExpression)?.Arguments?.Skip(1).FirstOrDefault() as UnaryExpression)?.Operand as LambdaExpression)?.Body as MethodCallExpression)?.Method.Name != "Where")
-                Assert.Fail("Expression was updated");
-            else
-                Console.WriteLine("Success");
+            var methodName = (((updatedExpression as MethodCallExpression)?.Arguments?.Skip(1).FirstOrDefault() as UnaryExpression)?.Operand as LambdaExpression)?.Body as MethodCallExpression)?.Method.Name;
+            Assert.IsTrue(methodName == "Where", "Expression was updated");
         }
 
         [TestMethod]
@@ -27,11 +24,8 @@ namespace Atis.SqlExpressionEngine.UnitTest.Tests
             var employeeDegrees = new Queryable<EmployeeDegree>(this.queryProvider);
             var q = employees.SelectMany(e => employeeDegrees.Select(x => new { x.EmployeeId, x.Degree, e.Name, x.RowId }).Where(x => x.EmployeeId == e.EmployeeId).Where(x => x.Degree == "123" && x.RowId == e.RowId));
             var updatedExpression = PreprocessExpression(q.Expression);
-            Console.WriteLine(updatedExpression);
-            if (((((updatedExpression as MethodCallExpression)?.Arguments?.Skip(1).FirstOrDefault() as UnaryExpression)?.Operand as LambdaExpression)?.Body as MethodCallExpression)?.Method.Name != "Where")
-                Assert.Fail("Expression was updated");
-            else
-                Console.WriteLine("Success");
+            var methodName2 = (((updatedExpression as MethodCallExpression)?.Arguments?.Skip(1).FirstOrDefault() as UnaryExpression)?.Operand as LambdaExpression)?.Body as MethodCallExpression)?.Method.Name;
+            Assert.IsTrue(methodName2 == "Where", "Expression was updated");
         }
     }
 }
