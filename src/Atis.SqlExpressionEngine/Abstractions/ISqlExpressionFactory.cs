@@ -16,7 +16,7 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlSelectExpression CreateSelectQueryFromStandaloneSelect(SqlStandaloneSelectExpression standaloneSelect);
         SqlSelectExpression CreateSelectQuery(SqlExpression queryShape);
         SqlAliasExpression CreateAlias(string alias);
-        SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, SqlExpression[] arguments);
+        SqlStringFunctionExpression CreateStringFunction(SqlStringFunction stringFunction, SqlExpression stringExpression, IReadOnlyList<SqlExpression> arguments);
         SqlFunctionCallExpression CreateFunctionCall(string functionName, SqlExpression[] arguments);
         SqlConditionalExpression CreateCondition(SqlExpression test, SqlExpression ifTrue, SqlExpression ifFalse);
         SqlDefaultIfEmptyExpression CreateDefaultIfEmpty(SqlDerivedTableExpression derivedTable);

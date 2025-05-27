@@ -453,7 +453,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
         private string TranslateSqlStringFunctionExpression(SqlStringFunctionExpression sqlStringFunctionExpression)
         {
             string arguments = string.Empty;
-            if (sqlStringFunctionExpression.Arguments?.Length > 0)
+            if (sqlStringFunctionExpression.Arguments?.Count > 0)
                 arguments = $", {string.Join(", ", sqlStringFunctionExpression.Arguments.Select(this.Translate))}";
             return $"{sqlStringFunctionExpression.StringFunction}({this.Translate(sqlStringFunctionExpression.StringExpression)}{arguments})";
         }
