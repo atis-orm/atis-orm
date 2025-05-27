@@ -57,7 +57,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                                 this.CteDataSources.Length == 0 &&
                                 !(this.HavingClause?.FilterConditions.Length > 0) &&
                                 this.GroupByClause.Length == 0 &&
-                                !(this.OrderByClause?.OrderByColumns.Length > 0) &&
+                                !(this.OrderByClause?.OrderByColumns.Count > 0) &&
                                 this.Top == null &&
                                 this.IsDistinct == false &&
                                 this.RowOffset == null &&

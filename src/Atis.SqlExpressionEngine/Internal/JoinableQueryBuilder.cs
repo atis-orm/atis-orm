@@ -69,7 +69,7 @@ namespace Atis.SqlExpressionEngine.Internal
                    //this.derivedTable.CteDataSources.Length == 0 &&
                     !(this.derivedTable.HavingClause?.FilterConditions.Length > 0) &&
                     this.derivedTable.GroupByClause.Length == 0 &&
-                    !(this.derivedTable.OrderByClause?.OrderByColumns.Length > 0) &&
+                    !(this.derivedTable.OrderByClause?.OrderByColumns.Count > 0) &&
                     this.derivedTable.Top == null &&
                     this.derivedTable.IsDistinct == false &&
                     this.derivedTable.RowOffset == null &&

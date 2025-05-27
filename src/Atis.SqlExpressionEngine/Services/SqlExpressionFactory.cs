@@ -304,7 +304,7 @@ namespace Atis.SqlExpressionEngine.Services
                     derivedTable.Joins.All(x => x.IsNavigationJoin)) &&
                     !(derivedTable.HavingClause?.FilterConditions.Length > 0) &&
                     derivedTable.GroupByClause.Length == 0 &&
-                    !(derivedTable.OrderByClause?.OrderByColumns.Length > 0) &&
+                    !(derivedTable.OrderByClause?.OrderByColumns.Count > 0) &&
                     derivedTable.Top == null &&
                     derivedTable.IsDistinct == false &&
                     derivedTable.RowOffset == null &&
