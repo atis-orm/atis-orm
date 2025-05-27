@@ -194,10 +194,10 @@ namespace Atis.SqlExpressionEngine.UnitTest.Preprocessors
 
             var navigationType = relationAttribute.NavigationType;
 
-            if (!(relationAttribute.ParentKeys?.Length >= 1 && relationAttribute.ForeignKeysInChild?.Length >= 1))
+            if (!(relationAttribute.ParentKeys?.Count >= 1 && relationAttribute.ForeignKeysInChild?.Count >= 1))
                 throw new InvalidOperationException("ParentKeys or ForeignKeysInChild is not set.");
 
-            if (relationAttribute.ParentKeys.Length != relationAttribute.ForeignKeysInChild.Length)
+            if (relationAttribute.ParentKeys.Count != relationAttribute.ForeignKeysInChild.Count)
                 throw new InvalidOperationException($"ParentKeys and ForeignKeysInChild must have the same number of elements.");
 
             Type childModelType = modelType ?? throw new InvalidOperationException($"ReflectedType property is null for member '{member.Name}'.");
