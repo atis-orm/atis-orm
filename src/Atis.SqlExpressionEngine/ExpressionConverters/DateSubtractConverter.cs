@@ -71,8 +71,8 @@ namespace Atis.SqlExpressionEngine.ExpressionConverters
                             ??
                             throw new InvalidOperationException($"Expected a collection, but got {convertedChildren[0].GetType()}.");
 
-            if (collection.SqlExpressions.Count() < 2)
-                throw new ArgumentException($"Expected 2 children, but got {convertedChildren.Length}.");
+            if (collection.SqlExpressions.Count() != 2)
+                throw new ArgumentException($"Expected 2 children, but got {collection.SqlExpressions.Count()}.");
 
             // dateField.Subtract(otherField).Seconds
             var dateStart = collection.SqlExpressions.ElementAt(0);
