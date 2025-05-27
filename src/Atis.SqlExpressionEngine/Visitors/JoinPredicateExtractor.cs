@@ -331,7 +331,7 @@ namespace Atis.SqlExpressionEngine.Visitors
                 }
                 newFilterConditions.Add(filter);
             }
-            if (newFilterConditions.Count != visited.FilterConditions.Length)
+            if (newFilterConditions.Count != visited.FilterConditions.Count)
             {
                 if (newFilterConditions.Count == 0)
                 {

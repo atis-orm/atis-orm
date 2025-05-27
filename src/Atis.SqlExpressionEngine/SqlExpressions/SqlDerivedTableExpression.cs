@@ -55,14 +55,14 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
                                     this.FromSource.QuerySource is SqlCteReferenceExpression) &&
                                 this.Joins.Count == 0 &&
                                 this.CteDataSources.Count == 0 &&
-                                !(this.HavingClause?.FilterConditions.Length > 0) &&
+                                !(this.HavingClause?.FilterConditions.Count > 0) &&
                                 this.GroupByClause.Count == 0 &&
                                 !(this.OrderByClause?.OrderByColumns.Count > 0) &&
                                 this.Top == null &&
                                 this.IsDistinct == false &&
                                 this.RowOffset == null &&
                                 this.RowsPerPage == null &&
-                               !(this.WhereClause?.FilterConditions?.Length > 0);
+                               !(this.WhereClause?.FilterConditions?.Count > 0);
 
             this.AllDataSources = ((IEnumerable<SqlAliasedDataSourceExpression>)new[] { this.FromSource })
                                         .Concat(this.Joins)

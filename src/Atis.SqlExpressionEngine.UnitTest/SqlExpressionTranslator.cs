@@ -192,10 +192,10 @@ namespace Atis.SqlExpressionEngine.UnitTest
                 &&
                 node.QuerySource is SqlDerivedTableExpression derivedTable)
             {
-                if (!(derivedTable.WhereClause?.FilterConditions.Length > 0)    // must have filter condition
+                if (!(derivedTable.WhereClause?.FilterConditions.Count > 0)    // must have filter condition
                     ||
                     derivedTable.GroupByClause?.Count > 0 ||                   // must not have grouping
-                    derivedTable.HavingClause?.FilterConditions.Length > 0      // or having
+                    derivedTable.HavingClause?.FilterConditions.Count > 0      // or having
                     ||
                     !(derivedTable.QueryShape is SqlQueryShapeExpression)       // either shape is not Query Shape
                     ||                                                          // or it is query shape but it's a scalar
@@ -316,14 +316,14 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string JoinPredicate(SqlFilterClauseExpression filterClause, string method)
         {
-            if (filterClause is null || filterClause.FilterConditions.Length == 0)
+            if (filterClause is null || filterClause.FilterConditions.Count == 0)
                 return string.Empty;
 
             var predicateString = new StringBuilder();
 
-            for (var i = 0; i < filterClause.FilterConditions.Length; i++)
+            for (var i = 0; i < filterClause.FilterConditions.Count; i++)
             {
-                var isLastCondition = i == filterClause.FilterConditions.Length - 1;
+                var isLastCondition = i == filterClause.FilterConditions.Count - 1;
                 var condition = filterClause.FilterConditions[i];
 
                 var translated = Indent(this.TranslateLogicalExpression(condition.Predicate));
