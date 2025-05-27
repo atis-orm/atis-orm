@@ -299,11 +299,11 @@ namespace Atis.SqlExpressionEngine.Services
                 throw new ArgumentNullException(nameof(derivedTable));
             return derivedTable.AutoProjection &&
                     //derivedTable.CteDataSources.Length == 0 &&
-                    (derivedTable.Joins.Length == 0 ||     // either there are no joins
+                    (derivedTable.Joins.Count == 0 ||     // either there are no joins
                                                            // or all the joins are navigation joins
                     derivedTable.Joins.All(x => x.IsNavigationJoin)) &&
                     !(derivedTable.HavingClause?.FilterConditions.Length > 0) &&
-                    derivedTable.GroupByClause.Length == 0 &&
+                    derivedTable.GroupByClause.Count == 0 &&
                     !(derivedTable.OrderByClause?.OrderByColumns.Count > 0) &&
                     derivedTable.Top == null &&
                     derivedTable.IsDistinct == false &&
