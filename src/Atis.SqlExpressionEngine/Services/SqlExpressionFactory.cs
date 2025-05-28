@@ -208,7 +208,9 @@ namespace Atis.SqlExpressionEngine.Services
                                             throw new InvalidOperationException($"Failed to convert {join.QuerySource} to SqlQuerySourceExpression");
                     var dsQueryShape = selectQuery.AddJoin(updatedQuerySource, join.JoinType);
                     aliasMap.Add(join.Alias, dsQueryShape.DataSourceAlias);
-                    var joinCondition = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, join.JoinCondition);
+                    SqlExpression joinCondition = null;
+                    if (join.JoinCondition != null)
+                        joinCondition = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, join.JoinCondition);
                     selectQuery.UpdateJoin(dsQueryShape.DataSourceAlias, join.JoinType, joinCondition, join.JoinName, join.IsNavigationJoin);
                 }
                 if (!(derivedTable.WhereClause?.FilterConditions.IsNullOrEmpty() ?? true))
