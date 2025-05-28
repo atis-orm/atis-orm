@@ -9,7 +9,7 @@ namespace Atis.SqlExpressionEngine.Abstractions
     {
         SqlBinaryExpression CreateBinary(SqlExpression left, SqlExpression right, SqlExpressionType sqlExpressionType);
         SqlLiteralExpression CreateLiteral(object value);
-        SqlTableExpression CreateTable(string tableName, IReadOnlyList<TableColumn> tableColumns);
+        SqlTableExpression CreateTable(SqlTable sqlTable, IReadOnlyList<TableColumn> tableColumns);
         SqlDerivedTableExpression ConvertSelectQueryToDeriveTable(SqlSelectExpression selectQuery);
         SqlDerivedTableExpression ConvertSelectQueryToUnwrappableDeriveTable(SqlSelectExpression selectQuery);
         SqlDerivedTableExpression ConvertSelectQueryToDataManipulationDerivedTable(SqlSelectExpression selectQuery);
@@ -37,5 +37,7 @@ namespace Atis.SqlExpressionEngine.Abstractions
         SqlUpdateExpression CreateUpdate(SqlDerivedTableExpression source, Guid dataSourceToUpdate, IReadOnlyList<string> columns, IReadOnlyList<SqlExpression> values);
         SqlDeleteExpression CreateDelete(SqlDerivedTableExpression source, Guid dataSourceAlias);
         SqlExpression CreateJoinCondition(SqlExpression predicateLeft, SqlExpression predicateRight);
+        SqlInsertIntoExpression CreateInsertInto(SqlTable sqlTable, IReadOnlyList<TableColumn> tableColumns, SqlDerivedTableExpression derivedTable);
+        SqlNewGuidExpression CreateNewGuid();
     }
 }

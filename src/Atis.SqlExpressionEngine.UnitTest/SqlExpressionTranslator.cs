@@ -147,10 +147,44 @@ namespace Atis.SqlExpressionEngine.UnitTest
             {
                 return sqlFragment.Fragment;
             }
+            else if (sqlExpression is SqlInsertIntoExpression sqlInsertInto)
+            {
+                return this.TranslateSqlInsertIntoExpression(sqlInsertInto);
+            }
+            else if (sqlExpression is SqlNewGuidExpression sqlNewGuid)
+            {
+                return this.TranslateSqlNewGuidExpression(sqlNewGuid);
+            }
             else
             {
                 throw new NotSupportedException($"SqlExpression type '{sqlExpression?.GetType().Name}' is not supported.");
             }
+        }
+
+        private string TranslateSqlNewGuidExpression(SqlNewGuidExpression sqlNewGuid)
+        {
+            return "newId()";
+        }
+
+        private string TranslateSqlInsertIntoExpression(SqlInsertIntoExpression sqlInsertInto)
+        {
+            var query = new StringBuilder();
+            var selectColumns = sqlInsertInto.SelectQuery.SelectColumnCollection.SelectColumns.ToList();
+            var propertyWithDbColumnMap = (
+                                          from tableCol in sqlInsertInto.TableColumns
+                                          join selectCol in selectColumns on tableCol.ModelPropertyName equals selectCol.Alias
+                                          select new { selectCol.Alias, tableCol.DatabaseColumnName }
+                                          )
+                                          .ToDictionary(x => x.Alias, x => x.DatabaseColumnName);
+            var selectColumnsNotFoundInMap = selectColumns.Where(x => !propertyWithDbColumnMap.ContainsKey(x.Alias)).ToList();
+            if (selectColumnsNotFoundInMap.Count > 0)
+                throw new InvalidOperationException($"Some columns in Select List in {nameof(sqlInsertInto)} derived table are not found in the table '{sqlInsertInto.SqlTable.TableName}': {string.Join(", ", selectColumnsNotFoundInMap.Select(x => x.Alias))}");
+            query.Append($"insert into {sqlInsertInto.SqlTable.TableName}(");
+            query.Append(string.Join(", ", selectColumns.Select(x => propertyWithDbColumnMap[x.Alias])));
+            query.Append(')');
+            query.AppendLine();
+            query.Append(this.Translate(sqlInsertInto.SelectQuery));
+            return query.ToString();
         }
 
         private string TranslateSqlCommentExpression(SqlCommentExpression sqlComment)
@@ -553,7 +587,7 @@ namespace Atis.SqlExpressionEngine.UnitTest
 
         private string TranslateSqlTableExpression(SqlTableExpression sqlTableExpression)
         {
-            return sqlTableExpression.TableName;
+            return sqlTableExpression.SqlTable.TableName;
         }
 
         private string TranslateLogicalExpression(SqlExpression sqlExpression)

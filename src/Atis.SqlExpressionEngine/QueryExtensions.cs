@@ -470,7 +470,7 @@ namespace Atis.SqlExpressionEngine
                 throw new ArgumentNullException(nameof(tableUpdateFields));
             if (predicate is null)
                 throw new ArgumentNullException(nameof(predicate));
-            var q  = query.Provider.CreateQuery<T>(
+            var q = query.Provider.CreateQuery<T>(
                 Expression.Call(
                     null,
                     new Func<IQueryable<T>, Expression<Func<T, T>>, Expression<Func<T, bool>>, int>(Update).Method,
@@ -540,6 +540,17 @@ namespace Atis.SqlExpressionEngine
                     new Type[] { typeof(R) },
                     Expression.Constant(db),
                     selector));
+        }
+
+        public static int BulkInsert<T>(this IQueryable<T> query)
+        {
+            if (query is null)
+                throw new ArgumentNullException(nameof(query));
+            return query.Provider.Execute<int>(
+                Expression.Call(
+                    null,
+                    new Func<IQueryable<T>, int>(BulkInsert).Method,
+                    query.Expression));
         }
     }
 }

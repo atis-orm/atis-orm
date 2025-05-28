@@ -156,7 +156,7 @@ namespace Atis.SqlExpressionEngine
 
         protected internal override SqlExpression VisitSqlTable(SqlTableExpression node)
         {
-            this.hashCode.Add(node.TableName);
+            this.hashCode.Add(node.SqlTable);
             foreach (var column in node.TableColumns)
             {
                 this.hashCode.Add(column.DatabaseColumnName);

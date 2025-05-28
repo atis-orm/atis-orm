@@ -399,5 +399,16 @@ namespace Atis.SqlExpressionEngine
             var shapeExpression = this.Visit(node.ShapeExpression);
             return node.Update(shapeExpression);
         }
+
+        protected virtual internal SqlExpression VisitSqlInsertInto(SqlInsertIntoExpression node)
+        {
+            var selectQuery = this.VisitAndConvert(node.SelectQuery);
+            return node.Update(selectQuery);
+        }
+
+        protected virtual internal SqlExpression VisitSqlNewGuid(SqlNewGuidExpression node)
+        {
+            return node;
+        }
     }
 }
