@@ -448,4 +448,19 @@ namespace Atis.SqlExpressionEngine.UnitTest
         [NavigationLink(NavigationType.ToParent, nameof(Person.Id), nameof(Id))]
         public Person Person { get; set; }
     }
+
+    public class SiteExtension
+    {
+        public string SiteId { get; set; }
+        public string AttributeType { get; set; }
+        public string AttributeValue { get; set; }
+    }
+
+    public class SiteAuthorizationSetting
+    {
+        public Guid RowId { get; set; }
+        public string SiteId { get; set; }
+        public string ModuleName { get; set; }
+        public string AuthorizationUserId { get; set; }
+    }
 }

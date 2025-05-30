@@ -42,6 +42,6 @@ namespace Atis.SqlExpressionEngine.Abstractions
         /// </summary>
         /// <param name="type">The type of the model.</param>
         /// <returns>The name of the table.</returns>
-        string GetTableName(Type type);
+        SqlTable GetSqlTable(Type type);
     }
 }

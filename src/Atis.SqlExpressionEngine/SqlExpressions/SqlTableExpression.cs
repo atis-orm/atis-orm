@@ -14,12 +14,12 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="tableName"></param>
+        /// <param name="sqlTable"></param>
         /// <param name="tableColumns"></param>
         /// <exception cref="ArgumentNullException"></exception>
-        public SqlTableExpression(string tableName, IReadOnlyList<TableColumn> tableColumns)
+        public SqlTableExpression(SqlTable sqlTable, IReadOnlyList<TableColumn> tableColumns)
         {
-            this.TableName = tableName ?? throw new ArgumentNullException(nameof(tableName));
+            this.SqlTable = sqlTable ?? throw new ArgumentNullException(nameof(sqlTable));
             this.TableColumns = tableColumns ?? throw new ArgumentNullException(nameof(tableColumns));
             this.propertyMap = tableColumns.ToDictionary(x => x.ModelPropertyName, x => x.DatabaseColumnName);
         }
@@ -32,7 +32,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <summary>
         /// 
         /// </summary>
-        public string TableName { get; }
+        public SqlTable SqlTable { get; }
 
         /// <summary>
         /// 
@@ -58,7 +58,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         {
             if (this.propertyMap.TryGetValue(propertyName, out var columnName))
                 return columnName;
-            throw new InvalidOperationException($"Property '{propertyName}' not found in table '{this.TableName}'.");
+            throw new InvalidOperationException($"Property '{propertyName}' not found in table '{this.SqlTable}'.");
         }
 
         /// <inheritdoc />
@@ -70,7 +70,7 @@ namespace Atis.SqlExpressionEngine.SqlExpressions
         /// <inheritdoc />
         public override string ToString()
         {
-            return this.TableName;
+            return this.SqlTable.TableName;
         }
     }
 }

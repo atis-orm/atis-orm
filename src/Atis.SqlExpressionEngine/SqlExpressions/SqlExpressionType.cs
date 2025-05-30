@@ -60,5 +60,7 @@
         DataSourceQueryShape,
         MemberInit,
         QueryShapeMember,
+        InsertInto,
+        NewGuid,
     }
 }

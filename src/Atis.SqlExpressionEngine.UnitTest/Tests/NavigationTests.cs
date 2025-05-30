@@ -371,8 +371,34 @@ select a_1.RowId as RowId, a_1.EmployeeId as EmployeeId, a_1.Name as Name, a_1.D
         {
             var invoices = new Queryable<Invoice>(this.queryProvider);
             var q = invoices.Where(x => x.NavFirstLine() != null);
-            string expectedResult = null;
+            string expectedResult = @"
+select a_1.RowId as RowId, a_1.InvoiceId as InvoiceId, a_1.InvoiceDate as InvoiceDate, a_1.Description as Description, a_1.CustomerId as CustomerId, a_1.DueDate as DueDate
+	from Invoice as a_1
+			outer apply (
+				select top (1) a_3.RowId as RowId, a_3.InvoiceId as InvoiceId, a_3.ItemId as ItemId, a_3.UnitPrice as UnitPrice, a_3.Quantity as Quantity, a_3.LineTotal as LineTotal
+				from InvoiceDetail as a_3
+				where (a_1.RowId = a_3.InvoiceId)
+			) as NavFirstLine_2
+	where (NavFirstLine_2.RowId is not null)
+";
             Test("Navigation Outer Apply Is Not Null Test", q.Expression, expectedResult);
+        }
+
+        [TestMethod]
+        public void Navigation_in_condition_checking_for_null()
+        {
+            var invoices = new Queryable<Invoice>(this.queryProvider);
+            var q = invoices.Select(x => new { InvoiceFirstLineRowId = x.NavFirstLine() != null ? (Guid?)x.NavFirstLine().RowId : null });
+            string expectedResult = @"
+select NavFirstLine_2.RowId as InvoiceFirstLineRowId
+	from Invoice as a_1
+			outer apply (
+				select top (1) a_3.RowId as RowId, a_3.InvoiceId as InvoiceId, a_3.ItemId as ItemId, a_3.UnitPrice as UnitPrice, a_3.Quantity as Quantity, a_3.LineTotal as LineTotal
+				from InvoiceDetail as a_3
+				where (a_1.RowId = a_3.InvoiceId)
+			) as NavFirstLine_2
+";
+            Test("Navigation in Condition Check for Null Test", q.Expression, expectedResult);
         }
     }
 }

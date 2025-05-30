@@ -77,6 +77,8 @@ namespace Atis.SqlExpressionEngine
                 new ToStringConverterFactory(context),
                 new GetValueOrDefaultConverterFactory(context),
                 new CastQueryMethodExpressionConverterFactory(context),
+                new BulkInsertConverterFactory(context),
+                new GuidNewConverterFactory(context),
             };
             this.Factories.AddRange(defaultConverters);
         }

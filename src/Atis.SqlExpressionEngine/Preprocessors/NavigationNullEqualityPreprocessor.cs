@@ -65,6 +65,26 @@ namespace Atis.SqlExpressionEngine.Preprocessors
             return visited;
         }
 
+        protected override Expression VisitConditional(ConditionalExpression node)
+        {
+            // node = x.NavProp() != null ? x.NavProp().Field1 : null
+            // OR
+            // node = x.CalcProp != null ? x.CalcProp.Field1 : null
+            // IMPORTANT: we are not going further in visit because it would replace the Navigation call to
+            // primary key member selection and following condition will never be true
+            if (node.Test is BinaryExpression binExpr && node.IfFalse is ConstantExpression falseConstExpr && falseConstExpr.Value is null)
+            {
+                if (binExpr.NodeType == ExpressionType.NotEqual && binExpr.Right is ConstantExpression constExpr && constExpr.Value is null)
+                {
+                    if (binExpr.Left is NavigationMemberExpression)
+                    {
+                        return this.Visit(node.IfTrue);
+                    }
+                }
+            }
+            return base.VisitConditional(node);
+        }
+
         /// <summary>
         /// Gets the first primary key member of the navigation table source type.
         /// </summary>

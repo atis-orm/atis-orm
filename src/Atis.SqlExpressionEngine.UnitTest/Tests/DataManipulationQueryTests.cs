@@ -160,5 +160,24 @@ from Asset as a_1
             Test($"Delete Query Multiple Table Navigation Test", queryExpression, expectedResult);
         }
 
+
+        [TestMethod]
+        public void Bulk_insert()
+        {
+            var siteExtList = new Queryable<SiteExtension>(this.queryProvider);
+            Expression<Func<int>> expr = () => siteExtList.Where(x => x.AttributeType == "T1" && x.AttributeValue == "V1")
+                                                .Select(x => new SiteAuthorizationSetting { RowId = Guid.NewGuid(), ModuleName = "Module1", SiteId = x.SiteId, AuthorizationUserId = "User1" })
+                                                .BulkInsert();
+            var queryExpression = expr.Body;
+            string expectedResult = @"
+insert into SiteAuthorizationSetting(RowId, ModuleName, SiteId, AuthorizationUserId)
+(
+	select newId() as RowId, 'Module1' as ModuleName, a_1.SiteId as SiteId, 'User1' as AuthorizationUserId
+	from SiteExtension as a_1
+	where ((a_1.AttributeType = 'T1') and (a_1.AttributeValue = 'V1'))
+)
+";
+            Test("Bulk Insert Test", queryExpression, expectedResult);
+        }
     }
 }

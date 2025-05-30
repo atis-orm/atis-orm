@@ -159,9 +159,9 @@ namespace Atis.SqlExpressionEngine.Services
             return new SqlStringFunctionExpression(stringFunction, stringExpression, arguments);
         }
 
-        public SqlTableExpression CreateTable(string tableName, IReadOnlyList<TableColumn> tableColumns)
+        public SqlTableExpression CreateTable(SqlTable sqlTable, IReadOnlyList<TableColumn> tableColumns)
         {
-            return new SqlTableExpression(tableName, tableColumns);
+            return new SqlTableExpression(sqlTable, tableColumns);
         }
 
         public virtual SqlFunctionCallExpression CreateFunctionCall(string functionName, SqlExpression[] arguments)
@@ -208,7 +208,9 @@ namespace Atis.SqlExpressionEngine.Services
                                             throw new InvalidOperationException($"Failed to convert {join.QuerySource} to SqlQuerySourceExpression");
                     var dsQueryShape = selectQuery.AddJoin(updatedQuerySource, join.JoinType);
                     aliasMap.Add(join.Alias, dsQueryShape.DataSourceAlias);
-                    var joinCondition = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, join.JoinCondition);
+                    SqlExpression joinCondition = null;
+                    if (join.JoinCondition != null)
+                        joinCondition = ReplaceDataSourceAliasVisitor.FindAndReplace(aliasMap, join.JoinCondition);
                     selectQuery.UpdateJoin(dsQueryShape.DataSourceAlias, join.JoinType, joinCondition, join.JoinName, join.IsNavigationJoin);
                 }
                 if (!(derivedTable.WhereClause?.FilterConditions.IsNullOrEmpty() ?? true))
@@ -427,6 +429,16 @@ namespace Atis.SqlExpressionEngine.Services
             }
 
             return joinPredicate;
+        }
+
+        public SqlInsertIntoExpression CreateInsertInto(SqlTable sqlTable, IReadOnlyList<TableColumn> tableColumns, SqlDerivedTableExpression derivedTable)
+        {
+            return new SqlInsertIntoExpression(sqlTable, tableColumns, derivedTable);
+        }
+
+        public SqlNewGuidExpression CreateNewGuid()
+        {
+            return new SqlNewGuidExpression();
         }
     }
 }

@@ -42,9 +42,9 @@ namespace Atis.SqlExpressionEngine.Services
         }
 
         /// <inheritdoc />
-        public virtual string GetTableName(Type type)
+        public virtual SqlTable GetSqlTable(Type type)
         {
-            return type.Name;
+            return new SqlTable(type.Name);
         }
     }
 }
